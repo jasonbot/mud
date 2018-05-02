@@ -8,11 +8,14 @@ import (
 
 import "github.com/gliderlabs/ssh"
 
-func Server() {
+// Serve runs the main server loop.
+func Serve() {
 	ssh.Handle(func(s ssh.Session) {
 		io.WriteString(s, fmt.Sprintf("Hello %s\n", s.User()))
 	})
 
+	_, privateKey := makeKeyFiles()
+
 	log.Println("starting ssh server on port 2222...")
-	log.Fatal(ssh.ListenAndServe(":2222", nil))
+	log.Fatal(ssh.ListenAndServe(":2222", nil, ssh.HostKeyFile(privateKey)))
 }
