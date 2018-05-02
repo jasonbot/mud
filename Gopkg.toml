@@ -24,7 +24,10 @@
 #   go-tests = true
 #   unused-packages = true
 
-
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "github.com/gliderlabs/ssh"
+  revision = "8c1707734eaa00a4c129cba17af6bae4e27de117"

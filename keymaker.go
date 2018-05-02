@@ -10,31 +10,22 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-
-	"golang.org/x/crypto/ssh"
 )
 
-func makeKeyFiles() (string, string) {
+func makeKeyFiles() string {
 	savePrivateFileTo := "./id_rsa"
-	savePublicFileTo := "./id_rsa.pub"
 
 	_, err := os.Stat(savePrivateFileTo)
-	_, err2 := os.Stat(savePublicFileTo)
-	if err == nil && err2 == nil {
-		log.Printf("Key files already exist")
-		return savePrivateFileTo, savePublicFileTo
+	if err == nil {
+		log.Printf("Key file already exists")
+		return savePrivateFileTo
 	}
 
-	log.Printf("Generating %s and %s...", savePrivateFileTo, savePublicFileTo)
+	log.Printf("Generating %s...", savePrivateFileTo)
 
 	bitSize := 4096
 
 	privateKey, err := generatePrivateKey(bitSize)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	publicKeyBytes, err := generatePublicKey(&privateKey.PublicKey)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -46,12 +37,7 @@ func makeKeyFiles() (string, string) {
 		log.Fatal(err.Error())
 	}
 
-	err = writeKeyToFile([]byte(publicKeyBytes), savePublicFileTo)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	return savePrivateFileTo, savePublicFileTo
+	return savePrivateFileTo
 }
 
 // generatePrivateKey creates a RSA Private Key of specified byte size
@@ -88,20 +74,6 @@ func encodePrivateKeyToPEM(privateKey *rsa.PrivateKey) []byte {
 	privatePEM := pem.EncodeToMemory(&privBlock)
 
 	return privatePEM
-}
-
-// generatePublicKey take a rsa.PublicKey and return bytes suitable for writing to .pub file
-// returns in the format "ssh-rsa ..."
-func generatePublicKey(privatekey *rsa.PublicKey) ([]byte, error) {
-	publicRsaKey, err := ssh.NewPublicKey(privatekey)
-	if err != nil {
-		return nil, err
-	}
-
-	pubKeyBytes := ssh.MarshalAuthorizedKey(publicRsaKey)
-
-	log.Println("Public key generated")
-	return pubKeyBytes, nil
 }
 
 // writePemToFile writes keys to a file

@@ -3,6 +3,7 @@
 *.dll
 *.so
 *.dylib
+id_rsa
 /bin/
 vendor/
 
