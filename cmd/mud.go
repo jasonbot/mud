@@ -5,6 +5,6 @@ import "log"
 import "github.com/jasonbot/mud"
 
 func main() {
-	log.Println("Serving MUD...")
+	log.Println("Starting")
 	mud.Serve()
 }

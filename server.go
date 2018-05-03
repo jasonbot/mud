@@ -2,8 +2,6 @@ package mud
 
 import (
 	"bufio"
-	"fmt"
-	"io"
 	"log"
 	"strconv"
 	"time"
@@ -12,20 +10,14 @@ import (
 )
 
 func handleConnection(w World, s ssh.Session) {
-	io.WriteString(s, fmt.Sprintf("Hello %s\n", s.User()))
-
 	user := w.GetUser(s.User())
-
 	screen := NewSSHScreen(s, w, user)
 
-	log.Printf("Public key: %v", s.PublicKey())
-	log.Printf("Environ: %v", s.Environ())
+	log.Printf("Connected with %v (as %v)", s.RemoteAddr(), user)
 	if len(s.Command()) > 0 {
 		s.Write([]byte("Commands are not supported.\n"))
 		s.Close()
 	}
-
-	io.WriteString(s, internalCursorDemo())
 
 	done := s.Context().Done()
 	tick := time.Tick(250 * time.Millisecond)
@@ -39,7 +31,6 @@ func handleConnection(w World, s ssh.Session) {
 		case inputString := <-stringInput:
 			log.Printf("Got string s: %v err: %v", strconv.Quote(inputString.inputString), inputString.err)
 			if inputString.err != nil {
-				log.Printf("Input error: %v", inputString.err)
 				s.Close()
 				continue
 			}
@@ -60,7 +51,7 @@ func Serve() {
 
 	privateKey := makeKeyFiles()
 
-	log.Println("starting ssh server on port 2222...")
+	log.Println("Starting SSH server on :2222")
 	log.Fatal(ssh.ListenAndServe(":2222", func(s ssh.Session) {
 		handleConnection(world, s)
 	}, ssh.HostKeyFile(privateKey)))

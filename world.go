@@ -1,6 +1,8 @@
 package mud
 
 import (
+	"log"
+
 	bolt "github.com/coreos/bbolt"
 )
 
@@ -33,6 +35,7 @@ func (w *dbWorld) Close() {
 }
 
 func (w *dbWorld) load() {
+	log.Printf("Loading world database %s", w.filename)
 	db, err := bolt.Open(w.filename, 0600, nil)
 
 	if err != nil {

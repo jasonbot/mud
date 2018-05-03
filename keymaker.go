@@ -17,7 +17,7 @@ func makeKeyFiles() string {
 
 	_, err := os.Stat(savePrivateFileTo)
 	if err == nil {
-		log.Printf("Key file already exists")
+		log.Printf("Key file %s already exists", savePrivateFileTo)
 		return savePrivateFileTo
 	}
 
