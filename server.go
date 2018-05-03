@@ -21,6 +21,8 @@ func handleConnection(s ssh.Session) {
 		s.Close()
 	}
 
+	io.WriteString(s, internalCursorDemo())
+
 	done := s.Context().Done()
 	tick := time.Tick(1 * time.Second)
 	stringInput := make(chan inputEvent, 1)
