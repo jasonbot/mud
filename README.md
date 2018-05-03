@@ -12,3 +12,13 @@ Run make.
     make
 
 Then run `bin/mud`.
+
+## Connecting to Play
+
+You need ssh installed and a key generated. This is beyond the scope of this `README` but you
+[can probably follow these Github instructions](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/)
+in order to get it set up on your platform of choice. From there it's a simple matter of connecting:
+
+    ssh localhost -p 2222
+
+assuming you're running the mud server locally.
