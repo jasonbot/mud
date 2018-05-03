@@ -1,6 +1,11 @@
 package mud
 
-import bolt "github.com/coreos/bbolt"
+import (
+	"encoding/json"
+	"log"
+
+	bolt "github.com/coreos/bbolt"
+)
 
 // User represents an active user in the system.
 type User interface {
@@ -33,6 +38,8 @@ func (user *dbUser) Reload() {
 
 		if record == nil {
 			user.UserData = user.world.newUser(user.UserData.username)
+		} else {
+			json.Unmarshal(record, &(user.UserData))
 		}
 
 		return nil
@@ -40,7 +47,23 @@ func (user *dbUser) Reload() {
 }
 
 func (user *dbUser) Save() {
+	bytes, err := json.Marshal(user.UserData)
+	if err != nil {
+		log.Printf("Can't marshal user: %v", err)
+		return
+	}
 
+	user.world.database.Update(func(tx *bolt.Tx) error {
+		bucket, err := tx.CreateBucketIfNotExists([]byte("users"))
+
+		if err != nil {
+			return err
+		}
+
+		err = bucket.Put([]byte(user.UserData.username), bytes)
+
+		return err
+	})
 }
 
 func getUserFromDB(world *dbWorld, username string) User {
