@@ -28,7 +28,7 @@ func (screen *sshScreen) Render() {
 		clear := cursor.ClearEntireScreen()
 		move := cursor.MoveTo(1, 1)
 		io.WriteString(screen.session,
-			fmt.Sprintf("%s%sScreen is too small. Make your terminal larger.", clear, move))
+			fmt.Sprintf("%s%sScreen is too small. Make your terminal larger. (80x20 minimum)", clear, move))
 		return
 	}
 

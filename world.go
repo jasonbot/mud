@@ -25,7 +25,11 @@ func (w *dbWorld) GetDimensions() (uint32, uint32) {
 }
 
 func (w *dbWorld) GetUser(username string) User {
-	return getUserFromDB(w.database, username)
+	return getUserFromDB(w, username)
+}
+
+func (w *dbWorld) newUser(username string) UserData {
+	return UserData{username: username, x: 1024, y: 1024}
 }
 
 func (w *dbWorld) Close() {
