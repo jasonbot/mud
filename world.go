@@ -1,6 +1,8 @@
 package mud
 
-import bolt "github.com/coreos/bbolt"
+import (
+	bolt "github.com/coreos/bbolt"
+)
 
 // World represents a gameplay world. It should keep track of the map,
 // entities in the map, and players.
@@ -26,7 +28,7 @@ func (w *dbWorld) Close() {
 }
 
 func (w *dbWorld) load() {
-	db, err := bolt.Open(w.filename, 0x600, nil)
+	db, err := bolt.Open(w.filename, 0600, nil)
 
 	if err != nil {
 		panic(err)

@@ -6,6 +6,7 @@
 id_rsa
 /bin/
 vendor/
+*.db
 
 # Test binary, build with `go test -c`
 *.test
