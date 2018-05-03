@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -18,35 +19,57 @@ type inputEvent struct {
 }
 
 const (
-	OUTOFSEQUENCE = iota
-	INESCAPE
-	DIRECTIVE
+	sOUTOFSEQUENCE = iota
+	sINESCAPE
+	sDIRECTIVE
 )
+
+// sleepThenReport is a timeout sequence so that if the escape key is pressed it will register
+// as a keypress within a reasonable period of time with the input loop, even if the input
+// state machine is in its "inside ESCAPE press listening for extended sequence" state.
+func sleepThenReport(stringChannel chan<- inputEvent, myOnce *sync.Once, state *int) {
+	time.Sleep(100 * time.Millisecond)
+
+	myOnce.Do(func() {
+		*state = sOUTOFSEQUENCE
+		stringChannel <- inputEvent{string(rune(27)), nil}
+	})
+}
 
 func handleKeys(s ssh.Session, stringChannel chan<- inputEvent) {
 	reader := bufio.NewReader(s)
 	inputGone := errors.New("Input ended")
-	inEscapeSequence := OUTOFSEQUENCE
+	inEscapeSequence := sOUTOFSEQUENCE
+	var myOnce *sync.Once
 
 	for {
-		runeRead, len, err := reader.ReadRune()
+		runeRead, _, err := reader.ReadRune()
 
 		if err != nil || runeRead == 3 {
-			log.Printf("Leaving byte handler err: %v", err)
 			stringChannel <- inputEvent{"", inputGone}
 		}
-		log.Printf("In byte handler rune: %v len: %v", strconv.QuoteRune(runeRead), len)
 
-		if inEscapeSequence == OUTOFSEQUENCE && runeRead == 27 {
-			inEscapeSequence = INESCAPE
-		} else if inEscapeSequence == INESCAPE {
+		if myOnce != nil {
+			myOnce.Do(func() { myOnce = nil })
+		}
+
+		if inEscapeSequence == sOUTOFSEQUENCE && runeRead == 27 {
+			inEscapeSequence = sINESCAPE
+			myOnce = new(sync.Once)
+			go sleepThenReport(stringChannel, myOnce, &inEscapeSequence)
+		} else if inEscapeSequence == sINESCAPE {
 			if string(runeRead) == "[" {
-				inEscapeSequence = DIRECTIVE
+				inEscapeSequence = sDIRECTIVE
+			} else if runeRead == 27 {
+				stringChannel <- inputEvent{string(rune(27)), nil}
 			} else {
-				inEscapeSequence = OUTOFSEQUENCE
+				inEscapeSequence = sOUTOFSEQUENCE
+				if myOnce != nil {
+					myOnce.Do(func() { myOnce = nil })
+				}
 				stringChannel <- inputEvent{string(runeRead), nil}
 			}
-		} else if inEscapeSequence == DIRECTIVE {
+		} else if inEscapeSequence == sDIRECTIVE {
 			switch runeRead {
 			case 'A':
 				stringChannel <- inputEvent{"UP", nil}
@@ -59,7 +82,7 @@ func handleKeys(s ssh.Session, stringChannel chan<- inputEvent) {
 			default:
 				stringChannel <- inputEvent{strconv.QuoteRune(runeRead), nil}
 			}
-			inEscapeSequence = OUTOFSEQUENCE
+			inEscapeSequence = sOUTOFSEQUENCE
 		} else {
 			stringChannel <- inputEvent{string(runeRead), nil}
 		}
@@ -82,7 +105,7 @@ func handleConnection(s ssh.Session) {
 	for {
 		select {
 		case inputString := <-stringInput:
-			log.Printf("Got string %v", inputString)
+			log.Printf("Got string s: %v err: %v", strconv.Quote(inputString.inputString), inputString.err)
 			if inputString.err != nil {
 				log.Printf("Input error: %v", inputString.err)
 				s.Close()
