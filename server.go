@@ -11,7 +11,7 @@ import (
 	"github.com/gliderlabs/ssh"
 )
 
-func handleConnection(s ssh.Session) {
+func handleConnection(w World, s ssh.Session) {
 	io.WriteString(s, fmt.Sprintf("Hello %s\n", s.User()))
 
 	log.Printf("Public key: %v", s.PublicKey())
@@ -50,9 +50,13 @@ func handleConnection(s ssh.Session) {
 
 // Serve runs the main server loop.
 func Serve() {
+	world := LoadWorldFromDB("./world.db")
+	defer world.Close()
 
 	privateKey := makeKeyFiles()
 
 	log.Println("starting ssh server on port 2222...")
-	log.Fatal(ssh.ListenAndServe(":2222", handleConnection, ssh.HostKeyFile(privateKey)))
+	log.Fatal(ssh.ListenAndServe(":2222", func(s ssh.Session) {
+		handleConnection(world, s)
+	}, ssh.HostKeyFile(privateKey)))
 }

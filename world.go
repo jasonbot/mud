@@ -6,6 +6,7 @@ import bolt "github.com/coreos/bbolt"
 // entities in the map, and players.
 type World interface {
 	GetDimensions() (uint32, uint32)
+	Close()
 }
 
 type dbWorld struct {
@@ -16,6 +17,12 @@ type dbWorld struct {
 // GetDimensions returns the size of the world
 func (w *dbWorld) GetDimensions() (uint32, uint32) {
 	return uint32(1 << 31), uint32(1 << 31)
+}
+
+func (w *dbWorld) Close() {
+	if w.database != nil {
+		w.database.Close()
+	}
 }
 
 func (w *dbWorld) load() {
