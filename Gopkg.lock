@@ -14,6 +14,12 @@
   revision = "648efa622239a2f6ff949fed78ee37b48d499ba4"
 
 [[projects]]
+  name = "github.com/coreos/bbolt"
+  packages = ["."]
+  revision = "583e8937c61f1af6513608ccc75c97b6abdf4ff9"
+  version = "v1.3.0"
+
+[[projects]]
   name = "github.com/gliderlabs/ssh"
   packages = ["."]
   revision = "8c1707734eaa00a4c129cba17af6bae4e27de117"
@@ -58,6 +64,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9f0c765002299edbae11fa2cc268d3fa0ca91dcbf17f845643d77ca6d3631d58"
+  inputs-digest = "3e329bf7d21810c8ac8e6a60c1f107ecdfafecc27cd1eb27a863fbdacab3371f"
   solver-name = "gps-cdcl"
   solver-version = 1
