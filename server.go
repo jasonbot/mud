@@ -14,6 +14,10 @@ import (
 func handleConnection(w World, s ssh.Session) {
 	io.WriteString(s, fmt.Sprintf("Hello %s\n", s.User()))
 
+	user := w.GetUser(s.User())
+
+	screen := NewSSHScreen(s, w, user)
+
 	log.Printf("Public key: %v", s.PublicKey())
 	log.Printf("Environ: %v", s.Environ())
 	if len(s.Command()) > 0 {
@@ -24,7 +28,7 @@ func handleConnection(w World, s ssh.Session) {
 	io.WriteString(s, internalCursorDemo())
 
 	done := s.Context().Done()
-	tick := time.Tick(1 * time.Second)
+	tick := time.Tick(250 * time.Millisecond)
 	stringInput := make(chan inputEvent, 1)
 	reader := bufio.NewReader(s)
 
@@ -40,6 +44,7 @@ func handleConnection(w World, s ssh.Session) {
 				continue
 			}
 		case <-tick:
+			screen.Render()
 			continue
 		case <-done:
 			log.Printf("Disconnected %v", s.RemoteAddr())

@@ -8,11 +8,16 @@ import (
 	"github.com/mgutz/ansi"
 )
 
-// Screen represents a UI screen. For now, just a terminal.
+// Screen represents a UI screen. For now, just an SSH terminal.
 type Screen interface {
+	Render()
 }
 
 type sshScreen struct {
+}
+
+func (screen *sshScreen) Render() {
+
 }
 
 // NewSSHScreen manages the window rendering for a game session

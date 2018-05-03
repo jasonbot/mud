@@ -8,6 +8,7 @@ import (
 // entities in the map, and players.
 type World interface {
 	GetDimensions() (uint32, uint32)
+	GetUser(string) User
 	Close()
 }
 
@@ -19,6 +20,10 @@ type dbWorld struct {
 // GetDimensions returns the size of the world
 func (w *dbWorld) GetDimensions() (uint32, uint32) {
 	return uint32(1 << 31), uint32(1 << 31)
+}
+
+func (w *dbWorld) GetUser(username string) User {
+	return getUserFromDB(w.database, username)
 }
 
 func (w *dbWorld) Close() {
