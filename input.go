@@ -27,7 +27,7 @@ func sleepThenReport(stringChannel chan<- inputEvent, myOnce *sync.Once, state *
 
 	myOnce.Do(func() {
 		*state = sOUTOFSEQUENCE
-		stringChannel <- inputEvent{string(rune(27)), nil}
+		stringChannel <- inputEvent{"ESCAPE", nil}
 	})
 }
 
@@ -35,6 +35,12 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent) {
 	inputGone := errors.New("Input ended")
 	inEscapeSequence := sOUTOFSEQUENCE
 	var myOnce *sync.Once
+
+	codeMap := map[rune]string{
+		rune(9):   "TAB",
+		rune(13):  "ENTER",
+		rune(127): "BACKSPACE",
+	}
 
 	for {
 		runeRead, _, err := reader.ReadRune()
@@ -55,7 +61,7 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent) {
 			if string(runeRead) == "[" {
 				inEscapeSequence = sDIRECTIVE
 			} else if runeRead == 27 {
-				stringChannel <- inputEvent{string(rune(27)), nil}
+				stringChannel <- inputEvent{"ESCAPE", nil}
 			} else {
 				inEscapeSequence = sOUTOFSEQUENCE
 				if myOnce != nil {
@@ -78,7 +84,11 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent) {
 			}
 			inEscapeSequence = sOUTOFSEQUENCE
 		} else {
-			stringChannel <- inputEvent{string(runeRead), nil}
+			if newString, ok := codeMap[runeRead]; ok {
+				stringChannel <- inputEvent{newString, nil}
+			} else {
+				stringChannel <- inputEvent{string(runeRead), nil}
+			}
 		}
 	}
 }
