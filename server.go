@@ -16,7 +16,10 @@ func handleConnection(s ssh.Session) {
 
 	log.Printf("Public key: %v", s.PublicKey())
 	log.Printf("Environ: %v", s.Environ())
-	log.Printf("Command: %v", s.Command())
+	if len(s.Command()) > 0 {
+		s.Write([]byte("Commands are not supported.\n"))
+		s.Close()
+	}
 
 	done := s.Context().Done()
 	tick := time.Tick(1 * time.Second)
