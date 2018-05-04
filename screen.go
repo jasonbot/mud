@@ -12,6 +12,7 @@ import (
 // Screen represents a UI screen. For now, just an SSH terminal.
 type Screen interface {
 	Render()
+	Reset()
 }
 
 type sshScreen struct {
@@ -23,6 +24,9 @@ type sshScreen struct {
 	refreshed  bool
 }
 
+const allowMouseInput string = "\x1b[?1003h"
+const resetScreen string = "\x1bc"
+
 func (screen *sshScreen) Render() {
 	if screen.screenSize.Height < 20 || screen.screenSize.Width < 80 {
 		clear := cursor.ClearEntireScreen()
@@ -33,13 +37,12 @@ func (screen *sshScreen) Render() {
 	}
 
 	if !screen.refreshed {
-		clear := cursor.ClearEntireScreen()
+		clear := cursor.ClearEntireScreen() + allowMouseInput
 		io.WriteString(screen.session, clear)
 		move := cursor.MoveTo(screen.screenSize.Height, screen.screenSize.Width-10)
 		io.WriteString(screen.session,
 			fmt.Sprintf("%sRender %v", move, screen.renderct))
 		screen.refreshed = true
-
 	}
 	move := cursor.MoveTo(2, 2)
 	color := ansi.ColorCode("blue+b")
@@ -49,6 +52,10 @@ func (screen *sshScreen) Render() {
 
 	io.WriteString(screen.session,
 		fmt.Sprintf("%s%sRender %v%s\n", move, color, screen.renderct, reset))
+}
+
+func (screen *sshScreen) Reset() {
+	io.WriteString(screen.session, fmt.Sprintf("%s👋\n", resetScreen))
 }
 
 func (screen *sshScreen) watchSSHScreen(resizeChan <-chan ssh.Window) {

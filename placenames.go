@@ -40,7 +40,7 @@ func randomName() string {
 }
 
 // RandomPlaceName generates a random place name
-func RandomPlaceName() string {
+func randomPlaceName() string {
 	name := ""
 	for w := 0; w < 1+rand.Int()%2; w++ {
 		if len(name) > 0 {
@@ -60,7 +60,7 @@ func RandomPlaceName() string {
 	}
 
 	if len(name) > 25 {
-		return RandomPlaceName()
+		return randomPlaceName()
 	}
 
 	return strings.Title(name)

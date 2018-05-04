@@ -2,7 +2,9 @@ package mud
 
 import (
 	"bufio"
+	"context"
 	"errors"
+	"log"
 	"strconv"
 	"sync"
 	"time"
@@ -17,6 +19,7 @@ const (
 	sOUTOFSEQUENCE = iota
 	sINESCAPE
 	sDIRECTIVE
+	sQUESTION
 )
 
 // sleepThenReport is a timeout sequence so that if the escape key is pressed it will register
@@ -31,7 +34,7 @@ func sleepThenReport(stringChannel chan<- inputEvent, myOnce *sync.Once, state *
 	})
 }
 
-func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent) {
+func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel context.CancelFunc) {
 	inputGone := errors.New("Input ended")
 	inEscapeSequence := sOUTOFSEQUENCE
 	var myOnce *sync.Once
@@ -45,8 +48,12 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent) {
 	for {
 		runeRead, _, err := reader.ReadRune()
 
+		log.Printf("RUNE READ %v %v", runeRead, strconv.QuoteRune(runeRead))
+
 		if err != nil || runeRead == 3 {
 			stringChannel <- inputEvent{"", inputGone}
+			cancel()
+			return
 		}
 
 		if myOnce != nil {

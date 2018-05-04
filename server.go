@@ -2,8 +2,8 @@ package mud
 
 import (
 	"bufio"
+	"context"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/gliderlabs/ssh"
@@ -12,6 +12,7 @@ import (
 func handleConnection(builder WorldBuilder, s ssh.Session) {
 	user := builder.GetUser(s.User())
 	screen := NewSSHScreen(s, builder, user)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	log.Printf("Connected with %v (as %v)", s.RemoteAddr(), user)
 	if len(s.Command()) > 0 {
@@ -24,21 +25,26 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 	stringInput := make(chan inputEvent, 1)
 	reader := bufio.NewReader(s)
 
-	go handleKeys(reader, stringInput)
+	go handleKeys(reader, stringInput, cancel)
 
 	for {
 		select {
 		case inputString := <-stringInput:
-			log.Printf("Got string s: %v err: %v", strconv.Quote(inputString.inputString), inputString.err)
+			// log.Printf("Got string s: %v err: %v", strconv.Quote(inputString.inputString), inputString.err)
 			if inputString.err != nil {
+				screen.Reset()
 				s.Close()
 				continue
 			}
+		case <-ctx.Done():
+			cancel()
 		case <-tick:
 			screen.Render()
 			continue
 		case <-done:
 			log.Printf("Disconnected %v", s.RemoteAddr())
+			screen.Reset()
+			s.Close()
 			return
 		}
 	}
