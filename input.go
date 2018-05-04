@@ -97,7 +97,7 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel co
 				ny, _ := reader.ReadByte()
 
 				pt := Point{X: uint32(nx) - 32, Y: uint32(ny) - 32}
-				log.Printf("GOT IT: %s %v @ %v", strconv.FormatInt(int64(b), 2), b, pt)
+				log.Printf("GOT IT: %32b %v @ %v", b, b, pt)
 
 			default:
 				stringChannel <- inputEvent{strconv.QuoteRune(runeRead), nil}
