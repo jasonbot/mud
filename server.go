@@ -9,9 +9,9 @@ import (
 	"github.com/gliderlabs/ssh"
 )
 
-func handleConnection(w World, s ssh.Session) {
-	user := w.GetUser(s.User())
-	screen := NewSSHScreen(s, w, user)
+func handleConnection(builder WorldBuilder, s ssh.Session) {
+	user := builder.GetUser(s.User())
+	screen := NewSSHScreen(s, builder, user)
 
 	log.Printf("Connected with %v (as %v)", s.RemoteAddr(), user)
 	if len(s.Command()) > 0 {
@@ -48,11 +48,12 @@ func handleConnection(w World, s ssh.Session) {
 func Serve() {
 	world := LoadWorldFromDB("./world.db")
 	defer world.Close()
+	builder := NewWorldBuilder(world)
 
 	privateKey := makeKeyFiles()
 
 	log.Println("Starting SSH server on :2222")
 	log.Fatal(ssh.ListenAndServe(":2222", func(s ssh.Session) {
-		handleConnection(world, s)
+		handleConnection(builder, s)
 	}, ssh.HostKeyFile(privateKey)))
 }

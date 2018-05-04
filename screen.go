@@ -16,7 +16,7 @@ type Screen interface {
 
 type sshScreen struct {
 	session    ssh.Session
-	world      World
+	builder    WorldBuilder
 	user       User
 	screenSize ssh.Window
 	renderct   uint64
@@ -66,10 +66,10 @@ func (screen *sshScreen) watchSSHScreen(resizeChan <-chan ssh.Window) {
 }
 
 // NewSSHScreen manages the window rendering for a game session
-func NewSSHScreen(session ssh.Session, world World, user User) Screen {
+func NewSSHScreen(session ssh.Session, builder WorldBuilder, user User) Screen {
 	pty, resize, isPty := session.Pty()
 
-	screen := sshScreen{session: session, world: world, user: user, screenSize: pty.Window}
+	screen := sshScreen{session: session, builder: builder, user: user, screenSize: pty.Window}
 
 	if isPty {
 		go screen.watchSSHScreen(resize)
