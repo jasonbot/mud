@@ -59,6 +59,10 @@ func RandomPlaceName() string {
 		}
 	}
 
+	if len(name) > 25 {
+		return RandomPlaceName()
+	}
+
 	return strings.Title(name)
 }
 
@@ -67,7 +71,7 @@ func init() {
 	nucleae = []string{"en", "em", "ul", "er", "il", "po", "to"}
 	vowels = []string{"a", "i", "u", "e", "o"}
 	codae = []string{"p", "t", "k", "f", "s", "sh", "os", "ers", ""}
-	prefixes = []string{"penrhyn", "sir", "newydd", "pant", "new ", "old ", "den", "high", "ast", "black", "white", "green", "castle", "heck", "hell", "button", "glen", "myr", "griffin", "lion", "bear", "pegasus", "corn"}
-	middles = []string{"helms", "al", "ox", "horse", "tree", "stone", "men", "fond", "muck", "cross", "snake", "", ""}
-	suffixes = []string{"fill", "sley", "well", "stone", "wich", "ddych", "thorpe", "den", "ton", "chester", "worth", "land", "hole", "park", " hole", " corner", " bend", " place", " mawr"}
+	prefixes = []string{"nor", "sur", "wess", "ess", "jer", "hamp", "penrhyn", "trans", "mid", "man", "men", "sir", "dun", "beas", "newydd", "pant", "new ", "old ", "den", "high", "ast", "black", "white", "green", "castle", "heck", "hell", "button", "glen", "myr", "griffin", "lion", "bear", "pegasus", "sheep", "goat", "grouse", "pelican", "gull", "sparrow", "hawks", "starling", "badger", "otter", "tiger", "goose", "hogs", "hedgehog", "mouse", "shields", "swords", "spears", "cloaks", "gloven", "circus", "corn", "gren"}
+	middles = []string{"helms", "al", "ox", "horse", "tree", "sylvania", "stone", "men", "fond", "muck", "cross", "snake", "yank", "her", "dam", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""}
+	suffixes = []string{"fill", "sley", "sey", "spey", "well", "stone", "wich", "ddych", "thorpe", "den", "ton", "chester", "worth", "land", "hole", "park", "ware", "ine", "pile", "ina", "feld", "hoff", "wind", "dal", "hope", "kirk", "cen", "eux", "ans", "mont", "noble", "hole", "corner", "bend", "place", "mawr", "circle", "square", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""}
 }
