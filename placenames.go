@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-var onsets, vowels, nucleae, codae []string
+var onsets, vowels, nucleae, codae, prefixes, middles, suffixes []string
 
 func randomOnset() string {
 	if rand.Int()%2 == 0 {
@@ -35,6 +35,10 @@ func randomRhyme(inWord bool) string {
 	return randomVowel() + randomCoda()
 }
 
+func randomName() string {
+	return prefixes[rand.Int()%len(prefixes)] + middles[rand.Int()%len(middles)] + suffixes[rand.Int()%len(suffixes)]
+}
+
 // RandomPlaceName generates a random place name
 func RandomPlaceName() string {
 	name := ""
@@ -42,8 +46,16 @@ func RandomPlaceName() string {
 		if len(name) > 0 {
 			name += " "
 		}
-		for i := 0; i < 1+rand.Int()%2; i++ {
-			name += randomOnset() + randomRhyme(i > 0)
+		if rand.Int()%2 == 0 {
+			if rand.Int()%2 == 0 {
+				name += prefixes[rand.Int()%len(prefixes)]
+			}
+			for i := 0; i < 1+rand.Int()%2; i++ {
+				name += randomOnset() + randomRhyme(i > 0)
+			}
+			name += suffixes[rand.Int()%len(suffixes)]
+		} else {
+			name += randomName()
 		}
 	}
 
@@ -51,8 +63,11 @@ func RandomPlaceName() string {
 }
 
 func init() {
-	onsets = []string{"b", "d", "g", "m", "n", "v", "th", "l", "r", "h", "zh", "y"}
-	nucleae = []string{"en", "em", "ul", "er", "ilh", "po", "to"}
+	onsets = []string{"s", "sp", "spr", "spl", "th", "z", "g", "gr", "n", "m"}
+	nucleae = []string{"en", "em", "ul", "er", "il", "po", "to"}
 	vowels = []string{"a", "i", "u", "e", "o"}
-	codae = []string{"p", "t", "k", "f", "s", "sh", ""}
+	codae = []string{"p", "t", "k", "f", "s", "sh", "os", "ers", ""}
+	prefixes = []string{"penrhyn", "sir", "newydd", "pant", "new ", "old ", "den", "high", "ast", "black", "white", "green", "castle", "heck", "hell", "button", "glen", "myr", "griffin", "lion", "bear", "pegasus", "corn"}
+	middles = []string{"helms", "al", "ox", "horse", "tree", "stone", "men", "fond", "muck", "cross", "snake", "", ""}
+	suffixes = []string{"fill", "sley", "well", "stone", "wich", "ddych", "thorpe", "den", "ton", "chester", "worth", "land", "hole", "park", " hole", " corner", " bend", " place", " mawr"}
 }
