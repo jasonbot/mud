@@ -10,8 +10,8 @@ import (
 
 // Point represents an (X,Y) pair in the world
 type Point struct {
-	x uint32
-	y uint32
+	X uint32
+	Y uint32
 }
 
 // Bytes Dumps a point into a byte array

@@ -86,6 +86,19 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel co
 				stringChannel <- inputEvent{"RIGHT", nil}
 			case 'D':
 				stringChannel <- inputEvent{"LEFT", nil}
+			case 'M':
+				b, err := reader.ReadByte()
+				if err != nil {
+					cancel()
+					return
+				}
+
+				nx, _ := reader.ReadByte()
+				ny, _ := reader.ReadByte()
+
+				pt := Point{X: uint32(nx) - 32, Y: uint32(ny) - 32}
+				log.Printf("GOT IT: %s %v @ %v", strconv.FormatInt(int64(b), 2), b, pt)
+
 			default:
 				stringChannel <- inputEvent{strconv.QuoteRune(runeRead), nil}
 			}
