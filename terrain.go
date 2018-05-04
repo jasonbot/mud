@@ -67,6 +67,7 @@ const (
 type CellInfo struct {
 	TerrainType string `json:""`
 	Exits       byte   `json:""`
+	RegionName  string `json:""`
 }
 
 // CellInfoFromBytes reads a CellInfo from raw bytes
@@ -90,7 +91,7 @@ func init() {
 		log.Printf("Terrain info file %s errored: %v; using bad defaults.", terrainInfoFile, err)
 
 		CellTypes[DefaultCellType] = CellTerrain{
-			Name:            DefaultCellType,
+			Name:            "Clearing of %s",
 			Radius:          1,
 			FGcolor:         184,
 			BGcolor:         0,
@@ -98,7 +99,7 @@ func init() {
 			Representations: []rune{rune('+')}}
 
 		CellTypes[DefaultCellType+"-grass"] = CellTerrain{
-			Name:            DefaultCellType + "-grass",
+			Name:            "%s grasslands",
 			Radius:          10,
 			FGcolor:         112,
 			BGcolor:         154,
