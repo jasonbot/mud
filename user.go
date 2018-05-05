@@ -9,21 +9,27 @@ import (
 
 // User represents an active user in the system.
 type User interface {
+	Username() string
 	Reload()
 	Save()
 }
 
 // UserData is a JSON-serializable set of information about a User.
 type UserData struct {
-	Username    string `json:""`
-	X           uint32 `json:""`
-	Y           uint32 `json:""`
-	Initialized bool   `json:""`
+	Username    string          `json:""`
+	X           uint32          `json:""`
+	Y           uint32          `json:""`
+	Initialized bool            `json:""`
+	PublicKeys  map[string]bool `json:""`
 }
 
 type dbUser struct {
 	UserData
 	world *dbWorld
+}
+
+func (user *dbUser) Username() string {
+	return user.UserData.Username
 }
 
 func (user *dbUser) Reload() {
