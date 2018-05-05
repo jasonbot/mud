@@ -25,10 +25,10 @@ const (
 // sleepThenReport is a timeout sequence so that if the escape key is pressed it will register
 // as a keypress within a reasonable period of time with the input loop, even if the input
 // state machine is in its "inside ESCAPE press listening for extended sequence" state.
-func sleepThenReport(stringChannel chan<- inputEvent, myOnce *sync.Once, state *int) {
+func sleepThenReport(stringChannel chan<- inputEvent, escapeCanceller *sync.Once, state *int) {
 	time.Sleep(100 * time.Millisecond)
 
-	myOnce.Do(func() {
+	escapeCanceller.Do(func() {
 		*state = sOUTOFSEQUENCE
 		stringChannel <- inputEvent{"ESCAPE", Point{}, nil}
 	})
@@ -37,7 +37,7 @@ func sleepThenReport(stringChannel chan<- inputEvent, myOnce *sync.Once, state *
 func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel context.CancelFunc) {
 	inputGone := errors.New("Input ended")
 	inEscapeSequence := sOUTOFSEQUENCE
-	var myOnce *sync.Once
+	var escapeCanceller *sync.Once
 	emptyPoint := Point{}
 
 	codeMap := map[rune]string{
@@ -55,14 +55,14 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel co
 			return
 		}
 
-		if myOnce != nil {
-			myOnce.Do(func() { myOnce = nil })
+		if escapeCanceller != nil {
+			escapeCanceller.Do(func() { escapeCanceller = nil })
 		}
 
 		if inEscapeSequence == sOUTOFSEQUENCE && runeRead == 27 {
 			inEscapeSequence = sINESCAPE
-			myOnce = new(sync.Once)
-			go sleepThenReport(stringChannel, myOnce, &inEscapeSequence)
+			escapeCanceller = new(sync.Once)
+			go sleepThenReport(stringChannel, escapeCanceller, &inEscapeSequence)
 		} else if inEscapeSequence == sINESCAPE {
 			if string(runeRead) == "[" {
 				inEscapeSequence = sDIRECTIVE
@@ -70,8 +70,8 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel co
 				stringChannel <- inputEvent{"ESCAPE", emptyPoint, nil}
 			} else {
 				inEscapeSequence = sOUTOFSEQUENCE
-				if myOnce != nil {
-					myOnce.Do(func() { myOnce = nil })
+				if escapeCanceller != nil {
+					escapeCanceller.Do(func() { escapeCanceller = nil })
 				}
 				stringChannel <- inputEvent{string(runeRead), emptyPoint, nil}
 			}
@@ -117,7 +117,6 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel co
 				if len(event) > 0 {
 					stringChannel <- inputEvent{event, pt, nil}
 				}
-
 			default:
 				stringChannel <- inputEvent{strconv.QuoteRune(runeRead), emptyPoint, nil}
 			}
