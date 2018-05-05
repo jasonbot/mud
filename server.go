@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"log"
+	"math/rand"
 	"time"
 
 	gossh "golang.org/x/crypto/ssh"
@@ -70,6 +71,8 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 
 // Serve runs the main server loop.
 func Serve() {
+	rand.Seed(time.Now().Unix())
+
 	world := LoadWorldFromDB("./world.db")
 	defer world.Close()
 	builder := NewWorldBuilder(world)
