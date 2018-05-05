@@ -40,27 +40,33 @@ func (w *dbWorld) GetCellInfo(x, y uint32) CellInfo {
 	var cellInfo CellInfo
 	w.database.View(func(tx *bolt.Tx) error {
 
-		bucket, err := tx.CreateBucketIfNotExists([]byte("terrain"))
-
-		if err != nil {
-			return err
-		}
+		bucket := tx.Bucket([]byte("terrain"))
 
 		pt := Point{x, y}
 		record := bucket.Get(pt.Bytes())
 
 		if record != nil {
-			cellInfo = CellInfoFromBytes(record)
+			cellInfo = cellInfoFromBytes(record)
 		}
 
 		return nil
 	})
 
+	cellInfo.RegionName = getPlaceNameByIDFromDB(cellInfo.RegionNameID, w.database)
+
 	return cellInfo
 }
 
-func (w *dbWorld) SetCellInfo(uint32, uint32, CellInfo) {
+func (w *dbWorld) SetCellInfo(x, y uint32, cellInfo CellInfo) {
+	w.database.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("terrain"))
 
+		pt := Point{x, y}
+		bytes := cellInfoToBytes(&cellInfo)
+		err := bucket.Put(pt.Bytes(), bytes)
+
+		return err
+	})
 }
 
 func (w *dbWorld) GetTerrainMap(x1, y1, x2, y2 uint32) [][]CellTerrain {
@@ -84,6 +90,21 @@ func (w *dbWorld) load() {
 	if err != nil {
 		panic(err)
 	}
+
+	// Make default tables
+	db.Update(func(tx *bolt.Tx) error {
+		buckets := []string{"users", "terrain", "placenames"}
+
+		for _, bucket := range buckets {
+			_, err := tx.CreateBucketIfNotExists([]byte(bucket))
+
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 
 	w.database = db
 }

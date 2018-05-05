@@ -1,8 +1,11 @@
 package mud
 
 import (
+	"encoding/binary"
 	"math/rand"
 	"strings"
+
+	bolt "github.com/coreos/bbolt"
 )
 
 var onsets, vowels, nucleae, codae, prefixes, middles, suffixes []string
@@ -64,6 +67,45 @@ func randomPlaceName() string {
 	}
 
 	return strings.Title(name)
+}
+
+func newPlaceNameInDB(db *bolt.DB) (uint64, string) {
+	placeName := randomPlaceName()
+
+	db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("placenames"))
+
+		id, err := bucket.NextSequence()
+
+		if err != nil {
+			return err
+		}
+
+		b := make([]byte, 8)
+		binary.BigEndian.PutUint64(b, uint64(id))
+		bucket.Put(b, []byte(placeName))
+		return nil
+	})
+	return uint64(0), "Delaware"
+}
+
+func getPlaceNameByIDFromDB(id uint64, db *bolt.DB) string {
+	placeName := "Delaware"
+
+	db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("placenames"))
+		b := make([]byte, 8)
+		binary.BigEndian.PutUint64(b, uint64(id))
+		record := bucket.Get(b)
+
+		if record != nil {
+			placeName = string(record)
+		}
+
+		return nil
+	})
+
+	return placeName
 }
 
 func init() {

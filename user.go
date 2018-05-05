@@ -40,13 +40,8 @@ func (user *dbUser) Username() string {
 }
 
 func (user *dbUser) Reload() {
-	user.world.database.Update(func(tx *bolt.Tx) error {
-		bucket, err := tx.CreateBucketIfNotExists([]byte("users"))
-
-		if err != nil {
-			log.Printf("Error fectching %v...", err)
-			return err
-		}
+	user.world.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("users"))
 
 		record := bucket.Get([]byte(user.UserData.Username))
 
@@ -70,11 +65,7 @@ func (user *dbUser) Save() {
 	}
 
 	user.world.database.Update(func(tx *bolt.Tx) error {
-		bucket, err := tx.CreateBucketIfNotExists([]byte("users"))
-
-		if err != nil {
-			return err
-		}
+		bucket := tx.Bucket([]byte("users"))
 
 		err = bucket.Put([]byte(user.UserData.Username), bytes)
 
