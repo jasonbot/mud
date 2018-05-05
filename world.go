@@ -32,7 +32,8 @@ func (w *dbWorld) GetUser(username string) User {
 }
 
 func (w *dbWorld) newUser(username string) UserData {
-	return UserData{username: username, x: 1024, y: 1024}
+	// (0x7fffffff, 0x7fffffff) is the exact middle of the world
+	return UserData{Username: username, X: 0x7fffffff, Y: 0x7fffffff}
 }
 
 func (w *dbWorld) GetCellInfo(x, y uint32) CellInfo {

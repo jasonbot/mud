@@ -15,10 +15,10 @@ type User interface {
 
 // UserData is a JSON-serializable set of information about a User.
 type UserData struct {
-	username    string `json:""`
-	x           uint32 `json:""`
-	y           uint32 `json:""`
-	initialized bool   `json:""`
+	Username    string `json:""`
+	X           uint32 `json:""`
+	Y           uint32 `json:""`
+	Initialized bool   `json:""`
 }
 
 type dbUser struct {
@@ -27,18 +27,21 @@ type dbUser struct {
 }
 
 func (user *dbUser) Reload() {
-	user.world.database.View(func(tx *bolt.Tx) error {
+	user.world.database.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists([]byte("users"))
 
 		if err != nil {
+			log.Printf("Error fectching %v...", err)
 			return err
 		}
 
-		record := bucket.Get([]byte(user.UserData.username))
+		record := bucket.Get([]byte(user.UserData.Username))
 
 		if record == nil {
-			user.UserData = user.world.newUser(user.UserData.username)
+			log.Printf("User %s does not exist, creating anew...", user.UserData.Username)
+			user.UserData = user.world.newUser(user.UserData.Username)
 		} else {
+			log.Printf("User %s loaded: %s", user.UserData.Username, string(record))
 			json.Unmarshal(record, &(user.UserData))
 		}
 
@@ -60,15 +63,16 @@ func (user *dbUser) Save() {
 			return err
 		}
 
-		err = bucket.Put([]byte(user.UserData.username), bytes)
+		err = bucket.Put([]byte(user.UserData.Username), bytes)
 
 		return err
 	})
 }
 
 func getUserFromDB(world *dbWorld, username string) User {
+	log.Printf("Looking up %s", username)
 	user := dbUser{UserData: UserData{
-		username: username},
+		Username: username},
 		world: world}
 
 	user.Reload()
