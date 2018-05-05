@@ -16,15 +16,28 @@ const mudPubkey = "MUD-pubkey"
 func handleConnection(builder WorldBuilder, s ssh.Session) {
 	user := builder.GetUser(s.User())
 	screen := NewSSHScreen(s, builder, user)
-	ctx, cancel := context.WithCancel(context.Background())
-
 	pubKey, _ := s.Context().Value(mudPubkey).(string)
+	userSSH, ok := user.(UserSSHAuthentication)
 
-	log.Printf("Connected with %v (as %v - %v)", s.RemoteAddr(), user.Username(), pubKey)
 	if len(s.Command()) > 0 {
 		s.Write([]byte("Commands are not supported.\n"))
 		s.Close()
 	}
+
+	if ok {
+		if userSSH.SSHKeysEmpty() {
+			userSSH.AddSSHKey(pubKey)
+			log.Printf("Saving SSH key for %s", user.Username())
+		} else if !userSSH.ValidateSSHKey(pubKey) {
+			s.Write([]byte("This is not the SSH key authenticated for this user. Try another username.\n"))
+			log.Printf("User %s doesn't have this key.", user.Username())
+			return
+		}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	log.Printf("Connected with host %v (as %v)", s.RemoteAddr(), user.Username())
 
 	done := s.Context().Done()
 	tick := time.Tick(250 * time.Millisecond)
@@ -65,7 +78,6 @@ func Serve() {
 
 	publicKeyOption := ssh.PublicKeyAuth(func(ctx ssh.Context, key ssh.PublicKey) bool {
 		marshal := gossh.MarshalAuthorizedKey(key)
-		log.Printf("Connected with public key: %v", string(marshal))
 		ctx.SetValue(mudPubkey, string(marshal))
 		return true
 	})

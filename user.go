@@ -14,6 +14,13 @@ type User interface {
 	Save()
 }
 
+// UserSSHAuthentication for storing SSH auth.
+type UserSSHAuthentication interface {
+	SSHKeysEmpty() bool
+	ValidateSSHKey(string) bool
+	AddSSHKey(string)
+}
+
 // UserData is a JSON-serializable set of information about a User.
 type UserData struct {
 	Username    string          `json:""`
@@ -47,7 +54,7 @@ func (user *dbUser) Reload() {
 			log.Printf("User %s does not exist, creating anew...", user.UserData.Username)
 			user.UserData = user.world.newUser(user.UserData.Username)
 		} else {
-			log.Printf("User %s loaded: %s", user.UserData.Username, string(record))
+			log.Printf("User %s loaded from DB", user.UserData.Username)
 			json.Unmarshal(record, &(user.UserData))
 		}
 
@@ -73,6 +80,20 @@ func (user *dbUser) Save() {
 
 		return err
 	})
+}
+
+func (user *dbUser) SSHKeysEmpty() bool {
+	return len(user.UserData.PublicKeys) == 0
+}
+
+func (user *dbUser) ValidateSSHKey(sshKey string) bool {
+	val, ok := user.UserData.PublicKeys[sshKey]
+	return val && ok
+}
+
+func (user *dbUser) AddSSHKey(sshKey string) {
+	user.UserData.PublicKeys[sshKey] = true
+	user.Save()
 }
 
 func getUserFromDB(world *dbWorld, username string) User {
