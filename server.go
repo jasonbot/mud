@@ -30,7 +30,6 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 	for {
 		select {
 		case inputString := <-stringInput:
-			// log.Printf("Got string s: %v err: %v", strconv.Quote(inputString.inputString), inputString.err)
 			if inputString.err != nil {
 				screen.Reset()
 				s.Close()

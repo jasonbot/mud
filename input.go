@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"log"
 	"strconv"
 	"sync"
 	"time"
@@ -12,6 +11,7 @@ import (
 
 type inputEvent struct {
 	inputString string
+	position    Point
 	err         error
 }
 
@@ -30,7 +30,7 @@ func sleepThenReport(stringChannel chan<- inputEvent, myOnce *sync.Once, state *
 
 	myOnce.Do(func() {
 		*state = sOUTOFSEQUENCE
-		stringChannel <- inputEvent{"ESCAPE", nil}
+		stringChannel <- inputEvent{"ESCAPE", Point{}, nil}
 	})
 }
 
@@ -38,6 +38,7 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel co
 	inputGone := errors.New("Input ended")
 	inEscapeSequence := sOUTOFSEQUENCE
 	var myOnce *sync.Once
+	emptyPoint := Point{}
 
 	codeMap := map[rune]string{
 		rune(9):   "TAB",
@@ -48,10 +49,8 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel co
 	for {
 		runeRead, _, err := reader.ReadRune()
 
-		log.Printf("RUNE READ %v %v", runeRead, strconv.QuoteRune(runeRead))
-
 		if err != nil || runeRead == 3 {
-			stringChannel <- inputEvent{"", inputGone}
+			stringChannel <- inputEvent{"", emptyPoint, inputGone}
 			cancel()
 			return
 		}
@@ -68,26 +67,26 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel co
 			if string(runeRead) == "[" {
 				inEscapeSequence = sDIRECTIVE
 			} else if runeRead == 27 {
-				stringChannel <- inputEvent{"ESCAPE", nil}
+				stringChannel <- inputEvent{"ESCAPE", emptyPoint, nil}
 			} else {
 				inEscapeSequence = sOUTOFSEQUENCE
 				if myOnce != nil {
 					myOnce.Do(func() { myOnce = nil })
 				}
-				stringChannel <- inputEvent{string(runeRead), nil}
+				stringChannel <- inputEvent{string(runeRead), emptyPoint, nil}
 			}
 		} else if inEscapeSequence == sDIRECTIVE {
 			switch runeRead {
 			case 'A':
-				stringChannel <- inputEvent{"UP", nil}
+				stringChannel <- inputEvent{"UP", emptyPoint, nil}
 			case 'B':
-				stringChannel <- inputEvent{"DOWN", nil}
+				stringChannel <- inputEvent{"DOWN", emptyPoint, nil}
 			case 'C':
-				stringChannel <- inputEvent{"RIGHT", nil}
+				stringChannel <- inputEvent{"RIGHT", emptyPoint, nil}
 			case 'D':
-				stringChannel <- inputEvent{"LEFT", nil}
+				stringChannel <- inputEvent{"LEFT", emptyPoint, nil}
 			case 'M':
-				b, err := reader.ReadByte()
+				code, err := reader.ReadByte()
 				if err != nil {
 					cancel()
 					return
@@ -97,17 +96,37 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel co
 				ny, _ := reader.ReadByte()
 
 				pt := Point{X: uint32(nx) - 32, Y: uint32(ny) - 32}
-				log.Printf("GOT IT: %32b %v @ %v", b, b, pt)
+
+				event := ""
+
+				switch code {
+				case 32:
+					event = "MOUSEDOWN"
+				case 33:
+					event = "MIDDLEDOWN"
+				case 35:
+					event = "MOUSEUP"
+				case 67:
+					event = "MOUSEMOVE"
+				case 96:
+					event = "SCROLLUP"
+				case 97:
+					event = "SCROLLDOWN"
+				}
+
+				if len(event) > 0 {
+					stringChannel <- inputEvent{event, pt, nil}
+				}
 
 			default:
-				stringChannel <- inputEvent{strconv.QuoteRune(runeRead), nil}
+				stringChannel <- inputEvent{strconv.QuoteRune(runeRead), emptyPoint, nil}
 			}
 			inEscapeSequence = sOUTOFSEQUENCE
 		} else {
 			if newString, ok := codeMap[runeRead]; ok {
-				stringChannel <- inputEvent{newString, nil}
+				stringChannel <- inputEvent{newString, emptyPoint, nil}
 			} else {
-				stringChannel <- inputEvent{string(runeRead), nil}
+				stringChannel <- inputEvent{string(runeRead), emptyPoint, nil}
 			}
 		}
 	}
