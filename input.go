@@ -26,7 +26,7 @@ const (
 // as a keypress within a reasonable period of time with the input loop, even if the input
 // state machine is in its "inside ESCAPE press listening for extended sequence" state.
 func sleepThenReport(stringChannel chan<- inputEvent, escapeCanceller *sync.Once, state *int) {
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 
 	escapeCanceller.Do(func() {
 		*state = sOUTOFSEQUENCE
