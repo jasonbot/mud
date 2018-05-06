@@ -5,6 +5,11 @@ type WorldBuilder interface {
 	StepInto(x1, y1, x2, y2 uint32)
 	World() World
 	GetUser(string) User
+
+	MoveUserNorth(user User)
+	MoveUserSouth(user User)
+	MoveUserEast(user User)
+	MoveUserWest(user User)
 }
 
 // CellRenderInfo holds the minimum info for rendering a plot of map in a terminal
@@ -32,6 +37,40 @@ func (builder *worldBuilder) World() World {
 
 func (builder *worldBuilder) GetUser(username string) User {
 	return builder.world.GetUser(username)
+}
+
+func (builder *worldBuilder) MoveUserNorth(user User) {
+	location := user.Location()
+
+	if location.Y > 0 {
+
+	}
+}
+
+func (builder *worldBuilder) MoveUserSouth(user User) {
+	location := user.Location()
+	_, height := builder.world.GetDimensions()
+
+	if location.Y < height-1 {
+
+	}
+}
+
+func (builder *worldBuilder) MoveUserEast(user User) {
+	location := user.Location()
+
+	if location.X > 0 {
+
+	}
+}
+
+func (builder *worldBuilder) MoveUserWest(user User) {
+	location := user.Location()
+	width, _ := builder.world.GetDimensions()
+
+	if location.X < width-1 {
+
+	}
 }
 
 func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]CellRenderInfo {

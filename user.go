@@ -11,6 +11,12 @@ import (
 type User interface {
 	Username() string
 	Location() *Point
+
+	MoveNorth()
+	MoveSouth()
+	MoveEast()
+	MoveWest()
+
 	Reload()
 	Save()
 }
@@ -42,6 +48,38 @@ func (user *dbUser) Username() string {
 
 func (user *dbUser) Location() *Point {
 	return &Point{X: user.X, Y: user.Y}
+}
+
+func (user *dbUser) MoveNorth() {
+	if user.Y > 0 {
+		user.Y--
+		user.Save()
+	}
+}
+
+func (user *dbUser) MoveSouth() {
+	_, height := user.world.GetDimensions()
+
+	if user.Y < height-1 {
+		user.Y++
+		user.Save()
+	}
+}
+
+func (user *dbUser) MoveEast() {
+	width, _ := user.world.GetDimensions()
+
+	if user.X < width-1 {
+		user.X++
+		user.Save()
+	}
+}
+
+func (user *dbUser) MoveWest() {
+	if user.X > 0 {
+		user.X--
+		user.Save()
+	}
 }
 
 func (user *dbUser) Reload() {
