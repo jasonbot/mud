@@ -1,5 +1,7 @@
 package mud
 
+import "math/rand"
+
 // WorldBuilder handles map generation on top of the World, which is more a data store.
 type WorldBuilder interface {
 	StepInto(x1, y1, x2, y2 uint32)
@@ -29,6 +31,23 @@ type worldBuilder struct {
 }
 
 func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) {
+	newCell := builder.world.GetCellInfo(x2, y2)
+
+	if newCell == nil {
+		currentCell := builder.world.GetCellInfo(x1, y1)
+
+		if currentCell == nil {
+			return
+		}
+
+		cellType := CellTypes[currentCell.TerrainType]
+
+		newCellType := cellType.Transitions[rand.Uint64()%uint64(len(cellType.Transitions))]
+
+		newCell := CellInfo{TerrainType: newCellType, RegionNameID: currentCell.RegionNameID}
+
+		builder.world.SetCellInfo(x2, y2, &newCell)
+	}
 }
 
 func (builder *worldBuilder) World() World {
@@ -43,7 +62,8 @@ func (builder *worldBuilder) MoveUserNorth(user User) {
 	location := user.Location()
 
 	if location.Y > 0 {
-
+		builder.StepInto(location.X, location.Y, location.X, location.Y-1)
+		user.MoveNorth()
 	}
 }
 
@@ -52,7 +72,8 @@ func (builder *worldBuilder) MoveUserSouth(user User) {
 	_, height := builder.world.GetDimensions()
 
 	if location.Y < height-1 {
-
+		builder.StepInto(location.X, location.Y, location.X, location.Y+1)
+		user.MoveSouth()
 	}
 }
 
@@ -60,7 +81,8 @@ func (builder *worldBuilder) MoveUserEast(user User) {
 	location := user.Location()
 
 	if location.X > 0 {
-
+		builder.StepInto(location.X, location.Y, location.X+1, location.Y)
+		user.MoveEast()
 	}
 }
 
@@ -69,7 +91,8 @@ func (builder *worldBuilder) MoveUserWest(user User) {
 	width, _ := builder.world.GetDimensions()
 
 	if location.X < width-1 {
-
+		builder.StepInto(location.X, location.Y, location.X-1, location.Y)
+		user.MoveWest()
 	}
 }
 

@@ -110,7 +110,7 @@ func init() {
 			FGcolor:         112,
 			BGcolor:         154,
 			Transitions:     []string{DefaultCellType + "-grass"},
-			Representations: []rune{rune('⺾'), rune('艸'), rune('草')}}
+			Representations: []rune{rune('\\'), rune('.'), rune('/')}}
 
 		outBytes, _ := json.Marshal(CellTypes)
 

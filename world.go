@@ -88,8 +88,6 @@ func (w *dbWorld) SetCellInfo(x, y uint32, cellInfo *CellInfo) {
 		pt := Point{x, y}
 		bytes := cellInfoToBytes(cellInfo)
 
-		log.Printf("Setting cell at (%v, %v): %v %v", x, y, cellInfo, string(bytes))
-
 		err := bucket.Put(pt.Bytes(), bytes)
 
 		return err

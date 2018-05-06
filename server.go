@@ -65,8 +65,6 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			case "RIGHT":
 				builder.MoveUserEast(user)
 			}
-
-			log.Printf("KEY %v", inputString)
 		case <-ctx.Done():
 			cancel()
 		case <-tick:
