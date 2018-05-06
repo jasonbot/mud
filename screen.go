@@ -25,7 +25,7 @@ type sshScreen struct {
 	colorCodeCache map[string](func(string) string)
 }
 
-const allowMouseInput string = "\x1b[?1003h"
+const allowMouseInputAndHideCursor string = "\x1b[?1003h\x1b[?25h"
 const resetScreen string = "\x1bc"
 
 func (screen *sshScreen) colorFunc(color string) func(string) string {
@@ -55,7 +55,7 @@ func (screen *sshScreen) renderMap() {
 				rowText += screen.colorFunc(fmt.Sprintf("%v:%v", value.FGColor, value.BGColor))(string(mGlyph))
 			}
 
-			rowText += screen.colorFunc("clear")("|") + screen.colorFunc("red")(fmt.Sprintf("Line: %v", row))
+			rowText += screen.colorFunc("clear")("")
 			io.WriteString(screen.session, rowText)
 		}
 	}
@@ -71,7 +71,7 @@ func (screen *sshScreen) Render() {
 	}
 
 	if !screen.refreshed {
-		clear := cursor.ClearEntireScreen() + allowMouseInput
+		clear := cursor.ClearEntireScreen() + allowMouseInputAndHideCursor
 		io.WriteString(screen.session, clear)
 		screen.refreshed = true
 	}

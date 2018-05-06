@@ -40,15 +40,15 @@ func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]Cel
 		terrainMap[i] = make([]CellRenderInfo, width)
 	}
 
-	startx := int64(cx - (width / 2))
-	starty := int64(cy - (height / 2))
+	startx := cx - (width / uint32(2))
+	starty := cy - (height / uint32(2))
 
 	worldWidth, worldHeight := builder.world.GetDimensions()
 
 	for xd := int64(0); xd < int64(width); xd++ {
 		for yd := int64(0); yd < int64(height); yd++ {
-			if (startx+xd) >= 0 && startx < int64(worldWidth) && (starty+yd) >= 0 && (starty+yd) < int64(worldHeight) {
-				xcoord, ycoord := uint32(startx+xd), uint32(starty+yd)
+			if (int64(startx)+xd) >= 0 && (int64(startx)+xd) < int64(worldWidth) && (int64(starty)+yd) >= 0 && (int64(starty)+yd) < int64(worldHeight) {
+				xcoord, ycoord := uint32(int64(startx)+xd), uint32(int64(starty)+yd)
 				terrainInfo := CellTypes[builder.world.GetCellInfo(xcoord, ycoord).TerrainType]
 
 				renderGlyph := rune('·')
