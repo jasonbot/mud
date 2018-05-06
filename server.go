@@ -30,8 +30,8 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			userSSH.AddSSHKey(pubKey)
 			log.Printf("Saving SSH key for %s", user.Username())
 		} else if !userSSH.ValidateSSHKey(pubKey) {
-			s.Write([]byte("This is not the SSH key authenticated for this user. Try another username.\n"))
-			log.Printf("User %s doesn't have this key.", user.Username())
+			s.Write([]byte("This is not the SSH key verified for this user. Try another username.\n"))
+			log.Printf("User %s doesn't use this key.", user.Username())
 			return
 		}
 	}
@@ -41,7 +41,7 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 	log.Printf("Connected with host %v (as %v)", s.RemoteAddr(), user.Username())
 
 	done := s.Context().Done()
-	tick := time.Tick(250 * time.Millisecond)
+	tick := time.Tick(500 * time.Millisecond)
 	stringInput := make(chan inputEvent, 1)
 	reader := bufio.NewReader(s)
 
@@ -58,12 +58,16 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			switch inputString.inputString {
 			case "UP":
 				builder.MoveUserNorth(user)
+				screen.Render()
 			case "DOWN":
 				builder.MoveUserSouth(user)
+				screen.Render()
 			case "LEFT":
 				builder.MoveUserWest(user)
+				screen.Render()
 			case "RIGHT":
 				builder.MoveUserEast(user)
+				screen.Render()
 			}
 		case <-ctx.Done():
 			cancel()

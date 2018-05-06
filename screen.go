@@ -53,12 +53,22 @@ func (screen *sshScreen) renderMap() {
 
 		for row := range mapArray {
 			rowText := cursor.MoveTo(3+row, 2)
-			for _, value := range mapArray[row] {
+			for col, value := range mapArray[row] {
+				fgcolor := value.FGColor
+				bgcolor := value.BGColor
 				mGlyph := value.Glyph
+
 				if mGlyph == 0 {
 					mGlyph = rune('?')
 				}
-				rowText += screen.colorFunc(fmt.Sprintf("%v:%v", value.FGColor, value.BGColor))(string(mGlyph))
+
+				if (row == len(mapArray)/2) && (col == len(mapArray[row])/2) {
+					fgcolor = 160
+					bgcolor = 181
+					mGlyph = rune('#')
+				}
+
+				rowText += screen.colorFunc(fmt.Sprintf("%v:%v", fgcolor, bgcolor))(string(mGlyph))
 			}
 
 			rowText += screen.colorFunc("clear")("")
