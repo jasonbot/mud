@@ -35,17 +35,17 @@ const DefaultCellType string = "clearing"
 // CellTerrain stores rules about different cell's terrain types.
 // For 256 color colors check https://jonasjacek.github.io/colors/
 type CellTerrain struct {
-	Name            string   `json:""`
-	Permeable       bool     `json:""`           // Things like paths, rivers, etc. should be permeable so biomes don't suddenly stop geneating through them.
-	Blocking        bool     `json:""`           // Some terrain types are impassable; e.g. walls
-	Transitions     []string `json:""`           // Other cell types this can transition into when generating
-	PlaceName       string   `json:",omitempty"` // Formatstring to modify place name
-	Radius          uint16   `json:""`           // How far out to go; default of 0 should be significant somehow
-	Algorithm       string   `json:""`           // Default is radiateout; should have algos for e.g. town grid building etc.
-	FGcolor         byte     `json:""`           // SSH-display specific: the 256 color xterm color for FG
-	BGcolor         byte     `json:""`           // SSH-display specific: the 256 color xterm color for BG
-	Bold            bool     `json:""`           // SSH-display specific: bold the cell FG?
-	Representations []rune   `json:""`           // SSH-display specific: unicode chars to use to represent this cell on-screen
+	Name                string            `json:""`
+	Permeable           bool              `json:""`           // Things like paths, rivers, etc. should be permeable so biomes don't suddenly stop geneating through them.
+	Blocking            bool              `json:""`           // Some terrain types are impassable; e.g. walls
+	Transitions         []string          `json:""`           // Other cell types this can transition into when generating
+	PlaceName           string            `json:",omitempty"` // Formatstring to modify place name
+	Algorithm           string            `json:""`           // Default is radiateout; should have algos for e.g. town grid building etc.
+	AlgorithmParameters map[string]string `json:""`           // Helpers for terrain generator algorithm
+	FGcolor             byte              `json:""`           // SSH-display specific: the 256 color xterm color for FG
+	BGcolor             byte              `json:""`           // SSH-display specific: the 256 color xterm color for BG
+	Bold                bool              `json:""`           // SSH-display specific: bold the cell FG?
+	Representations     []rune            `json:""`           // SSH-display specific: unicode chars to use to represent this cell on-screen
 }
 
 // CellTypes is the list of cell types
@@ -97,20 +97,22 @@ func init() {
 		log.Printf("Terrain info file %s errored: %v; using bad defaults.", terrainInfoFile, err)
 
 		CellTypes[DefaultCellType] = CellTerrain{
-			Name:            "Clearing of %s",
-			Radius:          1,
-			FGcolor:         184,
-			BGcolor:         0,
-			Transitions:     []string{DefaultCellType + "-grass"},
-			Representations: []rune{rune('+')}}
+			Name:                "Clearing of %s",
+			Algorithm:           "once",
+			AlgorithmParameters: make(map[string]string),
+			FGcolor:             184,
+			BGcolor:             0,
+			Transitions:         []string{DefaultCellType + "-grass"},
+			Representations:     []rune{rune('+')}}
 
 		CellTypes[DefaultCellType+"-grass"] = CellTerrain{
-			Name:            "%s grasslands",
-			Radius:          10,
-			FGcolor:         112,
-			BGcolor:         154,
-			Transitions:     []string{DefaultCellType + "-grass"},
-			Representations: []rune{rune('\\'), rune('.'), rune('/')}}
+			Name:                "%s grasslands",
+			Algorithm:           "spread",
+			AlgorithmParameters: map[string]string{"radius": "5"},
+			FGcolor:             112,
+			BGcolor:             154,
+			Transitions:         []string{DefaultCellType + "-grass"},
+			Representations:     []rune{rune('⁙'), rune('⁛'), rune('⁘'), rune('⁖')}}
 
 		outBytes, _ := json.Marshal(CellTypes)
 

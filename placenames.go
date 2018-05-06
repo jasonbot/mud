@@ -51,16 +51,24 @@ func randomPlaceName() string {
 			name += " "
 		}
 		if rand.Int()%2 == 0 {
+			noPrefix := true
 			if rand.Int()%2 == 0 {
+				noPrefix = false
 				name += prefixes[rand.Int()%len(prefixes)]
 			}
 			for i := 0; i < 1+rand.Int()%2; i++ {
 				name += randomOnset() + randomRhyme(i > 0)
 			}
-			name += suffixes[rand.Int()%len(suffixes)]
+			if rand.Int()%2 == 0 || noPrefix {
+				name += suffixes[rand.Int()%len(suffixes)]
+			}
 		} else {
 			name += randomName()
 		}
+	}
+
+	if len(name) > 25 {
+		return randomPlaceName()
 	}
 
 	return strings.Title(name)
@@ -70,7 +78,6 @@ func newPlaceNameInDB(db *bolt.DB) (uint64, string) {
 	var id uint64
 	placeName := randomPlaceName()
 
-	log.Print("New name open Tx")
 	db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("placenames"))
 
@@ -84,6 +91,9 @@ func newPlaceNameInDB(db *bolt.DB) (uint64, string) {
 		b := make([]byte, 8)
 		binary.BigEndian.PutUint64(b, uint64(id))
 		err = bucket.Put(b, []byte(placeName))
+
+		log.Printf("New place: %s (%v)", placeName, id)
+
 		return err
 	})
 
