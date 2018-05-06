@@ -14,6 +14,7 @@ type World interface {
 	GetUser(string) User
 	GetCellInfo(uint32, uint32) *CellInfo
 	SetCellInfo(uint32, uint32, *CellInfo)
+	NewPlaceID() uint64
 	Close()
 }
 
@@ -87,11 +88,15 @@ func (w *dbWorld) SetCellInfo(x, y uint32, cellInfo *CellInfo) {
 
 		pt := Point{x, y}
 		bytes := cellInfoToBytes(cellInfo)
-
 		err := bucket.Put(pt.Bytes(), bytes)
 
 		return err
 	})
+}
+
+func (w *dbWorld) NewPlaceID() uint64 {
+	id, _ := newPlaceNameInDB(w.database)
+	return id
 }
 
 func (w *dbWorld) Close() {

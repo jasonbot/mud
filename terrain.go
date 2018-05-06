@@ -97,7 +97,8 @@ func init() {
 		log.Printf("Terrain info file %s errored: %v; using bad defaults.", terrainInfoFile, err)
 
 		CellTypes[DefaultCellType] = CellTerrain{
-			Name:                "Clearing of %s",
+			Name:                DefaultCellType,
+			PlaceName:           "Clearing of %s",
 			Algorithm:           "once",
 			AlgorithmParameters: make(map[string]string),
 			FGcolor:             184,
@@ -106,7 +107,8 @@ func init() {
 			Representations:     []rune{rune('+')}}
 
 		CellTypes[DefaultCellType+"-grass"] = CellTerrain{
-			Name:                "%s grasslands",
+			Name:                DefaultCellType + "-grass",
+			PlaceName:           "%s grasslands",
 			Algorithm:           "spread",
 			AlgorithmParameters: map[string]string{"radius": "5"},
 			FGcolor:             112,

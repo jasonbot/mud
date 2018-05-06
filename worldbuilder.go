@@ -44,9 +44,12 @@ func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) {
 
 		newCellType := cellType.Transitions[rand.Uint64()%uint64(len(cellType.Transitions))]
 
-		newCell := CellInfo{TerrainType: newCellType, RegionNameID: currentCell.RegionNameID}
+		newCellItem, ok := CellTypes[newCellType]
+		if !ok {
+			newCellItem = CellTypes[DefaultCellType]
+		}
 
-		builder.world.SetCellInfo(x2, y2, &newCell)
+		PopulateCellFromAlgorithm(x1, y1, x2, y2, builder.world, &newCellItem)
 	}
 }
 
