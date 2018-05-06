@@ -35,18 +35,17 @@ const DefaultCellType string = "clearing"
 // CellTerrain stores rules about different cell's terrain types.
 // For 256 color colors check https://jonasjacek.github.io/colors/
 type CellTerrain struct {
-	Name string `json:""`
-	// Things like paths, rivers, etc. should be permeable so biomes don't suddenly stop geneating through them.
-	Permeable bool `json:""`
-	// Some terrain types are impassable; e.g. walls
-	Blocking        bool
-	Transitions     []string `json:""` // Other cell types this can transition into when generating
-	Radius          uint16   `json:""` // How far out to go; default of 0 should be significant somehow
-	Algorithm       string   `json:""` // Default is radiateout; should have algos for e.g. town grid building etc.
-	FGcolor         byte     `json:""` // SSH-display specific: the 256 color xterm color for FG
-	BGcolor         byte     `json:""` // SSH-display specific: the 256 color xterm color for BG
-	Bold            bool     `json:""` // SSH-display specific: bold the cell FG?
-	Representations []rune   `json:""` // SSH-display specific: unicode chars to use to represent this cell on-screen
+	Name            string   `json:""`
+	Permeable       bool     `json:""`           // Things like paths, rivers, etc. should be permeable so biomes don't suddenly stop geneating through them.
+	Blocking        bool     `json:""`           // Some terrain types are impassable; e.g. walls
+	Transitions     []string `json:""`           // Other cell types this can transition into when generating
+	PlaceName       string   `json:",omitempty"` // Formatstring to modify place name
+	Radius          uint16   `json:""`           // How far out to go; default of 0 should be significant somehow
+	Algorithm       string   `json:""`           // Default is radiateout; should have algos for e.g. town grid building etc.
+	FGcolor         byte     `json:""`           // SSH-display specific: the 256 color xterm color for FG
+	BGcolor         byte     `json:""`           // SSH-display specific: the 256 color xterm color for BG
+	Bold            bool     `json:""`           // SSH-display specific: bold the cell FG?
+	Representations []rune   `json:""`           // SSH-display specific: unicode chars to use to represent this cell on-screen
 }
 
 // CellTypes is the list of cell types
@@ -65,10 +64,11 @@ const (
 
 // CellInfo holds more information on the cell: exits, items available, etc.
 type CellInfo struct {
-	TerrainType  string `json:""`
-	Exits        byte   `json:""`
-	RegionNameID uint64 `json:""`
-	RegionName   string `json:"-"`
+	TerrainType  string      `json:""`
+	Exits        byte        `json:""`
+	RegionNameID uint64      `json:""`
+	RegionName   string      `json:"-"`
+	TerrainData  CellTerrain `json:"-"`
 }
 
 // cellInfoFromBytes reads a CellInfo from raw bytes

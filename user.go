@@ -10,6 +10,7 @@ import (
 // User represents an active user in the system.
 type User interface {
 	Username() string
+	Location() *Point
 	Reload()
 	Save()
 }
@@ -37,6 +38,10 @@ type dbUser struct {
 
 func (user *dbUser) Username() string {
 	return user.UserData.Username
+}
+
+func (user *dbUser) Location() *Point {
+	return &Point{X: user.X, Y: user.Y}
 }
 
 func (user *dbUser) Reload() {

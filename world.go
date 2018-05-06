@@ -1,6 +1,7 @@
 package mud
 
 import (
+	"fmt"
 	"log"
 
 	bolt "github.com/coreos/bbolt"
@@ -13,7 +14,6 @@ type World interface {
 	GetUser(string) User
 	GetCellInfo(uint32, uint32) CellInfo
 	SetCellInfo(uint32, uint32, CellInfo)
-	GetTerrainMap(uint32, uint32, uint32, uint32) [][]CellTerrain
 	Close()
 }
 
@@ -52,7 +52,15 @@ func (w *dbWorld) GetCellInfo(x, y uint32) CellInfo {
 		return nil
 	})
 
-	cellInfo.RegionName = getPlaceNameByIDFromDB(cellInfo.RegionNameID, w.database)
+	placeName := getPlaceNameByIDFromDB(cellInfo.RegionNameID, w.database)
+	cellTerrain := CellTypes[cellInfo.TerrainType]
+
+	// Format place name if it exists
+	if len(cellTerrain.PlaceName) > 0 {
+		placeName = fmt.Sprintf(cellTerrain.PlaceName, placeName)
+	}
+
+	cellInfo.RegionName = placeName
 
 	return cellInfo
 }
@@ -67,14 +75,6 @@ func (w *dbWorld) SetCellInfo(x, y uint32, cellInfo CellInfo) {
 
 		return err
 	})
-}
-
-func (w *dbWorld) GetTerrainMap(x1, y1, x2, y2 uint32) [][]CellTerrain {
-	terrainMap := make([][]CellTerrain, x2-x1)
-	for i := range terrainMap {
-		terrainMap[i] = make([]CellTerrain, y2-y1)
-	}
-	return terrainMap
 }
 
 func (w *dbWorld) Close() {

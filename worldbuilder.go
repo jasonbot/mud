@@ -7,6 +7,18 @@ type WorldBuilder interface {
 	GetUser(string) User
 }
 
+// CellRenderInfo holds the minimum info for rendering a plot of map in a terminal
+type CellRenderInfo struct {
+	FGColor byte
+	BGColor byte
+	Glyph   rune
+}
+
+// SSHInterfaceTools has miscellaneous helpers for
+type SSHInterfaceTools interface {
+	GetTerrainMap(uint32, uint32, uint32, uint32) [][]CellRenderInfo
+}
+
 type worldBuilder struct {
 	world World
 }
@@ -20,6 +32,42 @@ func (builder *worldBuilder) World() World {
 
 func (builder *worldBuilder) GetUser(username string) User {
 	return builder.world.GetUser(username)
+}
+
+func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]CellRenderInfo {
+	terrainMap := make([][]CellRenderInfo, height)
+	for i := range terrainMap {
+		terrainMap[i] = make([]CellRenderInfo, width)
+	}
+
+	startx := int64(cx - (width / 2))
+	starty := int64(cy - (height / 2))
+
+	worldWidth, worldHeight := builder.world.GetDimensions()
+
+	for xd := int64(0); xd < int64(width); xd++ {
+		for yd := int64(0); yd < int64(height); yd++ {
+			if (startx+xd) >= 0 && startx < int64(worldWidth) && (starty+yd) >= 0 && (starty+yd) < int64(worldHeight) {
+				xcoord, ycoord := uint32(startx+xd), uint32(starty+yd)
+				terrainInfo := CellTypes[builder.world.GetCellInfo(xcoord, ycoord).TerrainType]
+
+				renderGlyph := rune('·')
+				if len(terrainInfo.Representations) > 0 {
+					renderGlyph = terrainInfo.Representations[(xcoord^ycoord)%uint32(len(terrainInfo.Representations))]
+				} else {
+					terrainInfo.FGcolor = 232
+					terrainInfo.BGcolor = 233
+				}
+
+				terrainMap[yd][xd] = CellRenderInfo{
+					FGColor: terrainInfo.FGcolor,
+					BGColor: terrainInfo.BGcolor,
+					Glyph:   renderGlyph}
+			}
+		}
+	}
+
+	return terrainMap
 }
 
 // NewWorldBuilder creates a new WorldBuilder to surround the World

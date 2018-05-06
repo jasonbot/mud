@@ -16,39 +16,74 @@ type Screen interface {
 }
 
 type sshScreen struct {
-	session    ssh.Session
-	builder    WorldBuilder
-	user       User
-	screenSize ssh.Window
-	renderct   uint64
-	refreshed  bool
+	session        ssh.Session
+	builder        WorldBuilder
+	user           User
+	screenSize     ssh.Window
+	renderct       uint64
+	refreshed      bool
+	colorCodeCache map[string](func(string) string)
 }
 
 const allowMouseInput string = "\x1b[?1003h"
 const resetScreen string = "\x1bc"
 
+func (screen *sshScreen) colorFunc(color string) func(string) string {
+	_, ok := screen.colorCodeCache[color]
+
+	if !ok {
+		screen.colorCodeCache[color] = ansi.ColorFunc(color)
+	}
+
+	return screen.colorCodeCache[color]
+}
+
+func (screen *sshScreen) renderMap() {
+	interfaceTools, ok := screen.builder.(SSHInterfaceTools)
+
+	if ok {
+		location := screen.user.Location()
+		mapArray := interfaceTools.GetTerrainMap(location.X, location.Y,
+			uint32(screen.screenSize.Width/2),
+			uint32(screen.screenSize.Height/2))
+
+		for row := range mapArray {
+			rowText := cursor.MoveTo(3+row, 2)
+			for _, value := range mapArray[row] {
+				mGlyph := value.Glyph
+				if mGlyph == 0 {
+					mGlyph = rune('?')
+				}
+				rowText += screen.colorFunc(fmt.Sprintf("%v:%v", value.FGColor, value.BGColor))(string(mGlyph))
+			}
+
+			rowText += screen.colorFunc("clear")("|") + screen.colorFunc("red")(fmt.Sprintf("Line: %v", row))
+			io.WriteString(screen.session, rowText)
+		}
+	}
+}
+
 func (screen *sshScreen) Render() {
-	if screen.screenSize.Height < 20 || screen.screenSize.Width < 80 {
+	if screen.screenSize.Height < 20 || screen.screenSize.Width < 40 {
 		clear := cursor.ClearEntireScreen()
 		move := cursor.MoveTo(1, 1)
 		io.WriteString(screen.session,
-			fmt.Sprintf("%s%sScreen is too small. Make your terminal larger. (80x20 minimum)", clear, move))
+			fmt.Sprintf("%s%sScreen is too small. Make your terminal larger. (40x20 minimum)", clear, move))
 		return
 	}
 
 	if !screen.refreshed {
 		clear := cursor.ClearEntireScreen() + allowMouseInput
 		io.WriteString(screen.session, clear)
-		move := cursor.MoveTo(screen.screenSize.Height, screen.screenSize.Width-10)
-		io.WriteString(screen.session,
-			fmt.Sprintf("%sRender %v", move, screen.renderct))
 		screen.refreshed = true
 	}
-	move := cursor.MoveTo(2, 2)
+	move := cursor.MoveTo(1, 1)
 	color := ansi.ColorCode("blue+b")
 	reset := ansi.ColorCode("reset")
 
 	screen.renderct++
+
+	screen.renderMap()
 
 	io.WriteString(screen.session,
 		fmt.Sprintf("%s%sRender %v%s\n", move, color, screen.renderct, reset))
@@ -76,7 +111,12 @@ func (screen *sshScreen) watchSSHScreen(resizeChan <-chan ssh.Window) {
 func NewSSHScreen(session ssh.Session, builder WorldBuilder, user User) Screen {
 	pty, resize, isPty := session.Pty()
 
-	screen := sshScreen{session: session, builder: builder, user: user, screenSize: pty.Window}
+	screen := sshScreen{
+		session:        session,
+		builder:        builder,
+		user:           user,
+		screenSize:     pty.Window,
+		colorCodeCache: make(map[string](func(string) string))}
 
 	if isPty {
 		go screen.watchSSHScreen(resize)
