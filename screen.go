@@ -43,9 +43,7 @@ func (screen *sshScreen) renderMap() {
 
 	if ok {
 		location := screen.user.Location()
-		mapArray := interfaceTools.GetTerrainMap(location.X, location.Y,
-			uint32(screen.screenSize.Width/2),
-			uint32(screen.screenSize.Height/2))
+		mapArray := interfaceTools.GetTerrainMap(location.X, location.Y, 20, 20)
 
 		for row := range mapArray {
 			rowText := cursor.MoveTo(3+row, 2)
