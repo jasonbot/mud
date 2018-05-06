@@ -49,10 +49,17 @@ func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]Cel
 		for yd := int64(0); yd < int64(height); yd++ {
 			if (int64(startx)+xd) >= 0 && (int64(startx)+xd) < int64(worldWidth) && (int64(starty)+yd) >= 0 && (int64(starty)+yd) < int64(worldHeight) {
 				xcoord, ycoord := uint32(int64(startx)+xd), uint32(int64(starty)+yd)
-				terrainInfo := CellTypes[builder.world.GetCellInfo(xcoord, ycoord).TerrainType]
+				cellInfo := builder.world.GetCellInfo(xcoord, ycoord)
+
+				terrainType := ""
+				if cellInfo != nil {
+					terrainType = cellInfo.TerrainType
+				}
+
+				terrainInfo := CellTypes[terrainType]
 
 				renderGlyph := rune('·')
-				if len(terrainInfo.Representations) > 0 {
+				if cellInfo != nil && len(terrainInfo.Representations) > 0 {
 					renderGlyph = terrainInfo.Representations[(xcoord^ycoord)%uint32(len(terrainInfo.Representations))]
 				} else {
 					terrainInfo.FGcolor = 232

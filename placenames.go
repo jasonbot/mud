@@ -2,6 +2,7 @@ package mud
 
 import (
 	"encoding/binary"
+	"log"
 	"math/rand"
 	"strings"
 
@@ -62,20 +63,19 @@ func randomPlaceName() string {
 		}
 	}
 
-	if len(name) > 25 {
-		return randomPlaceName()
-	}
-
 	return strings.Title(name)
 }
 
 func newPlaceNameInDB(db *bolt.DB) (uint64, string) {
+	var id uint64
 	placeName := randomPlaceName()
 
+	log.Print("New name open Tx")
 	db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("placenames"))
 
-		id, err := bucket.NextSequence()
+		var err error
+		id, err = bucket.NextSequence()
 
 		if err != nil {
 			return err
@@ -83,16 +83,18 @@ func newPlaceNameInDB(db *bolt.DB) (uint64, string) {
 
 		b := make([]byte, 8)
 		binary.BigEndian.PutUint64(b, uint64(id))
-		bucket.Put(b, []byte(placeName))
-		return nil
+		err = bucket.Put(b, []byte(placeName))
+		return err
 	})
-	return uint64(0), "Delaware"
+
+	log.Printf("Returning %v - %v", id, placeName)
+	return id, placeName
 }
 
 func getPlaceNameByIDFromDB(id uint64, db *bolt.DB) string {
 	placeName := "Delaware"
 
-	db.Update(func(tx *bolt.Tx) error {
+	db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("placenames"))
 		b := make([]byte, 8)
 		binary.BigEndian.PutUint64(b, uint64(id))

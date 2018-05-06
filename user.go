@@ -45,21 +45,21 @@ func (user *dbUser) Location() *Point {
 }
 
 func (user *dbUser) Reload() {
+	var record []byte
 	user.world.database.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("users"))
 
-		record := bucket.Get([]byte(user.UserData.Username))
-
-		if record == nil {
-			log.Printf("User %s does not exist, creating anew...", user.UserData.Username)
-			user.UserData = user.world.newUser(user.UserData.Username)
-		} else {
-			log.Printf("User %s loaded from DB", user.UserData.Username)
-			json.Unmarshal(record, &(user.UserData))
-		}
+		record = bucket.Get([]byte(user.UserData.Username))
 
 		return nil
 	})
+
+	if record == nil {
+		log.Printf("User %s does not exist, creating anew...", user.UserData.Username)
+		user.UserData = user.world.newUser(user.UserData.Username)
+	} else {
+		json.Unmarshal(record, &(user.UserData))
+	}
 }
 
 func (user *dbUser) Save() {

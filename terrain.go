@@ -64,11 +64,10 @@ const (
 
 // CellInfo holds more information on the cell: exits, items available, etc.
 type CellInfo struct {
-	TerrainType  string      `json:""`
-	Exits        byte        `json:""`
-	RegionNameID uint64      `json:""`
-	RegionName   string      `json:"-"`
-	TerrainData  CellTerrain `json:"-"`
+	TerrainType  string `json:""`
+	ExitBlocks   byte   `json:""`
+	RegionNameID uint64 `json:""`
+	RegionName   string `json:"-"`
 }
 
 // cellInfoFromBytes reads a CellInfo from raw bytes

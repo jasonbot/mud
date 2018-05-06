@@ -43,7 +43,13 @@ func (screen *sshScreen) renderMap() {
 
 	if ok {
 		location := screen.user.Location()
-		mapArray := interfaceTools.GetTerrainMap(location.X, location.Y, 20, 20)
+		height := uint32(screen.screenSize.Height)
+		if height < 20 {
+			height = 5
+		} else {
+			height = (height / 2) - 2
+		}
+		mapArray := interfaceTools.GetTerrainMap(location.X, location.Y, uint32(screen.screenSize.Width/2)-4, height)
 
 		for row := range mapArray {
 			rowText := cursor.MoveTo(3+row, 2)
@@ -62,11 +68,11 @@ func (screen *sshScreen) renderMap() {
 }
 
 func (screen *sshScreen) Render() {
-	if screen.screenSize.Height < 20 || screen.screenSize.Width < 40 {
+	if screen.screenSize.Height < 20 || screen.screenSize.Width < 60 {
 		clear := cursor.ClearEntireScreen()
 		move := cursor.MoveTo(1, 1)
 		io.WriteString(screen.session,
-			fmt.Sprintf("%s%sScreen is too small. Make your terminal larger. (40x20 minimum)", clear, move))
+			fmt.Sprintf("%s%sScreen is too small. Make your terminal larger. (60x20 minimum)", clear, move))
 		return
 	}
 
