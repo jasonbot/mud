@@ -77,10 +77,8 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 				screen.Render()
 			case "TAB":
 				screen.ToggleInventory()
-				screen.Render()
 			case "ESCAPE":
 				screen.ToggleChat(true)
-				screen.Render()
 			case "BACKSPACE":
 				if screen.ChatActive() {
 					screen.HandleChatKey(inputString.inputString)

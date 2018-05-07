@@ -185,6 +185,7 @@ func (screen *sshScreen) renderLog() {
 func (screen *sshScreen) ToggleChat(sticky bool) {
 	screen.chatActive = !screen.chatActive
 	screen.chatSticky = sticky
+	screen.Render()
 }
 
 func (screen *sshScreen) ChatActive() bool {
@@ -211,6 +212,7 @@ func (screen *sshScreen) GetChat() string {
 func (screen *sshScreen) ToggleInventory() {
 	screen.inventoryActive = !screen.inventoryActive
 	screen.refreshed = false
+	screen.Render()
 }
 
 func (screen *sshScreen) InventoryActive() bool {
