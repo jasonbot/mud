@@ -1,12 +1,16 @@
 package mud
 
-import "math/rand"
+import (
+	"log"
+	"math/rand"
+)
 
 // WorldBuilder handles map generation on top of the World, which is more a data store.
 type WorldBuilder interface {
 	StepInto(x1, y1, x2, y2 uint32)
 	World() World
 	GetUser(string) User
+	Chat(string)
 
 	MoveUserNorth(user User)
 	MoveUserSouth(user User)
@@ -59,6 +63,11 @@ func (builder *worldBuilder) World() World {
 
 func (builder *worldBuilder) GetUser(username string) User {
 	return builder.world.GetUser(username)
+}
+
+func (builder *worldBuilder) Chat(message string) {
+	log.Printf("Chat: %s", message)
+	builder.world.Chat(message)
 }
 
 func (builder *worldBuilder) MoveUserNorth(user User) {

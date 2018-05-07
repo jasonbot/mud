@@ -1,8 +1,11 @@
 package mud
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"log"
+	"time"
 
 	bolt "github.com/coreos/bbolt"
 )
@@ -15,6 +18,8 @@ type World interface {
 	GetCellInfo(uint32, uint32) *CellInfo
 	SetCellInfo(uint32, uint32, *CellInfo)
 	NewPlaceID() uint64
+	OnlineUsers() []User
+	Chat(string)
 	Close()
 }
 
@@ -99,6 +104,43 @@ func (w *dbWorld) NewPlaceID() uint64 {
 	return id
 }
 
+func (w *dbWorld) OnlineUsers() []User {
+	names := make([]string, 0)
+	arr := make([]User, 0)
+
+	w.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("onlineusers"))
+
+		now := time.Now().UTC().Unix()
+
+		bucket.ForEach(func(k, v []byte) error {
+			var lastUpdate int64
+			buf := bytes.NewBuffer(v)
+			binary.Read(buf, binary.BigEndian, &lastUpdate)
+
+			if (now - lastUpdate) < 15 {
+				names = append(names, string(k))
+			}
+
+			return nil
+		})
+
+		return nil
+	})
+
+	for _, name := range names {
+		arr = append(arr, w.GetUser(name))
+	}
+
+	return arr
+}
+
+func (w *dbWorld) Chat(message string) {
+	for _, user := range w.OnlineUsers() {
+		user.Log(message)
+	}
+}
+
 func (w *dbWorld) Close() {
 	if w.database != nil {
 		w.database.Close()
@@ -115,7 +157,7 @@ func (w *dbWorld) load() {
 
 	// Make default tables
 	db.Update(func(tx *bolt.Tx) error {
-		buckets := []string{"users", "terrain", "placenames", "userlog"}
+		buckets := []string{"users", "terrain", "placenames", "userlog", "onlineusers"}
 
 		for _, bucket := range buckets {
 			_, err := tx.CreateBucketIfNotExists([]byte(bucket))

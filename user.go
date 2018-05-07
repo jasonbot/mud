@@ -23,6 +23,8 @@ type User interface {
 	Log(message string)
 	GetLog() []string
 
+	MarkActive()
+
 	Reload()
 	Save()
 }
@@ -131,6 +133,18 @@ func (user *dbUser) GetLog() []string {
 	})
 
 	return logMessages
+}
+
+func (user *dbUser) MarkActive() {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, time.Now().UTC().Unix())
+
+	user.world.database.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("onlineusers"))
+		err := bucket.Put([]byte(user.UserData.Username), buf.Bytes())
+
+		return err
+	})
 }
 
 func (user *dbUser) Reload() {

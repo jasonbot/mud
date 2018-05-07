@@ -21,6 +21,8 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 	pubKey, _ := s.Context().Value(mudPubkey).(string)
 	userSSH, ok := user.(UserSSHAuthentication)
 
+	builder.Chat(fmt.Sprintf("User %s has logged in", user.Username()))
+
 	if len(s.Command()) > 0 {
 		s.Write([]byte("Commands are not supported.\n"))
 		s.Close()
@@ -45,6 +47,7 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 
 	done := s.Context().Done()
 	tick := time.Tick(500 * time.Millisecond)
+	tickForOnline := time.Tick(5 * time.Second)
 	stringInput := make(chan inputEvent, 1)
 	reader := bufio.NewReader(s)
 
@@ -74,6 +77,8 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			}
 		case <-ctx.Done():
 			cancel()
+		case <-tickForOnline:
+			user.MarkActive()
 		case <-tick:
 			screen.Render()
 			continue
