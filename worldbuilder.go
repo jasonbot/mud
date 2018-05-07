@@ -64,8 +64,20 @@ func (builder *worldBuilder) GetUser(username string) User {
 func (builder *worldBuilder) MoveUserNorth(user User) {
 	location := user.Location()
 
+	ci := builder.world.GetCellInfo(location.X, location.Y)
+	if (ci != nil) && (ci.ExitBlocks&NORTHBIT != 0) {
+		user.Log("Can't move north from here.")
+		return
+	}
+
 	if location.Y > 0 {
 		builder.StepInto(location.X, location.Y, location.X, location.Y-1)
+
+		newcell := builder.world.GetCellInfo(location.X, location.Y-1)
+		if (newcell != nil) && (newcell.ExitBlocks&SOUTHBIT != 0) {
+			user.Log("Something is blocking your northward passage.")
+			return
+		}
 		user.MoveNorth()
 	}
 }
@@ -74,8 +86,20 @@ func (builder *worldBuilder) MoveUserSouth(user User) {
 	location := user.Location()
 	_, height := builder.world.GetDimensions()
 
+	ci := builder.world.GetCellInfo(location.X, location.Y)
+	if (ci != nil) && (ci.ExitBlocks&SOUTHBIT != 0) {
+		user.Log("Can't move south from here.")
+		return
+	}
+
 	if location.Y < height-1 {
 		builder.StepInto(location.X, location.Y, location.X, location.Y+1)
+
+		newcell := builder.world.GetCellInfo(location.X, location.Y+1)
+		if (newcell != nil) && (newcell.ExitBlocks&NORTHBIT != 0) {
+			user.Log("Something is blocking your southward passage.")
+			return
+		}
 		user.MoveSouth()
 	}
 }
@@ -83,8 +107,20 @@ func (builder *worldBuilder) MoveUserSouth(user User) {
 func (builder *worldBuilder) MoveUserEast(user User) {
 	location := user.Location()
 
+	ci := builder.world.GetCellInfo(location.X, location.Y)
+	if (ci != nil) && (ci.ExitBlocks&EASTBIT != 0) {
+		user.Log("Can't move east from here.")
+		return
+	}
+
 	if location.X > 0 {
 		builder.StepInto(location.X, location.Y, location.X+1, location.Y)
+
+		newcell := builder.world.GetCellInfo(location.X+1, location.Y)
+		if (newcell != nil) && (newcell.ExitBlocks&WESTBIT != 0) {
+			user.Log("Something is blocking your westward passage.")
+			return
+		}
 		user.MoveEast()
 	}
 }
@@ -93,8 +129,20 @@ func (builder *worldBuilder) MoveUserWest(user User) {
 	location := user.Location()
 	width, _ := builder.world.GetDimensions()
 
+	ci := builder.world.GetCellInfo(location.X, location.Y)
+	if (ci != nil) && (ci.ExitBlocks&WESTBIT != 0) {
+		user.Log("Can't move west from here.")
+		return
+	}
+
 	if location.X < width-1 {
 		builder.StepInto(location.X, location.Y, location.X-1, location.Y)
+
+		newcell := builder.world.GetCellInfo(location.X-1, location.Y)
+		if (newcell != nil) && (newcell.ExitBlocks&EASTBIT != 0) {
+			user.Log("Something is blocking your eastward passage.")
+			return
+		}
 		user.MoveWest()
 	}
 }

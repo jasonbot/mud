@@ -17,6 +17,8 @@ type User interface {
 	MoveEast()
 	MoveWest()
 
+	Log(message string)
+
 	Reload()
 	Save()
 }
@@ -80,6 +82,10 @@ func (user *dbUser) MoveWest() {
 		user.X--
 		user.Save()
 	}
+}
+
+func (user *dbUser) Log(message string) {
+
 }
 
 func (user *dbUser) Reload() {
