@@ -59,6 +59,7 @@ func (user *dbUser) Location() *Point {
 }
 
 func (user *dbUser) MoveNorth() {
+	user.Reload()
 	if user.Y > 0 {
 		user.Y--
 		user.Save()
@@ -66,6 +67,7 @@ func (user *dbUser) MoveNorth() {
 }
 
 func (user *dbUser) MoveSouth() {
+	user.Reload()
 	_, height := user.world.GetDimensions()
 
 	if user.Y < height-1 {
@@ -75,6 +77,7 @@ func (user *dbUser) MoveSouth() {
 }
 
 func (user *dbUser) MoveEast() {
+	user.Reload()
 	width, _ := user.world.GetDimensions()
 
 	if user.X < width-1 {
@@ -84,6 +87,7 @@ func (user *dbUser) MoveEast() {
 }
 
 func (user *dbUser) MoveWest() {
+	user.Reload()
 	if user.X > 0 {
 		user.X--
 		user.Save()
