@@ -21,6 +21,7 @@ type User interface {
 	MoveWest()
 
 	Log(message string)
+	GetLog() []string
 
 	Reload()
 	Save()
@@ -100,6 +101,36 @@ func (user *dbUser) Log(message string) {
 
 		return err
 	})
+}
+
+func (user *dbUser) GetLog() []string {
+	logMessages := make([]string, 0)
+
+	minBuf := new(bytes.Buffer)
+	maxBuf := new(bytes.Buffer)
+	binary.Write(minBuf, binary.BigEndian, []byte(user.UserData.Username))
+	binary.Write(minBuf, binary.BigEndian, byte(0))
+	binary.Write(maxBuf, binary.BigEndian, []byte(user.UserData.Username))
+	binary.Write(maxBuf, binary.BigEndian, byte(1))
+
+	min := minBuf.Bytes()
+	max := maxBuf.Bytes()
+	ct := 0
+
+	user.world.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("userlog"))
+
+		cur := bucket.Cursor()
+
+		for k, v := cur.Seek(min); k != nil && bytes.Compare(k, max) <= 0 && ct < 80; k, v = cur.Next() {
+			logMessages = append(logMessages, string(v))
+			ct++
+		}
+
+		return nil
+	})
+
+	return logMessages
 }
 
 func (user *dbUser) Reload() {

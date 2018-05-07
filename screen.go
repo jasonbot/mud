@@ -126,6 +126,31 @@ func (screen *sshScreen) redrawBorders() {
 	screen.drawHorizontalLine(1, y+2, screen.screenSize.Width/2-3)
 }
 
+func (screen *sshScreen) renderLog() {
+	screenX := screen.screenSize.Width/2 - 1
+	screenWidth := screen.screenSize.Width - screenX
+	log := screen.user.GetLog()
+	row := screen.screenSize.Height - 1
+	fmtString := fmt.Sprintf("%%-%vs", screenWidth)
+	formatFunc := screen.colorFunc(fmt.Sprintf("255:%v", bgcolor))
+
+	for _, item := range log {
+		if len(item) > screenWidth {
+			item = item[:screenWidth-1] + "…"
+		} else if len(item) < screenWidth {
+			item = fmt.Sprintf(fmtString, item)
+		}
+
+		move := cursor.MoveTo(row, screenX)
+		io.WriteString(screen.session, fmt.Sprintf("%s%s", move, formatFunc(item)))
+		row--
+
+		if row < 2 {
+			return
+		}
+	}
+}
+
 func (screen *sshScreen) Render() {
 	if screen.screenSize.Height < 20 || screen.screenSize.Width < 60 {
 		clear := cursor.ClearEntireScreen()
@@ -143,6 +168,7 @@ func (screen *sshScreen) Render() {
 	}
 
 	screen.renderMap()
+	screen.renderLog()
 }
 
 func (screen *sshScreen) Reset() {

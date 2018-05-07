@@ -79,6 +79,7 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			continue
 		case <-done:
 			log.Printf("Disconnected %v", s.RemoteAddr())
+			user.Log(fmt.Sprintf("Signed off at %v", time.Now().UTC().Format(time.RFC3339)))
 			screen.Reset()
 			s.Close()
 			return
