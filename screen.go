@@ -77,6 +77,27 @@ func (screen *sshScreen) renderMap() {
 	}
 }
 
+func (screen *sshScreen) drawBox(x, y, width, height int) {
+	for i := 1; i < width; i++ {
+		io.WriteString(screen.session, fmt.Sprintf("%s─", cursor.MoveTo(y, x+i)))
+		io.WriteString(screen.session, fmt.Sprintf("%s─", cursor.MoveTo(y+height, x+i)))
+	}
+
+	for i := 1; i < height; i++ {
+		io.WriteString(screen.session, fmt.Sprintf("%s│", cursor.MoveTo(y+i, x)))
+		io.WriteString(screen.session, fmt.Sprintf("%s│", cursor.MoveTo(y+i, x+width)))
+	}
+
+	io.WriteString(screen.session, fmt.Sprintf("%s┌", cursor.MoveTo(y, x)))
+	io.WriteString(screen.session, fmt.Sprintf("%s└", cursor.MoveTo(y+height, x)))
+	io.WriteString(screen.session, fmt.Sprintf("%s┐", cursor.MoveTo(y, x+width)))
+	io.WriteString(screen.session, fmt.Sprintf("%s┘", cursor.MoveTo(y+height, x+width)))
+}
+
+func (screen *sshScreen) redrawBorders() {
+	screen.drawBox(1, 1, screen.screenSize.Width-1, screen.screenSize.Height-1)
+}
+
 func (screen *sshScreen) Render() {
 	if screen.screenSize.Height < 20 || screen.screenSize.Width < 60 {
 		clear := cursor.ClearEntireScreen()
@@ -89,9 +110,10 @@ func (screen *sshScreen) Render() {
 	if !screen.refreshed {
 		clear := cursor.ClearEntireScreen() + allowMouseInputAndHideCursor
 		io.WriteString(screen.session, clear)
+		screen.redrawBorders()
 		screen.refreshed = true
 	}
-	move := cursor.MoveTo(1, 1)
+	move := cursor.MoveTo(2, 2)
 	color := ansi.ColorCode("blue+b")
 	reset := ansi.ColorCode("reset")
 
@@ -100,7 +122,7 @@ func (screen *sshScreen) Render() {
 	screen.renderMap()
 
 	io.WriteString(screen.session,
-		fmt.Sprintf("%s%sRender %v%s\n", move, color, screen.renderct, reset))
+		fmt.Sprintf("%s%sRender %v%s", move, color, screen.renderct, reset))
 }
 
 func (screen *sshScreen) Reset() {
