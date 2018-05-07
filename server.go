@@ -48,7 +48,7 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 
 	done := s.Context().Done()
 	tick := time.Tick(500 * time.Millisecond)
-	tickForOnline := time.Tick(5 * time.Second)
+	tickForOnline := time.Tick(4 * time.Second)
 	stringInput := make(chan inputEvent, 1)
 	reader := bufio.NewReader(s)
 

@@ -107,10 +107,10 @@ func (w *dbWorld) NewPlaceID() uint64 {
 func (w *dbWorld) OnlineUsers() []User {
 	names := make([]string, 0)
 	arr := make([]User, 0)
+	offlineNames := make([]string, 0)
 
-	w.database.View(func(tx *bolt.Tx) error {
+	w.database.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("onlineusers"))
-
 		now := time.Now().UTC().Unix()
 
 		bucket.ForEach(func(k, v []byte) error {
@@ -118,18 +118,29 @@ func (w *dbWorld) OnlineUsers() []User {
 			buf := bytes.NewBuffer(v)
 			binary.Read(buf, binary.BigEndian, &lastUpdate)
 
-			if (now - lastUpdate) < 10 {
+			if (now - lastUpdate) < 5 {
 				names = append(names, string(k))
+			} else {
+				offlineNames = append(offlineNames, string(k))
 			}
 
 			return nil
 		})
+
+		for _, name := range offlineNames {
+			bucket.Delete([]byte(name))
+		}
 
 		return nil
 	})
 
 	for _, name := range names {
 		arr = append(arr, w.GetUser(name))
+	}
+
+	for _, name := range offlineNames {
+		log.Printf("%s has signed off", name)
+		w.Chat(fmt.Sprintf("%s has signed off", name))
 	}
 
 	return arr

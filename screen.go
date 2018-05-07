@@ -89,7 +89,7 @@ func (screen *sshScreen) renderChatInput() {
 
 	chatFunc := screen.colorFunc(fmt.Sprintf("231:%v", bgcolor))
 	chat := chatFunc("> ")
-	if screen.chatActive {
+	if screen.ChatActive() {
 		chatFunc = screen.colorFunc(fmt.Sprintf("0+b:%v", bgcolor-1))
 	}
 
@@ -112,8 +112,10 @@ func (screen *sshScreen) drawBox(x, y, width, height int) {
 	}
 
 	for i := 1; i < height; i++ {
-		io.WriteString(screen.session, fmt.Sprintf("%s%s│", cursor.MoveTo(y+i, x), color))
-		io.WriteString(screen.session, fmt.Sprintf("%s%s│", cursor.MoveTo(y+i, x+width), color))
+		midString := fmt.Sprintf("%%s%%s│%%%vs│", (width - 1))
+		/* io.WriteString(screen.session, fmt.Sprintf("%s%s│", cursor.MoveTo(y+i, x), color))
+		io.WriteString(screen.session, fmt.Sprintf("%s%s│", cursor.MoveTo(y+i, x+width), color)) */
+		io.WriteString(screen.session, fmt.Sprintf(midString, cursor.MoveTo(y+i, x), color, " "))
 	}
 
 	io.WriteString(screen.session, fmt.Sprintf("%s%s┌", cursor.MoveTo(y, x), color))
@@ -158,10 +160,17 @@ func (screen *sshScreen) redrawBorders() {
 }
 
 func (screen *sshScreen) renderLog() {
-	screenX := screen.screenSize.Width/2 - 1
-	screenWidth := screen.screenSize.Width - screenX
+	y := screen.screenSize.Height
+	if y < 20 {
+		y = 5
+	} else {
+		y = (y / 2) - 2
+	}
+
+	screenX := 2
+	screenWidth := screen.screenSize.Width/2 - 4
 	log := screen.user.GetLog()
-	row := screen.screenSize.Height - 1
+	row := screen.screenSize.Height - 3
 	fmtString := fmt.Sprintf("%%-%vs", screenWidth)
 	formatFunc := screen.colorFunc(fmt.Sprintf("255:%v", bgcolor))
 
@@ -176,7 +185,7 @@ func (screen *sshScreen) renderLog() {
 		io.WriteString(screen.session, fmt.Sprintf("%s%s", move, formatFunc(item)))
 		row--
 
-		if row < 2 {
+		if row < y+3 {
 			return
 		}
 	}
@@ -189,7 +198,7 @@ func (screen *sshScreen) ToggleChat(sticky bool) {
 }
 
 func (screen *sshScreen) ChatActive() bool {
-	return screen.chatActive
+	return !screen.inventoryActive && screen.chatActive
 }
 
 func (screen *sshScreen) HandleChatKey(input string) {
