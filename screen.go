@@ -36,7 +36,26 @@ type sshScreen struct {
 
 const allowMouseInputAndHideCursor string = "\x1b[?1003h\x1b[?25l"
 const resetScreen string = "\x1bc"
+const ellipsis = "…"
 const bgcolor = 232
+
+func truncateRight(message string, width int) string {
+	if len(message) < width {
+		fmtString := fmt.Sprintf("%%-%vs", width)
+
+		return fmt.Sprintf(fmtString, message)
+	}
+	return message[0:width-1] + ellipsis
+}
+
+func truncateLeft(message string, width int) string {
+	if len(message) < width {
+		fmtString := fmt.Sprintf("%%-%vs", width)
+
+		return fmt.Sprintf(fmtString, message)
+	}
+	return ellipsis + message[len(message)-width:len(message)-1]
+}
 
 func (screen *sshScreen) colorFunc(color string) func(string) string {
 	_, ok := screen.colorCodeCache[color]
@@ -95,7 +114,7 @@ func (screen *sshScreen) renderChatInput() {
 
 	fixedChat := screen.chatText
 	if len(fixedChat) > int(inputWidth-4) {
-		fixedChat = "…" + fixedChat[len(fixedChat)-int(inputWidth-4):len(fixedChat)-1]
+		fixedChat = truncateLeft(fixedChat, int(inputWidth-4))
 	}
 
 	chatText := fmt.Sprintf("%s%s%s", move, chat, chatFunc(fmt.Sprintf(fmtString, fixedChat)))
@@ -168,19 +187,13 @@ func (screen *sshScreen) renderLog() {
 	}
 
 	screenX := 2
-	screenWidth := screen.screenSize.Width/2 - 4
+	screenWidth := screen.screenSize.Width/2 - 3
 	log := screen.user.GetLog()
 	row := screen.screenSize.Height - 3
-	fmtString := fmt.Sprintf("%%-%vs", screenWidth)
 	formatFunc := screen.colorFunc(fmt.Sprintf("255:%v", bgcolor))
 
 	for _, item := range log {
-		if len(item) > screenWidth {
-			item = item[:screenWidth-1] + "…"
-		} else if len(item) < screenWidth {
-			item = fmt.Sprintf(fmtString, item)
-		}
-
+		item = truncateRight(item, screenWidth-1)
 		move := cursor.MoveTo(row, screenX)
 		io.WriteString(screen.session, fmt.Sprintf("%s%s", move, formatFunc(item)))
 		row--
