@@ -26,6 +26,7 @@ type sshScreen struct {
 
 const allowMouseInputAndHideCursor string = "\x1b[?1003h\x1b[?25l"
 const resetScreen string = "\x1bc"
+const bgcolor = 232
 
 func (screen *sshScreen) colorFunc(color string) func(string) string {
 	_, ok := screen.colorCodeCache[color]
@@ -112,7 +113,7 @@ func (screen *sshScreen) drawHorizontalLine(x, y, width int) {
 }
 
 func (screen *sshScreen) redrawBorders() {
-	io.WriteString(screen.session, ansi.ColorCode("255:232"))
+	io.WriteString(screen.session, ansi.ColorCode(fmt.Sprintf("255:%v", bgcolor)))
 	screen.drawBox(1, 1, screen.screenSize.Width-1, screen.screenSize.Height-1)
 	screen.drawVerticalLine(screen.screenSize.Width/2-2, 1, screen.screenSize.Height)
 

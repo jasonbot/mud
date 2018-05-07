@@ -3,6 +3,7 @@ package mud
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -38,7 +39,9 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	log.Printf("Connected with host %v (as %v)", s.RemoteAddr(), user.Username())
+	logMessage := fmt.Sprintf("Logged in as %s via %s at %s", user.Username(), s.RemoteAddr(), time.Now().UTC().Format(time.RFC3339))
+	log.Println(logMessage)
+	user.Log(logMessage)
 
 	done := s.Context().Done()
 	tick := time.Tick(500 * time.Millisecond)

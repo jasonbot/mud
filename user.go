@@ -1,8 +1,11 @@
 package mud
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"log"
+	"time"
 
 	bolt "github.com/coreos/bbolt"
 )
@@ -85,7 +88,18 @@ func (user *dbUser) MoveWest() {
 }
 
 func (user *dbUser) Log(message string) {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, []byte(user.UserData.Username))
+	binary.Write(buf, binary.BigEndian, byte(0))
+	binary.Write(buf, binary.BigEndian, -time.Now().UnixNano())
 
+	user.world.database.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("userlog"))
+
+		err := bucket.Put(buf.Bytes(), []byte(message))
+
+		return err
+	})
 }
 
 func (user *dbUser) Reload() {
