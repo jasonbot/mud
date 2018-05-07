@@ -15,6 +15,20 @@ type User interface {
 	Username() string
 	Location() *Point
 
+	HP() uint64
+	SetHP(uint64)
+	MP() uint64
+	SetMP(uint64)
+	AP() uint64
+	SetAP(uint64)
+	MaxHP() uint64
+	SetMaxHP(uint64)
+	MaxMP() uint64
+	SetMaxMP(uint64)
+	MaxAP() uint64
+	SetMaxAP(uint64)
+	LocationName() string
+
 	MoveNorth()
 	MoveSouth()
 	MoveEast()
@@ -41,6 +55,14 @@ type UserData struct {
 	Username    string          `json:""`
 	X           uint32          `json:""`
 	Y           uint32          `json:""`
+	SpawnX      uint32          `json:""`
+	SpawnY      uint32          `json:""`
+	HP          uint64          `json:""`
+	MaxHP       uint64          `json:""`
+	AP          uint64          `json:""`
+	MaxAP       uint64          `json:""`
+	MP          uint64          `json:""`
+	MaxMP       uint64          `json:""`
 	Initialized bool            `json:""`
 	PublicKeys  map[string]bool `json:""`
 }
@@ -56,6 +78,63 @@ func (user *dbUser) Username() string {
 
 func (user *dbUser) Location() *Point {
 	return &Point{X: user.X, Y: user.Y}
+}
+
+func (user *dbUser) HP() uint64 {
+	return user.UserData.HP
+}
+
+func (user *dbUser) SetHP(hp uint64) {
+	user.UserData.HP = hp
+}
+
+func (user *dbUser) MP() uint64 {
+	return user.UserData.MP
+}
+
+func (user *dbUser) SetMP(mp uint64) {
+	user.UserData.MP = mp
+}
+
+func (user *dbUser) AP() uint64 {
+	return user.UserData.AP
+}
+
+func (user *dbUser) SetAP(ap uint64) {
+	user.UserData.AP = ap
+}
+
+func (user *dbUser) MaxHP() uint64 {
+	return user.UserData.MaxHP
+}
+
+func (user *dbUser) SetMaxHP(maxhp uint64) {
+	user.UserData.MaxHP = maxhp
+}
+
+func (user *dbUser) MaxMP() uint64 {
+	return user.UserData.MaxMP
+}
+
+func (user *dbUser) SetMaxMP(maxmp uint64) {
+	user.UserData.MaxMP = maxmp
+}
+
+func (user *dbUser) MaxAP() uint64 {
+	return user.UserData.MaxAP
+}
+
+func (user *dbUser) SetMaxAP(maxap uint64) {
+	user.UserData.MaxAP = maxap
+}
+
+// Location returns the name of the current cell
+func (user *dbUser) LocationName() string {
+	ci := user.world.GetCellInfo(user.UserData.X, user.UserData.Y)
+	if ci != nil {
+		return ci.RegionName
+	}
+	return "Delaware"
 }
 
 func (user *dbUser) MoveNorth() {

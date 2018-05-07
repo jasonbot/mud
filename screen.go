@@ -57,6 +57,15 @@ func truncateLeft(message string, width int) string {
 	return ellipsis + message[len(message)-width:len(message)-1]
 }
 
+func flushLeft(message string, width int) string {
+	if len(message) < width {
+		fmtString := fmt.Sprintf("%%%vs", width)
+
+		return fmt.Sprintf(fmtString, message)
+	}
+	return ellipsis + message[len(message)-width:len(message)-1]
+}
+
 func (screen *sshScreen) colorFunc(color string) func(string) string {
 	_, ok := screen.colorCodeCache[color]
 
@@ -178,6 +187,28 @@ func (screen *sshScreen) redrawBorders() {
 	screen.drawHorizontalLine(1, screen.screenSize.Height-2, screen.screenSize.Width/2-3)
 }
 
+func (screen *sshScreen) renderCharacterSheet() {
+	x := screen.screenSize.Width/2 - 1
+	width := screen.screenSize.Width - x
+	fmtFunc := screen.colorFunc(fmt.Sprintf("white:%v", bgcolor))
+	pos := screen.user.Location()
+
+	infoLines := []string{
+		screen.user.Username(),
+		fmt.Sprintf("%s (%v, %v)", screen.user.LocationName(), pos.X, pos.Y),
+		fmt.Sprintf("HP: %v/%v", screen.user.HP(), screen.user.MaxHP()),
+		fmt.Sprintf("AP: %v/%v", screen.user.AP(), screen.user.MaxAP()),
+		fmt.Sprintf("MP: %v/%v", screen.user.MP(), screen.user.MaxMP())}
+
+	for index, line := range infoLines {
+		newLine := truncateLeft(line, width)
+		io.WriteString(screen.session, fmt.Sprintf("%s%s", cursor.MoveTo(2+index, x), fmtFunc(newLine)))
+	}
+}
+
+func (screen *sshScreen) renderInventory() {
+}
+
 func (screen *sshScreen) renderLog() {
 	y := screen.screenSize.Height
 	if y < 20 {
@@ -259,8 +290,10 @@ func (screen *sshScreen) Render() {
 
 	screen.renderMap()
 	screen.renderChatInput()
+	screen.renderCharacterSheet()
 
 	if screen.inventoryActive {
+		screen.renderInventory()
 	} else {
 		screen.renderLog()
 	}

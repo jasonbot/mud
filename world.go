@@ -39,7 +39,19 @@ func (w *dbWorld) GetUser(username string) User {
 
 func (w *dbWorld) newUser(username string) UserData {
 	width, height := w.GetDimensions()
-	userData := UserData{Username: username, X: width / 2, Y: height / 2, PublicKeys: make(map[string]bool)}
+	userData := UserData{
+		Username:   username,
+		X:          width / 2,
+		Y:          height / 2,
+		SpawnX:     width / 2,
+		SpawnY:     height / 2,
+		HP:         10,
+		MaxHP:      10,
+		AP:         10,
+		MaxAP:      10,
+		MP:         10,
+		MaxMP:      10,
+		PublicKeys: make(map[string]bool)}
 	cellData := w.GetCellInfo(userData.X, userData.Y)
 
 	if cellData == nil {
