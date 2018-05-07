@@ -22,3 +22,15 @@ in order to get it set up on your platform of choice. From there it's a simple m
     ssh localhost -p 2222
 
 assuming you're running the mud server locally.
+
+## Playing
+
+### Keyboard commands
+
+`up`, `down`, `left`, `right`: move your character in that direction.
+
+`ctrl-C`: log off.
+
+`esc`: toggle chat mode.
+
+`tab`: toggle log/inventory view.

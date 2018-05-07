@@ -11,17 +11,27 @@ import (
 
 // Screen represents a UI screen. For now, just an SSH terminal.
 type Screen interface {
+	ToggleChat(bool)
+	ChatActive() bool
+	HandleChatKey(string)
+	GetChat() string
+	ToggleInventory()
+	InventoryActive() bool
 	Render()
 	Reset()
 }
 
 type sshScreen struct {
-	session        ssh.Session
-	builder        WorldBuilder
-	user           User
-	screenSize     ssh.Window
-	refreshed      bool
-	colorCodeCache map[string](func(string) string)
+	session         ssh.Session
+	builder         WorldBuilder
+	user            User
+	screenSize      ssh.Window
+	refreshed       bool
+	colorCodeCache  map[string](func(string) string)
+	chatActive      bool
+	chatSticky      bool
+	chatText        string
+	inventoryActive bool
 }
 
 const allowMouseInputAndHideCursor string = "\x1b[?1003h\x1b[?25l"
@@ -53,19 +63,13 @@ func (screen *sshScreen) renderMap() {
 
 		for row := range mapArray {
 			rowText := cursor.MoveTo(2+row, 2)
-			for col, value := range mapArray[row] {
+			for _, value := range mapArray[row] {
 				fgcolor := value.FGColor
 				bgcolor := value.BGColor
 				mGlyph := value.Glyph
 
 				if mGlyph == 0 {
 					mGlyph = rune('?')
-				}
-
-				if (row == len(mapArray)/2) && (col == len(mapArray[row])/2) {
-					fgcolor = 160
-					bgcolor = 181
-					mGlyph = rune('#')
 				}
 
 				rowText += screen.colorFunc(fmt.Sprintf("%v:%v", fgcolor, bgcolor))(string(mGlyph))
@@ -77,39 +81,65 @@ func (screen *sshScreen) renderMap() {
 	}
 }
 
+func (screen *sshScreen) renderChatInput() {
+	inputWidth := uint32(screen.screenSize.Width/2) - 2
+	move := cursor.MoveTo(screen.screenSize.Height-1, 2)
+
+	fmtString := fmt.Sprintf("%%-%vs", inputWidth-4)
+
+	chatFunc := screen.colorFunc(fmt.Sprintf("231:%v", bgcolor))
+	chat := chatFunc("> ")
+	if screen.chatActive {
+		chatFunc = screen.colorFunc(fmt.Sprintf("0+b:%v", bgcolor-1))
+	}
+
+	fixedChat := screen.chatText
+	if len(fixedChat) > int(inputWidth-4) {
+		fixedChat = "…" + fixedChat[len(fixedChat)-int(inputWidth-4):len(fixedChat)-1]
+	}
+
+	chatText := fmt.Sprintf("%s%s%s", move, chat, chatFunc(fmt.Sprintf(fmtString, fixedChat)))
+
+	io.WriteString(screen.session, chatText)
+}
+
 func (screen *sshScreen) drawBox(x, y, width, height int) {
+	color := ansi.ColorCode(fmt.Sprintf("255:%v", bgcolor))
+
 	for i := 1; i < width; i++ {
-		io.WriteString(screen.session, fmt.Sprintf("%s─", cursor.MoveTo(y, x+i)))
-		io.WriteString(screen.session, fmt.Sprintf("%s─", cursor.MoveTo(y+height, x+i)))
+		io.WriteString(screen.session, fmt.Sprintf("%s%s─", cursor.MoveTo(y, x+i), color))
+		io.WriteString(screen.session, fmt.Sprintf("%s%s─", cursor.MoveTo(y+height, x+i), color))
 	}
 
 	for i := 1; i < height; i++ {
-		io.WriteString(screen.session, fmt.Sprintf("%s│", cursor.MoveTo(y+i, x)))
-		io.WriteString(screen.session, fmt.Sprintf("%s│", cursor.MoveTo(y+i, x+width)))
+		io.WriteString(screen.session, fmt.Sprintf("%s%s│", cursor.MoveTo(y+i, x), color))
+		io.WriteString(screen.session, fmt.Sprintf("%s%s│", cursor.MoveTo(y+i, x+width), color))
 	}
 
-	io.WriteString(screen.session, fmt.Sprintf("%s┌", cursor.MoveTo(y, x)))
-	io.WriteString(screen.session, fmt.Sprintf("%s└", cursor.MoveTo(y+height, x)))
-	io.WriteString(screen.session, fmt.Sprintf("%s┐", cursor.MoveTo(y, x+width)))
-	io.WriteString(screen.session, fmt.Sprintf("%s┘", cursor.MoveTo(y+height, x+width)))
+	io.WriteString(screen.session, fmt.Sprintf("%s%s┌", cursor.MoveTo(y, x), color))
+	io.WriteString(screen.session, fmt.Sprintf("%s%s└", cursor.MoveTo(y+height, x), color))
+	io.WriteString(screen.session, fmt.Sprintf("%s%s┐", cursor.MoveTo(y, x+width), color))
+	io.WriteString(screen.session, fmt.Sprintf("%s%s┘", cursor.MoveTo(y+height, x+width), color))
 }
 
 func (screen *sshScreen) drawVerticalLine(x, y, height int) {
+	color := ansi.ColorCode(fmt.Sprintf("255:%v", bgcolor))
 	for i := 1; i < height; i++ {
-		io.WriteString(screen.session, fmt.Sprintf("%s│", cursor.MoveTo(y+i, x)))
+		io.WriteString(screen.session, fmt.Sprintf("%s%s│", cursor.MoveTo(y+i, x), color))
 	}
 
-	io.WriteString(screen.session, fmt.Sprintf("%s┬", cursor.MoveTo(y, x)))
-	io.WriteString(screen.session, fmt.Sprintf("%s┴", cursor.MoveTo(y+height, x)))
+	io.WriteString(screen.session, fmt.Sprintf("%s%s┬", cursor.MoveTo(y, x), color))
+	io.WriteString(screen.session, fmt.Sprintf("%s%s┴", cursor.MoveTo(y+height, x), color))
 }
 
 func (screen *sshScreen) drawHorizontalLine(x, y, width int) {
+	color := ansi.ColorCode(fmt.Sprintf("255:%v", bgcolor))
 	for i := 1; i < width; i++ {
-		io.WriteString(screen.session, fmt.Sprintf("%s─", cursor.MoveTo(y, x+i)))
+		io.WriteString(screen.session, fmt.Sprintf("%s%s─", cursor.MoveTo(y, x+i), color))
 	}
 
-	io.WriteString(screen.session, fmt.Sprintf("%s├", cursor.MoveTo(y, x)))
-	io.WriteString(screen.session, fmt.Sprintf("%s┤", cursor.MoveTo(y, x+width)))
+	io.WriteString(screen.session, fmt.Sprintf("%s%s├", cursor.MoveTo(y, x), color))
+	io.WriteString(screen.session, fmt.Sprintf("%s%s┤", cursor.MoveTo(y, x+width), color))
 }
 
 func (screen *sshScreen) redrawBorders() {
@@ -124,6 +154,7 @@ func (screen *sshScreen) redrawBorders() {
 		y = (y / 2) - 2
 	}
 	screen.drawHorizontalLine(1, y+2, screen.screenSize.Width/2-3)
+	screen.drawHorizontalLine(1, screen.screenSize.Height-2, screen.screenSize.Width/2-3)
 }
 
 func (screen *sshScreen) renderLog() {
@@ -151,6 +182,41 @@ func (screen *sshScreen) renderLog() {
 	}
 }
 
+func (screen *sshScreen) ToggleChat(sticky bool) {
+	screen.chatActive = !screen.chatActive
+	screen.chatSticky = sticky
+}
+
+func (screen *sshScreen) ChatActive() bool {
+	return screen.chatActive
+}
+
+func (screen *sshScreen) HandleChatKey(input string) {
+	if input == "BACKSPACE" && len(input) > 1 {
+		if len(screen.chatText) > 0 {
+			screen.chatText = screen.chatText[0 : len(screen.chatText)-1]
+		}
+	} else if len(input) == 1 {
+		screen.chatText += input
+	}
+}
+
+func (screen *sshScreen) GetChat() string {
+	ct := screen.chatText
+	screen.chatText = ""
+	screen.chatActive = screen.chatSticky
+	return ct
+}
+
+func (screen *sshScreen) ToggleInventory() {
+	screen.inventoryActive = !screen.inventoryActive
+	screen.refreshed = false
+}
+
+func (screen *sshScreen) InventoryActive() bool {
+	return screen.inventoryActive
+}
+
 func (screen *sshScreen) Render() {
 	if screen.screenSize.Height < 20 || screen.screenSize.Width < 60 {
 		clear := cursor.ClearEntireScreen()
@@ -168,7 +234,12 @@ func (screen *sshScreen) Render() {
 	}
 
 	screen.renderMap()
-	screen.renderLog()
+	screen.renderChatInput()
+
+	if screen.inventoryActive {
+	} else {
+		screen.renderLog()
+	}
 }
 
 func (screen *sshScreen) Reset() {

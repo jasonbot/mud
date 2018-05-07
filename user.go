@@ -196,7 +196,6 @@ func (user *dbUser) AddSSHKey(sshKey string) {
 }
 
 func getUserFromDB(world *dbWorld, username string) User {
-	log.Printf("Looking up %s", username)
 	user := dbUser{UserData: UserData{
 		Username: username},
 		world: world}

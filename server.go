@@ -22,6 +22,7 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 	userSSH, ok := user.(UserSSHAuthentication)
 
 	builder.Chat(fmt.Sprintf("User %s has logged in", user.Username()))
+	user.MarkActive()
 
 	if len(s.Command()) > 0 {
 		s.Write([]byte("Commands are not supported.\n"))
@@ -74,12 +75,40 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			case "RIGHT":
 				builder.MoveUserEast(user)
 				screen.Render()
+			case "TAB":
+				screen.ToggleInventory()
+				screen.Render()
+			case "ESCAPE":
+				screen.ToggleChat(true)
+				screen.Render()
+			case "BACKSPACE":
+				if screen.ChatActive() {
+					screen.HandleChatKey(inputString.inputString)
+					screen.Render()
+				}
+			case "ENTER":
+				if screen.ChatActive() {
+					chat := screen.GetChat()
+					chatString := fmt.Sprintf("%s: %s", user.Username(), chat)
+					if len(chatString) > 0 {
+						builder.Chat(chatString)
+					}
+					screen.Render()
+				}
+			default:
+				if screen.ChatActive() {
+					screen.HandleChatKey(inputString.inputString)
+					screen.Render()
+				} else if inputString.inputString == "t" || inputString.inputString == "T" {
+					screen.ToggleChat(false)
+				}
 			}
 		case <-ctx.Done():
 			cancel()
 		case <-tickForOnline:
 			user.MarkActive()
 		case <-tick:
+			user.Reload()
 			screen.Render()
 			continue
 		case <-done:

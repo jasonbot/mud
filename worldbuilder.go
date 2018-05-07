@@ -1,7 +1,6 @@
 package mud
 
 import (
-	"log"
 	"math/rand"
 )
 
@@ -66,7 +65,6 @@ func (builder *worldBuilder) GetUser(username string) User {
 }
 
 func (builder *worldBuilder) Chat(message string) {
-	log.Printf("Chat: %s", message)
 	builder.world.Chat(message)
 }
 
@@ -192,6 +190,26 @@ func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]Cel
 					FGColor: terrainInfo.FGcolor,
 					BGColor: terrainInfo.BGcolor,
 					Glyph:   renderGlyph}
+			}
+		}
+	}
+
+	for _, player := range builder.world.OnlineUsers() {
+		location := player.Location()
+		if location.X >= startx && location.X < startx+width && location.Y >= starty && location.Y < starty+height {
+			ix := location.X - startx
+			iy := location.Y - starty
+
+			terrainMap[iy][ix].FGColor = 160
+			switch terrainMap[iy][ix].Glyph {
+			case rune('⁂'):
+				continue
+			case rune('⁑'):
+				terrainMap[iy][ix].Glyph = rune('⁂')
+			case rune('*'):
+				terrainMap[iy][ix].Glyph = rune('⁑')
+			default:
+				terrainMap[iy][ix].Glyph = rune('*')
 			}
 		}
 	}

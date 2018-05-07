@@ -30,7 +30,7 @@ type dbWorld struct {
 
 // GetDimensions returns the size of the world
 func (w *dbWorld) GetDimensions() (uint32, uint32) {
-	return uint32(1 << 31), uint32(1 << 31)
+	return uint32(1 << 30), uint32(1 << 30)
 }
 
 func (w *dbWorld) GetUser(username string) User {
@@ -118,7 +118,7 @@ func (w *dbWorld) OnlineUsers() []User {
 			buf := bytes.NewBuffer(v)
 			binary.Read(buf, binary.BigEndian, &lastUpdate)
 
-			if (now - lastUpdate) < 15 {
+			if (now - lastUpdate) < 10 {
 				names = append(names, string(k))
 			}
 
