@@ -20,12 +20,11 @@ type sshScreen struct {
 	builder        WorldBuilder
 	user           User
 	screenSize     ssh.Window
-	renderct       uint64
 	refreshed      bool
 	colorCodeCache map[string](func(string) string)
 }
 
-const allowMouseInputAndHideCursor string = "\x1b[?1003h\x1b[?25h"
+const allowMouseInputAndHideCursor string = "\x1b[?1003h\x1b[?25l"
 const resetScreen string = "\x1bc"
 
 func (screen *sshScreen) colorFunc(color string) func(string) string {
@@ -52,7 +51,7 @@ func (screen *sshScreen) renderMap() {
 		mapArray := interfaceTools.GetTerrainMap(location.X, location.Y, uint32(screen.screenSize.Width/2)-4, height)
 
 		for row := range mapArray {
-			rowText := cursor.MoveTo(3+row, 2)
+			rowText := cursor.MoveTo(2+row, 2)
 			for col, value := range mapArray[row] {
 				fgcolor := value.FGColor
 				bgcolor := value.BGColor
@@ -94,8 +93,36 @@ func (screen *sshScreen) drawBox(x, y, width, height int) {
 	io.WriteString(screen.session, fmt.Sprintf("%s┘", cursor.MoveTo(y+height, x+width)))
 }
 
+func (screen *sshScreen) drawVerticalLine(x, y, height int) {
+	for i := 1; i < height; i++ {
+		io.WriteString(screen.session, fmt.Sprintf("%s│", cursor.MoveTo(y+i, x)))
+	}
+
+	io.WriteString(screen.session, fmt.Sprintf("%s┬", cursor.MoveTo(y, x)))
+	io.WriteString(screen.session, fmt.Sprintf("%s┴", cursor.MoveTo(y+height, x)))
+}
+
+func (screen *sshScreen) drawHorizontalLine(x, y, width int) {
+	for i := 1; i < width; i++ {
+		io.WriteString(screen.session, fmt.Sprintf("%s─", cursor.MoveTo(y, x+i)))
+	}
+
+	io.WriteString(screen.session, fmt.Sprintf("%s├", cursor.MoveTo(y, x)))
+	io.WriteString(screen.session, fmt.Sprintf("%s┤", cursor.MoveTo(y, x+width)))
+}
+
 func (screen *sshScreen) redrawBorders() {
+	io.WriteString(screen.session, ansi.ColorCode("255:232"))
 	screen.drawBox(1, 1, screen.screenSize.Width-1, screen.screenSize.Height-1)
+	screen.drawVerticalLine(screen.screenSize.Width/2-2, 1, screen.screenSize.Height)
+
+	y := screen.screenSize.Height
+	if y < 20 {
+		y = 5
+	} else {
+		y = (y / 2) - 2
+	}
+	screen.drawHorizontalLine(1, y+2, screen.screenSize.Width/2-3)
 }
 
 func (screen *sshScreen) Render() {
@@ -113,16 +140,8 @@ func (screen *sshScreen) Render() {
 		screen.redrawBorders()
 		screen.refreshed = true
 	}
-	move := cursor.MoveTo(2, 2)
-	color := ansi.ColorCode("blue+b")
-	reset := ansi.ColorCode("reset")
-
-	screen.renderct++
 
 	screen.renderMap()
-
-	io.WriteString(screen.session,
-		fmt.Sprintf("%s%sRender %v%s", move, color, screen.renderct, reset))
 }
 
 func (screen *sshScreen) Reset() {

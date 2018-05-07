@@ -1,1 +1,67 @@
-{"clearing":{"Name":"clearing","Permeable":false,"Blocking":false,"Transitions":["clearing-grass"],"PlaceName":"Clearing of %s","Algorithm":"once","AlgorithmParameters":{},"FGcolor":184,"BGcolor":0,"Bold":false,"Representations":[43]},"clearing-grass":{"Name":"clearing-grass","Permeable":false,"Blocking":false,"Transitions":["clearing-grass"],"PlaceName":"%s grasslands","Algorithm":"spread","AlgorithmParameters":{"radius":"5"},"FGcolor":112,"BGcolor":154,"Bold":false,"Representations":[8281,8283,8280,8278]}}
+{
+    "clearing": {
+        "Name": "clearing",
+        "Permeable": false,
+        "Blocking": false,
+        "Transitions": [
+            "clearing-grass"
+        ],
+        "PlaceName": "Clearing of %s",
+        "Algorithm": "once",
+        "AlgorithmParameters": {},
+        "FGcolor": 184,
+        "BGcolor": 0,
+        "Bold": false,
+        "Representations": [
+            43
+        ]
+    },
+    "clearing-grass": {
+        "Name": "clearing-grass",
+        "Permeable": false,
+        "Blocking": false,
+        "Transitions": [
+            "clearing-grass",
+            "clearing-grass",
+            "clearing-grass",
+            "clearing-grass",
+            "clearing-deep-grass"
+        ],
+        "PlaceName": "%s grasslands",
+        "Algorithm": "spread",
+        "AlgorithmParameters": {
+            "radius": "5"
+        },
+        "FGcolor": 112,
+        "BGcolor": 154,
+        "Bold": false,
+        "Representations": [
+            8281,
+            8283,
+            8280,
+            8278
+        ]
+    },
+    "clearing-deep-grass": {
+        "Name": "clearing-deep-grass",
+        "Permeable": false,
+        "Blocking": false,
+        "Transitions": [
+            "clearing-grass"
+        ],
+        "PlaceName": "%s grasslands",
+        "Algorithm": "spread",
+        "AlgorithmParameters": {
+            "radius": "5"
+        },
+        "FGcolor": 154,
+        "BGcolor": 118,
+        "Bold": false,
+        "Representations": [
+            8281,
+            8283,
+            8280,
+            8278
+        ]
+    }
+}
