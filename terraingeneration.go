@@ -46,6 +46,7 @@ func tendril(x, y uint32, count uint64, world World, regionID uint64, cellTerrai
 
 func visitTendril(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	radius := uint64(4)
+	tendrilcount := uint64(0)
 	if cellTerrain.AlgorithmParameters != nil {
 		radiusString, ok := cellTerrain.AlgorithmParameters["radius"]
 		if ok {
@@ -55,9 +56,19 @@ func visitTendril(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerra
 				radius = uint64(radiusI)
 			}
 		}
+
+		tendrilcount = radius
+		tendrilcountString, ok := cellTerrain.AlgorithmParameters["tendrilcount"]
+		if ok {
+			tendrilcountI, err := strconv.Atoi(tendrilcountString)
+
+			if err != nil {
+				tendrilcount = uint64(tendrilcountI)
+			}
+		}
 	}
 
-	for i := 0; i < int(radius); i++ {
+	for i := 0; i < int(tendrilcount); i++ {
 		tendril(x2, y2, radius, world, regionID, cellTerrain)
 	}
 
@@ -112,11 +123,21 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 	nx, ny := (int(x2)), (int(y2))
 	neighborTerrain, ok := cellTerrain.AlgorithmParameters["neighbor"]
 	endcap, endok := cellTerrain.AlgorithmParameters["endcap"]
+	radiusString, radiusok := cellTerrain.AlgorithmParameters["radius"]
+	radius := uint64(5)
 
 	world.SetCellInfo(x1, y1,
 		&CellInfo{
 			TerrainType:  cellTerrain.Name,
 			RegionNameID: regionID})
+
+	if radiusok {
+		radiusI, err := strconv.Atoi(radiusString)
+
+		if err != nil {
+			radius = uint64(radiusI)
+		}
+	}
 
 	if !ok {
 		ci := world.GetCellInfo(uint32(int(x1)+(xd*-2)), uint32(int(y1)+(yd*-2)))
@@ -131,7 +152,7 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 		}
 	}
 
-	length := 1 + rand.Int()%10
+	length := int(radius/2) + rand.Int()%int(radius/2)
 	broken := false
 
 	for i := 0; i < length; i++ {
@@ -164,7 +185,7 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 		}
 
 		// Make trails jitter a little
-		if rand.Int()%5 == 0 {
+		if rand.Int()%3 == 0 {
 			if rand.Int()%2 == 0 {
 				nx -= yd
 				ny -= xd
@@ -183,6 +204,13 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 
 		if newCell == nil {
 			world.SetCellInfo(uint32(nx), uint32(ny), &CellInfo{TerrainType: endcap, RegionNameID: regionID})
+
+			if rand.Int()%3 > 0 {
+				visitPath(uint32(nx), uint32(ny), uint32(nx+1), uint32(ny), world, regionID, cellTerrain)
+				visitPath(uint32(nx), uint32(ny), uint32(nx-1), uint32(ny), world, regionID, cellTerrain)
+				visitPath(uint32(nx), uint32(ny+1), uint32(nx), uint32(ny), world, regionID, cellTerrain)
+				visitPath(uint32(nx), uint32(ny-1), uint32(nx), uint32(ny), world, regionID, cellTerrain)
+			}
 		}
 	}
 }

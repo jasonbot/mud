@@ -33,6 +33,30 @@ type worldBuilder struct {
 	world World
 }
 
+func (builder *worldBuilder) populateAround(x, y uint32, xdelta, ydelta int) {
+	wwidth, wheight := builder.world.GetDimensions()
+
+	if x > 100 && x < wwidth-100 && y > 100 && y < wheight-100 {
+		for i := 1; i < 25; i++ {
+			xd := uint32(int(x) + (rand.Int()%i - (i / 2)))
+			yd := uint32(int(y) + (rand.Int()%i - (i / 2)))
+
+			if builder.world.GetCellInfo(xd, yd) != nil {
+				type diff struct {
+					x, y int
+				}
+
+				directions := []diff{diff{x: -1, y: 0}, diff{x: 1, y: 0}, diff{x: 0, y: -1}, diff{x: 0, y: 1}}
+				movement := directions[rand.Int()%len(directions)]
+
+				if builder.world.GetCellInfo(uint32(int(xd)+movement.x), uint32(int(yd)+movement.y)) == nil {
+					builder.StepInto(xd, yd, uint32(int(xd)+xdelta), uint32(int(yd)+ydelta))
+				}
+			}
+		}
+	}
+}
+
 func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) {
 	newCell := builder.world.GetCellInfo(x2, y2)
 
@@ -111,11 +135,18 @@ func (builder *worldBuilder) MoveUserNorth(user User) {
 		builder.StepInto(location.X, location.Y, location.X, location.Y-1)
 
 		newcell := builder.world.GetCellInfo(location.X, location.Y-1)
-		if (newcell != nil) && (newcell.ExitBlocks&SOUTHBIT != 0) {
+
+		ct := CellTypes[DefaultCellType]
+		if newcell != nil {
+			ct = CellTypes[newcell.TerrainType]
+		}
+
+		if (newcell != nil) && (newcell.ExitBlocks&SOUTHBIT != 0 || ct.Blocking) {
 			user.Log("Something is blocking your northward passage.")
 			return
 		}
 		user.MoveNorth()
+		builder.populateAround(location.X, location.Y, 0, -1)
 	}
 }
 
@@ -133,11 +164,18 @@ func (builder *worldBuilder) MoveUserSouth(user User) {
 		builder.StepInto(location.X, location.Y, location.X, location.Y+1)
 
 		newcell := builder.world.GetCellInfo(location.X, location.Y+1)
-		if (newcell != nil) && (newcell.ExitBlocks&NORTHBIT != 0) {
+
+		ct := CellTypes[DefaultCellType]
+		if newcell != nil {
+			ct = CellTypes[newcell.TerrainType]
+		}
+
+		if (newcell != nil) && (newcell.ExitBlocks&NORTHBIT != 0 || ct.Blocking) {
 			user.Log("Something is blocking your southward passage.")
 			return
 		}
 		user.MoveSouth()
+		builder.populateAround(location.X, location.Y, 0, 1)
 	}
 }
 
@@ -154,11 +192,18 @@ func (builder *worldBuilder) MoveUserEast(user User) {
 		builder.StepInto(location.X, location.Y, location.X+1, location.Y)
 
 		newcell := builder.world.GetCellInfo(location.X+1, location.Y)
-		if (newcell != nil) && (newcell.ExitBlocks&WESTBIT != 0) {
+
+		ct := CellTypes[DefaultCellType]
+		if newcell != nil {
+			ct = CellTypes[newcell.TerrainType]
+		}
+
+		if (newcell != nil) && (newcell.ExitBlocks&WESTBIT != 0 || ct.Blocking) {
 			user.Log("Something is blocking your westward passage.")
 			return
 		}
 		user.MoveEast()
+		builder.populateAround(location.X, location.Y, 1, 0)
 	}
 }
 
@@ -176,11 +221,18 @@ func (builder *worldBuilder) MoveUserWest(user User) {
 		builder.StepInto(location.X, location.Y, location.X-1, location.Y)
 
 		newcell := builder.world.GetCellInfo(location.X-1, location.Y)
-		if (newcell != nil) && (newcell.ExitBlocks&EASTBIT != 0) {
+
+		ct := CellTypes[DefaultCellType]
+		if newcell != nil {
+			ct = CellTypes[newcell.TerrainType]
+		}
+
+		if (newcell != nil) && (newcell.ExitBlocks&EASTBIT != 0 || ct.Blocking) {
 			user.Log("Something is blocking your eastward passage.")
 			return
 		}
 		user.MoveWest()
+		builder.populateAround(location.X, location.Y, -1, 0)
 	}
 }
 
