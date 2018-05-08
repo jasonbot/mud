@@ -288,9 +288,11 @@ func (screen *sshScreen) HandleChatKey(input string) {
 	if input == "BACKSPACE" && len(input) > 1 {
 		if len(screen.chatText) > 0 {
 			screen.chatText = screen.chatText[0 : len(screen.chatText)-1]
+			screen.Render()
 		}
 	} else if len(input) == 1 {
 		screen.chatText += input
+		screen.Render()
 	}
 }
 

@@ -82,7 +82,6 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			case "BACKSPACE":
 				if screen.ChatActive() {
 					screen.HandleChatKey(inputString.inputString)
-					screen.Render()
 				}
 			case "ENTER":
 				if screen.ChatActive() {
@@ -96,7 +95,6 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			default:
 				if screen.ChatActive() {
 					screen.HandleChatKey(inputString.inputString)
-					screen.Render()
 				} else if inputString.inputString == "t" || inputString.inputString == "T" {
 					screen.ToggleChat(false)
 				}
