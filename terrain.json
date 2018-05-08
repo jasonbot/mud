@@ -26,7 +26,7 @@
             "clearing-grass",
             "clearing-grass",
             "clearing-deep-grass",
-            "trailhead"
+            "trail"
         ],
         "PlaceName": "%s grasslands",
         "Algorithm": "spread",
@@ -46,10 +46,19 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
-            "clearing-grass"
+            "clearing-deep-grass",
+            "clearing-deep-grass",
+            "clearing-deep-grass",
+            "clearing-deep-grass",
+            "clearing-grass",
+            "clearing-grass",
+            "clearing-grass",
+            "clearing-grass",
+            "clearing-grass",
+            "clearing-tree"
         ],
         "PlaceName": "%s grasslands",
-        "Algorithm": "tendril",
+        "Algorithm": "spread",
         "AlgorithmParameters": {},
         "FGcolor": 154,
         "BGcolor": 118,
@@ -59,6 +68,31 @@
             8283,
             8280,
             8278
+        ]
+    },
+    "clearing-tree": {
+        "Name": "clearing-tree",
+        "Permeable": false,
+        "Blocking": true,
+        "Transitions": [
+            "clearing-deep-grass",
+            "clearing-deep-grass",
+            "clearing-deep-grass",
+            "clearing-tree"
+        ],
+        "PlaceName": "Tree in %s",
+        "Algorithm": "tendril",
+        "AlgorithmParameters": {
+            "radius": "2",
+            "tendrilcount": "2"
+        },
+        "FGcolor": 34,
+        "BGcolor": 118,
+        "Bold": false,
+        "Representations": [
+            9827,
+            8607,
+            8613
         ]
     },
     "trailhead": {
@@ -96,10 +130,11 @@
         "AlgorithmParameters": {
             "path": "trail",
             "neighbor": "clearing-grass",
-            "endcap": "trailhead"
+            "endcap": "trailhead",
+            "radius": "50"
         },
         "FGcolor": 144,
-        "BGcolor": 187,
+        "BGcolor": 155,
         "Bold": false,
         "Representations": [
             8280,
