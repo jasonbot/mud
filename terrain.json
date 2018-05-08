@@ -29,9 +29,7 @@
         ],
         "PlaceName": "%s grasslands",
         "Algorithm": "spread",
-        "AlgorithmParameters": {
-            "radius": "5"
-        },
+        "AlgorithmParameters": {},
         "FGcolor": 112,
         "BGcolor": 154,
         "Bold": false,
@@ -50,10 +48,8 @@
             "clearing-grass"
         ],
         "PlaceName": "%s grasslands",
-        "Algorithm": "spread",
-        "AlgorithmParameters": {
-            "radius": "5"
-        },
+        "Algorithm": "tendril",
+        "AlgorithmParameters": {},
         "FGcolor": 154,
         "BGcolor": 118,
         "Bold": false,
