@@ -21,12 +21,16 @@ type User interface {
 	SetMP(uint64)
 	AP() uint64
 	SetAP(uint64)
+	RP() uint64
+	SetRP(uint64)
 	MaxHP() uint64
 	SetMaxHP(uint64)
 	MaxMP() uint64
 	SetMaxMP(uint64)
 	MaxAP() uint64
 	SetMaxAP(uint64)
+	MaxRP() uint64
+	SetMaxRP(uint64)
 	LocationName() string
 
 	MoveNorth()
@@ -63,6 +67,8 @@ type UserData struct {
 	MaxAP       uint64          `json:""`
 	MP          uint64          `json:""`
 	MaxMP       uint64          `json:""`
+	RP          uint64          `json:""`
+	MaxRP       uint64          `json:""`
 	Initialized bool            `json:""`
 	PublicKeys  map[string]bool `json:""`
 }
@@ -104,6 +110,14 @@ func (user *dbUser) SetAP(ap uint64) {
 	user.UserData.AP = ap
 }
 
+func (user *dbUser) RP() uint64 {
+	return user.UserData.RP
+}
+
+func (user *dbUser) SetRP(rp uint64) {
+	user.UserData.RP = rp
+}
+
 func (user *dbUser) MaxHP() uint64 {
 	return user.UserData.MaxHP
 }
@@ -126,6 +140,14 @@ func (user *dbUser) MaxAP() uint64 {
 
 func (user *dbUser) SetMaxAP(maxap uint64) {
 	user.UserData.MaxAP = maxap
+}
+
+func (user *dbUser) MaxRP() uint64 {
+	return user.UserData.MaxRP
+}
+
+func (user *dbUser) SetMaxRP(maxrp uint64) {
+	user.UserData.MaxRP = maxrp
 }
 
 // Location returns the name of the current cell

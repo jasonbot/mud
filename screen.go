@@ -3,6 +3,7 @@ package mud
 import (
 	"fmt"
 	"io"
+	"math"
 
 	"github.com/ahmetb/go-cursor"
 	"github.com/gliderlabs/ssh"
@@ -37,6 +38,8 @@ type sshScreen struct {
 const allowMouseInputAndHideCursor string = "\x1b[?1003h\x1b[?25l"
 const resetScreen string = "\x1bc"
 const ellipsis = "…"
+const hpon = "◆"
+const hpoff = "◇"
 const bgcolor = 232
 
 func truncateRight(message string, width int) string {
@@ -152,6 +155,42 @@ func (screen *sshScreen) drawBox(x, y, width, height int) {
 	io.WriteString(screen.session, fmt.Sprintf("%s%s┘", cursor.MoveTo(y+height, x+width), color))
 }
 
+func (screen *sshScreen) drawProgressMeter(min, max, fgcolor, bgcolor, width uint64) string {
+	proportion := float64(float64(min) / float64(max))
+	if math.IsNaN(proportion) {
+		proportion = 0.0
+	}
+	onWidth := uint64(float64(width) * proportion)
+	offWidth := uint64(float64(width) * (1.0 - proportion))
+
+	onColor := screen.colorFunc(fmt.Sprintf("%v:%v", fgcolor, bgcolor))
+	offColor := onColor
+
+	if proportion < 1.5 {
+		onColor = screen.colorFunc(fmt.Sprintf("%v+Bbh:%v", fgcolor, bgcolor))
+	}
+
+	if (onWidth + offWidth) > width {
+		onWidth = width
+		offWidth = 0
+	} else if (onWidth + offWidth) < width {
+		onWidth += width - (onWidth + offWidth)
+	}
+
+	on := ""
+	off := ""
+
+	for i := 0; i < int(onWidth); i++ {
+		on += hpon
+	}
+
+	for i := 0; i < int(offWidth); i++ {
+		off += hpoff
+	}
+
+	return onColor(on) + offColor(off)
+}
+
 func (screen *sshScreen) drawVerticalLine(x, y, height int) {
 	color := ansi.ColorCode(fmt.Sprintf("255:%v", bgcolor))
 	for i := 1; i < height; i++ {
@@ -196,13 +235,13 @@ func (screen *sshScreen) renderCharacterSheet() {
 	infoLines := []string{
 		screen.user.Username(),
 		fmt.Sprintf("%s (%v, %v)", screen.user.LocationName(), pos.X, pos.Y),
-		fmt.Sprintf("HP: %v/%v", screen.user.HP(), screen.user.MaxHP()),
-		fmt.Sprintf("AP: %v/%v", screen.user.AP(), screen.user.MaxAP()),
-		fmt.Sprintf("MP: %v/%v", screen.user.MP(), screen.user.MaxMP())}
+		truncateRight(fmt.Sprintf("HP: %v/%v", screen.user.HP(), screen.user.MaxHP()), width-10) + screen.drawProgressMeter(screen.user.HP(), screen.user.MaxHP(), 196, bgcolor, 10),
+		truncateRight(fmt.Sprintf("AP: %v/%v", screen.user.AP(), screen.user.MaxAP()), width-10) + screen.drawProgressMeter(screen.user.AP(), screen.user.MaxAP(), 208, bgcolor, 10),
+		truncateRight(fmt.Sprintf("MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-10) + screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10),
+		truncateRight(fmt.Sprintf("RP: %v/%v", screen.user.RP(), screen.user.MaxRP()), width-10) + screen.drawProgressMeter(screen.user.RP(), screen.user.MaxRP(), 117, bgcolor, 10)}
 
 	for index, line := range infoLines {
-		newLine := truncateLeft(line, width)
-		io.WriteString(screen.session, fmt.Sprintf("%s%s", cursor.MoveTo(2+index, x), fmtFunc(newLine)))
+		io.WriteString(screen.session, fmt.Sprintf("%s%s", cursor.MoveTo(2+index, x), fmtFunc(line)))
 	}
 }
 
