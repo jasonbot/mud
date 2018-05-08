@@ -47,12 +47,42 @@ func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) {
 
 		newCellType := cellType.Transitions[rand.Uint64()%uint64(len(cellType.Transitions))]
 
+		if newCellType == "!origin" {
+			newCellType = currentCell.TerrainType
+		} else if newCellType == "!previous" {
+			xd := -(x2 - x1)
+			yd := -(y2 - y1)
+
+			ci := builder.world.GetCellInfo(x1+xd, y1+yd)
+
+			if ci != nil {
+				newCellType = ci.TerrainType
+			} else {
+				for _, i := range cellType.Transitions {
+					if i[0:1] != "!" {
+						newCellType = i
+					}
+				}
+			}
+		}
+
 		newCellItem, ok := CellTypes[newCellType]
 		if !ok {
 			newCellItem = CellTypes[DefaultCellType]
 		}
 
-		PopulateCellFromAlgorithm(x1, y1, x2, y2, builder.world, &newCellItem)
+		var regionID uint64
+		if currentCell != nil {
+			regionID = currentCell.RegionNameID
+
+			if cellType.MakeNewPlaceName == false && newCellItem.MakeNewPlaceName == true {
+				regionID = builder.World().NewPlaceID()
+			}
+		} else {
+			regionID = builder.World().NewPlaceID()
+		}
+
+		PopulateCellFromAlgorithm(x1, y1, x2, y2, builder.world, regionID, &newCellItem)
 	}
 }
 

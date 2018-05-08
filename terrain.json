@@ -25,7 +25,8 @@
             "clearing-grass",
             "clearing-grass",
             "clearing-grass",
-            "clearing-deep-grass"
+            "clearing-deep-grass",
+            "trailhead"
         ],
         "PlaceName": "%s grasslands",
         "Algorithm": "spread",
@@ -58,6 +59,51 @@
             8283,
             8280,
             8278
+        ]
+    },
+    "trailhead": {
+        "Name": "trailhead",
+        "Permeable": false,
+        "Blocking": false,
+        "Transitions": [
+            "trail",
+            "trail",
+            "trail",
+            "trail",
+            "clearing-grass",
+            "!previous"
+        ],
+        "PlaceName": "%s grasslands",
+        "Algorithm": "once",
+        "AlgorithmParameters": {},
+        "FGcolor": 144,
+        "BGcolor": 154,
+        "Bold": false,
+        "Representations": [
+            8284
+        ]
+    },
+    "trail": {
+        "Name": "trail",
+        "Permeable": false,
+        "Blocking": false,
+        "Transitions": [
+            "trail",
+            "!previous"
+        ],
+        "PlaceName": "%s trail",
+        "Algorithm": "path",
+        "AlgorithmParameters": {
+            "path": "trail",
+            "neighbor": "clearing-grass",
+            "endcap": "trailhead"
+        },
+        "FGcolor": 144,
+        "BGcolor": 187,
+        "Bold": false,
+        "Representations": [
+            8280,
+            8281
         ]
     }
 }

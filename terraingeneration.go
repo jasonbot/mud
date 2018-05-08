@@ -5,20 +5,13 @@ import (
 	"strconv"
 )
 
-type visitFunc func(x1, y1, x2, y2 uint32, world World, cellTerrain *CellTerrain)
+type visitFunc func(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain)
 
 var generationAlgorithms map[string]visitFunc
 
 var defaultAlgorithm = "once"
 
-func visitOnce(x1, y1, x2, y2 uint32, world World, cellTerrain *CellTerrain) {
-	oldCell := world.GetCellInfo(x1, y1)
-	var regionID uint64
-	if oldCell != nil {
-		regionID = oldCell.RegionNameID
-	} else {
-		regionID = world.NewPlaceID()
-	}
+func visitOnce(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	world.SetCellInfo(x2, y2, &CellInfo{TerrainType: cellTerrain.Name, RegionNameID: regionID})
 }
 
@@ -51,15 +44,7 @@ func tendril(x, y uint32, count uint64, world World, regionID uint64, cellTerrai
 	}
 }
 
-func visitTendril(x1, y1, x2, y2 uint32, world World, cellTerrain *CellTerrain) {
-	oldCell := world.GetCellInfo(x1, y1)
-	var regionID uint64
-	if oldCell != nil {
-		regionID = oldCell.RegionNameID
-	} else {
-		regionID = world.NewPlaceID()
-	}
-
+func visitTendril(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	radius := uint64(4)
 	if cellTerrain.AlgorithmParameters != nil {
 		radiusString, ok := cellTerrain.AlgorithmParameters["radius"]
@@ -87,15 +72,7 @@ func visitTendril(x1, y1, x2, y2 uint32, world World, cellTerrain *CellTerrain) 
 	}
 }
 
-func visitSpread(x1, y1, x2, y2 uint32, world World, cellTerrain *CellTerrain) {
-	oldCell := world.GetCellInfo(x1, y1)
-	var regionID uint64
-	if oldCell != nil {
-		regionID = oldCell.RegionNameID
-	} else {
-		regionID = world.NewPlaceID()
-	}
-
+func visitSpread(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	blocked := false
 
 	xs, xe, ys, ye := -1, 1, -1, 1
@@ -125,12 +102,93 @@ func visitSpread(x1, y1, x2, y2 uint32, world World, cellTerrain *CellTerrain) {
 	}
 
 	if blocked {
-		visitTendril(x1, y1, x2, y2, world, cellTerrain)
+		visitTendril(x1, y1, x2, y2, world, regionID, cellTerrain)
+	}
+}
+
+func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
+	xd := int(x2) - int(x1)
+	yd := int(y2) - int(y1)
+	nx, ny := (int(x2)), (int(y2))
+	neighborTerrain, ok := cellTerrain.AlgorithmParameters["neighbor"]
+	endcap, endok := cellTerrain.AlgorithmParameters["endcap"]
+
+	world.SetCellInfo(x1, y1,
+		&CellInfo{
+			TerrainType:  cellTerrain.Name,
+			RegionNameID: regionID})
+
+	if !ok {
+		ci := world.GetCellInfo(uint32(int(x1)+(xd*-2)), uint32(int(y1)+(yd*-2)))
+		if ci != nil {
+			if ci.TerrainType == cellTerrain.Name {
+				neighborTerrain = DefaultCellType
+			} else {
+				neighborTerrain = ci.TerrainType
+			}
+		} else {
+			neighborTerrain = DefaultCellType
+		}
+	}
+
+	length := 1 + rand.Int()%10
+	broken := false
+
+	for i := 0; i < length; i++ {
+		newCell := world.GetCellInfo(uint32(nx), uint32(ny))
+
+		if newCell == nil || newCell.TerrainType == neighborTerrain {
+			world.SetCellInfo(uint32(nx), uint32(ny),
+				&CellInfo{
+					TerrainType:  cellTerrain.Name,
+					RegionNameID: regionID})
+
+			neighborLeft := world.GetCellInfo(uint32(nx+yd), uint32(ny+xd))
+			neightborRight := world.GetCellInfo(uint32(nx-yd), uint32(ny-xd))
+
+			if neighborLeft == nil {
+				world.SetCellInfo(uint32(nx+yd), uint32(ny+xd),
+					&CellInfo{
+						TerrainType:  neighborTerrain,
+						RegionNameID: regionID})
+			}
+			if neightborRight == nil {
+				world.SetCellInfo(uint32(nx-yd), uint32(ny-xd),
+					&CellInfo{
+						TerrainType:  neighborTerrain,
+						RegionNameID: regionID})
+			}
+		} else {
+			broken = true
+			break
+		}
+
+		// Make trails jitter a little
+		if rand.Int()%5 == 0 {
+			if rand.Int()%2 == 0 {
+				nx -= yd
+				ny -= xd
+			} else {
+				nx += yd
+				ny += xd
+			}
+		} else {
+			nx += xd
+			ny += yd
+		}
+	}
+
+	if !broken && endok {
+		newCell := world.GetCellInfo(uint32(nx), uint32(ny))
+
+		if newCell == nil {
+			world.SetCellInfo(uint32(nx), uint32(ny), &CellInfo{TerrainType: endcap, RegionNameID: regionID})
+		}
 	}
 }
 
 // PopulateCellFromAlgorithm will run the specified algorithm to generate terrain
-func PopulateCellFromAlgorithm(x1, y1, x2, y2 uint32, world World, cellTerrain *CellTerrain) {
+func PopulateCellFromAlgorithm(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	if cellTerrain == nil {
 		return
 	}
@@ -141,7 +199,7 @@ func PopulateCellFromAlgorithm(x1, y1, x2, y2 uint32, world World, cellTerrain *
 		algo = generationAlgorithms["once"]
 	}
 
-	algo(x1, y1, x2, y2, world, cellTerrain)
+	algo(x1, y1, x2, y2, world, regionID, cellTerrain)
 }
 
 func init() {
@@ -150,4 +208,5 @@ func init() {
 	generationAlgorithms["once"] = visitOnce
 	generationAlgorithms["tendril"] = visitTendril
 	generationAlgorithms["spread"] = visitSpread
+	generationAlgorithms["path"] = visitPath
 }
