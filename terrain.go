@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"math/rand"
 )
 
 // Point represents an (X,Y) pair in the world
@@ -47,6 +48,7 @@ type CellTerrain struct {
 	BGcolor             byte              `json:""`           // SSH-display specific: the 256 color xterm color for BG
 	Bold                bool              `json:""`           // SSH-display specific: bold the cell FG?
 	Representations     []rune            `json:""`           // SSH-display specific: unicode chars to use to represent this cell on-screen
+	GetRandomTransition func() string     // What to transition to
 }
 
 // CellTypes is the list of cell types
@@ -84,6 +86,15 @@ func cellInfoToBytes(cellInfo *CellInfo) []byte {
 	return data
 }
 
+func makeTransitionFunction(name string, transitionList []string) func() string {
+	return func() string {
+		if transitionList != nil {
+			return transitionList[rand.Uint64()%uint64(len(transitionList))]
+		}
+		return name
+	}
+}
+
 func init() {
 	CellTypes = make(map[string]CellTerrain)
 
@@ -92,6 +103,11 @@ func init() {
 
 	if err == nil {
 		err = json.Unmarshal(data, &CellTypes)
+
+		for k, val := range CellTypes {
+			val.GetRandomTransition = makeTransitionFunction(val.Name, val.Transitions)
+			CellTypes[k] = val
+		}
 	}
 
 	if err != nil {

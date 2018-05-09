@@ -51,6 +51,8 @@ func (w *dbWorld) newUser(username string) UserData {
 		MaxAP:      10,
 		MP:         10,
 		MaxMP:      10,
+		RP:         10,
+		MaxRP:      10,
 		PublicKeys: make(map[string]bool)}
 	cellData := w.GetCellInfo(userData.X, userData.Y)
 
