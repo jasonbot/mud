@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"strconv"
+	"strings"
 )
 
 // Point represents an (X,Y) pair in the world
@@ -86,13 +88,56 @@ func cellInfoToBytes(cellInfo *CellInfo) []byte {
 	return data
 }
 
-func makeTransitionFunction(name string, transitionList []string) func() string {
+func makeTransitionFunction(name string, transitionList []string) (func() string, []string) {
+	total := 0
+
+	type transitionName struct {
+		name   string
+		weight int
+	}
+
+	transitionInternalList := make([]transitionName, 0)
+	returnTransitionList := make([]string, 0)
+
+	for _, transition := range transitionList {
+		splitString := strings.SplitN(transition, ":", 2)
+		weightString := "1"
+		returnTransitionList = append(returnTransitionList, splitString[0])
+
+		if (len(splitString)) > 1 {
+			weightString = splitString[1]
+		}
+
+		weight, err := strconv.Atoi(weightString)
+
+		if err != nil {
+			panic(err)
+		}
+
+		transitionInternalList = append(transitionInternalList, transitionName{name: splitString[0], weight: weight})
+		total += weight
+	}
+
+	log.Printf("Made a new weight matrix: %v (%v)", total, transitionInternalList)
+
 	return func() string {
-		if transitionList != nil {
-			return transitionList[rand.Uint64()%uint64(len(transitionList))]
+		if transitionInternalList != nil {
+			weight := 0
+			countTo := rand.Int() % total
+
+			log.Printf("Jumping to %v (%v)", countTo, transitionInternalList)
+			for _, item := range transitionInternalList {
+				weight += item.weight
+
+				if weight > countTo {
+					log.Printf("    Returning (at %v) %v", weight, item)
+					return item.name
+				}
+				log.Printf("    Skipping (at %v) %v", weight, item)
+			}
 		}
 		return name
-	}
+	}, returnTransitionList
 }
 
 func init() {
@@ -105,7 +150,7 @@ func init() {
 		err = json.Unmarshal(data, &CellTypes)
 
 		for k, val := range CellTypes {
-			val.GetRandomTransition = makeTransitionFunction(val.Name, val.Transitions)
+			val.GetRandomTransition, val.Transitions = makeTransitionFunction(val.Name, val.Transitions)
 			CellTypes[k] = val
 		}
 	}

@@ -21,10 +21,7 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
-            "clearing-grass",
-            "clearing-grass",
-            "clearing-grass",
-            "clearing-grass",
+            "clearing-grass:4",
             "clearing-deep-grass",
             "trail"
         ],
@@ -46,15 +43,8 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
-            "clearing-deep-grass",
-            "clearing-deep-grass",
-            "clearing-deep-grass",
-            "clearing-deep-grass",
-            "clearing-grass",
-            "clearing-grass",
-            "clearing-grass",
-            "clearing-grass",
-            "clearing-grass",
+            "clearing-deep-grass:4",
+            "clearing-grass:6",
             "clearing-tree"
         ],
         "PlaceName": "%s grasslands",
@@ -75,9 +65,7 @@
         "Permeable": false,
         "Blocking": true,
         "Transitions": [
-            "clearing-deep-grass",
-            "clearing-deep-grass",
-            "clearing-deep-grass",
+            "clearing-deep-grass:3",
             "clearing-tree"
         ],
         "PlaceName": "Tree in %s",
@@ -100,10 +88,7 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
-            "trail",
-            "trail",
-            "trail",
-            "trail",
+            "trail:4",
             "clearing-grass",
             "!previous"
         ],
