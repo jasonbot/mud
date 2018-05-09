@@ -149,10 +149,10 @@ func (screen *sshScreen) drawBox(x, y, width, height int) {
 		io.WriteString(screen.session, fmt.Sprintf(midString, cursor.MoveTo(y+i, x), color, " "))
 	}
 
-	io.WriteString(screen.session, fmt.Sprintf("%s%s┌", cursor.MoveTo(y, x), color))
-	io.WriteString(screen.session, fmt.Sprintf("%s%s└", cursor.MoveTo(y+height, x), color))
-	io.WriteString(screen.session, fmt.Sprintf("%s%s┐", cursor.MoveTo(y, x+width), color))
-	io.WriteString(screen.session, fmt.Sprintf("%s%s┘", cursor.MoveTo(y+height, x+width), color))
+	io.WriteString(screen.session, fmt.Sprintf("%s%s╭", cursor.MoveTo(y, x), color))
+	io.WriteString(screen.session, fmt.Sprintf("%s%s╰", cursor.MoveTo(y+height, x), color))
+	io.WriteString(screen.session, fmt.Sprintf("%s%s╮", cursor.MoveTo(y, x+width), color))
+	io.WriteString(screen.session, fmt.Sprintf("%s%s╯", cursor.MoveTo(y+height, x+width), color))
 }
 
 func (screen *sshScreen) drawProgressMeter(min, max, fgcolor, bgcolor, width uint64) string {
@@ -234,7 +234,7 @@ func (screen *sshScreen) renderCharacterSheet() {
 
 	infoLines := []string{
 		screen.user.Username(),
-		fmt.Sprintf("%s (%v, %v)", screen.user.LocationName(), pos.X, pos.Y),
+		truncateRight(fmt.Sprintf("%s (%v, %v)", screen.user.LocationName(), pos.X, pos.Y), width),
 		truncateRight(fmt.Sprintf("HP: %v/%v", screen.user.HP(), screen.user.MaxHP()), width-10) + screen.drawProgressMeter(screen.user.HP(), screen.user.MaxHP(), 196, bgcolor, 10),
 		truncateRight(fmt.Sprintf("AP: %v/%v", screen.user.AP(), screen.user.MaxAP()), width-10) + screen.drawProgressMeter(screen.user.AP(), screen.user.MaxAP(), 208, bgcolor, 10),
 		truncateRight(fmt.Sprintf("MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-10) + screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10),
@@ -353,7 +353,6 @@ func (screen *sshScreen) watchSSHScreen(resizeChan <-chan ssh.Window) {
 		case win := <-resizeChan:
 			screen.screenSize = win
 			screen.refreshed = false
-			screen.Render()
 		}
 	}
 }
