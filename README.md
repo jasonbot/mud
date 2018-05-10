@@ -25,6 +25,36 @@ assuming you're running the mud server locally.
 
 ## Playing
 
+### Game mechanics
+
+### Strengths
+
+Your primary and secondary strength determine how you are able to attack and defend.
+
+For instance, a sword attack is a meelee action. Throwing a grappling hook is a range action. Casting heal is a magic action. Combination actions are things like casting fireball (magic/range), shooting an arrow (range/melee), or using an enchanted staff (melee/magic).
+
+Note you can pick the same primary and secondary, which will greatly boost that individual strength.
+
+**Melee**: Strength is in physical action. Hand-to-hand combat, moving large objects.
+
+**Range**: Strength is in manipulating items from a distance. Accuracy in hitting things from far away, observing far away surroundings.
+
+**Magic**: Strength is in non-physical magical craft. Casting defensive and healing spells.
+
+The layout of the Melee/Range/Magic system is similar to Rock/Paper/Scissors: a Melee attack beats a Magic defense, a Magic offense trumps a Ranged defense, a Ranged offense beats a Melee defense.
+
+### Skills
+
+Your primary and secondary skill determine how you best solve problems.
+
+**People**: Strength is in persuasion and social skills. An understanding of the human landscape will reveal information.
+
+**Places**: Ability to notice obscure details and a gift for exploration. An understanding of the environment leads to clever solutions.
+
+**Things**: Ability to work with the physical world and tinker. An understanding of crafting and tools leads to engineered solutions.
+
+The layout of the skill system is similar to Strength: a People solution trumps a Place solution (chatting up a guard will be more successful in finding a trap exit over surveying the walls), a Place solution succeeds over a Thing solution (walking around the trap beats disarming it), a Thing solution trumps a People solution (knife to a gunfight).
+
 ### Keyboard commands
 
 `up`, `down`, `left`, `right`: move your character in that direction.
@@ -34,3 +64,7 @@ assuming you're running the mud server locally.
 `esc`: toggle chat mode.
 
 `tab`: toggle log/inventory view.
+
+`/`: activate command input mode (any chat message that starts with `/` is treated as a command).
+
+> **Note:** No commands have been implemented yet.
