@@ -32,6 +32,7 @@ type User interface {
 	Save()
 }
 
+// StatInfo handles user/NPC stats
 type StatInfo interface {
 	HP() uint64
 	SetHP(uint64)

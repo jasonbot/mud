@@ -51,8 +51,8 @@
         "MonsterSpawns": [
             {
                 "Name": "grass-snake",
-                "Probability": 5,
-                "Cluster": 2
+                "Probability": 1,
+                "Cluster": 5
             }
         ],
         "Algorithm": "spread",
