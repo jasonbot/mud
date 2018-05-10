@@ -6,6 +6,24 @@
         "MaxHP": 4,
         "MaxMP": 1,
         "MaxAP": 1,
-        "MaxRP": 1
+        "MaxRP": 1,
+        "Attacks": [
+            {
+                "Name": "Hiss",
+                "Accuracy": 100,
+                "MP": 0,
+                "AP": 0,
+                "RP": 0,
+                "Recovery": 1000
+            },
+            {
+                "Name": "Lash",
+                "Accuracy": 50,
+                "MP": 0,
+                "AP": 1,
+                "RP": 1,
+                "Recovery": 3000
+            }
+        ]
     }
 }
