@@ -14,7 +14,7 @@
                 "MP": 0,
                 "AP": 0,
                 "RP": 0,
-                "Recovery": 1000
+                "Recovery": 1
             },
             {
                 "Name": "Lash",
@@ -22,7 +22,15 @@
                 "MP": 0,
                 "AP": 1,
                 "RP": 1,
-                "Recovery": 3000
+                "Recovery": 1
+            },
+            {
+                "Name": "Strike",
+                "Accuracy": 50,
+                "MP": 1,
+                "AP": 1,
+                "RP": 0,
+                "Recovery": 2
             }
         ]
     }

@@ -17,7 +17,7 @@ type Attack struct {
 	AP       uint64   `json:""`
 	RP       uint64   `json:""`
 	Effects  []string `json:""`
-	Recovery uint64   `json:""` // In Milliseconds
+	Recovery uint64   `json:""` // In Seconds
 }
 
 // CreatureType is the type of creature (Hostile: true is monster, false is NPC)
