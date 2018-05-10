@@ -165,7 +165,7 @@ func setupSSHUser(ctx context.Context, cancel context.CancelFunc, done <-chan st
 			cancel()
 		case <-done:
 			log.Printf("Disconnected setup %v", session.RemoteAddr())
-			user.Log(fmt.Sprintf("Canceled player setup %v", time.Now().UTC().Format(time.RFC3339)))
+			user.Log(LogItem{Message: fmt.Sprintf("Canceled player setup %v", time.Now().UTC().Format(time.RFC3339)), MessageType: MESSAGESYSTEM})
 			session.Close()
 			return
 		}

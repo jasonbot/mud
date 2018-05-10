@@ -53,8 +53,8 @@ type User interface {
 	MoveEast()
 	MoveWest()
 
-	Log(message string)
-	GetLog() []string
+	Log(message LogItem)
+	GetLog() []LogItem
 
 	MarkActive()
 	LocationName() string
@@ -289,23 +289,32 @@ func (user *dbUser) MoveWest() {
 	}
 }
 
-func (user *dbUser) Log(message string) {
+func (user *dbUser) Log(message LogItem) {
+	now := time.Now().UTC()
+
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.BigEndian, []byte(user.UserData.Username))
 	binary.Write(buf, binary.BigEndian, byte(0))
-	binary.Write(buf, binary.BigEndian, -time.Now().UnixNano())
+	binary.Write(buf, binary.BigEndian, -now.UnixNano())
+
+	messageBytes, err := json.Marshal(message)
+
+	if err != nil {
+		log.Printf("Log serialization failure: %v", err)
+		return
+	}
 
 	user.world.database.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("userlog"))
 
-		err := bucket.Put(buf.Bytes(), []byte(message))
+		err := bucket.Put(buf.Bytes(), messageBytes)
 
 		return err
 	})
 }
 
-func (user *dbUser) GetLog() []string {
-	logMessages := make([]string, 0)
+func (user *dbUser) GetLog() []LogItem {
+	logMessages := make([]LogItem, 0)
 
 	minBuf := new(bytes.Buffer)
 	maxBuf := new(bytes.Buffer)
@@ -324,7 +333,15 @@ func (user *dbUser) GetLog() []string {
 		cur := bucket.Cursor()
 
 		for k, v := cur.Seek(min); k != nil && bytes.Compare(k, max) <= 0 && ct < 80; k, v = cur.Next() {
-			logMessages = append(logMessages, string(v))
+			var messageStruct LogItem
+
+			err := json.Unmarshal(v, &messageStruct)
+
+			if err != nil {
+				return err
+			}
+
+			logMessages = append(logMessages, messageStruct)
 			ct++
 		}
 

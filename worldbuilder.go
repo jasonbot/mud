@@ -10,7 +10,7 @@ type WorldBuilder interface {
 	StepInto(x1, y1, x2, y2 uint32) bool
 	World() World
 	GetUser(string) User
-	Chat(string)
+	Chat(LogItem)
 
 	MoveUserNorth(user User)
 	MoveUserSouth(user User)
@@ -113,7 +113,7 @@ func (builder *worldBuilder) GetUser(username string) User {
 	return builder.world.GetUser(username)
 }
 
-func (builder *worldBuilder) Chat(message string) {
+func (builder *worldBuilder) Chat(message LogItem) {
 	builder.world.Chat(message)
 }
 

@@ -14,6 +14,7 @@ import (
 // Screen represents a UI screen. For now, just an SSH terminal.
 type Screen interface {
 	ToggleChat(bool)
+	ActivateCommand()
 	ChatActive() bool
 	HandleChatKey(string)
 	GetChat() string
@@ -76,6 +77,24 @@ func centerText(message, pad string, width int) string {
 	}
 
 	return fmt.Sprintf("%s%s%s", string([]rune(leftString)[0:left]), message, string([]rune(leftString)[0:right]))
+}
+
+// SSHString render log item for console
+func (item *LogItem) SSHString(width int) string {
+	formatFunc := ansi.ColorFunc(fmt.Sprintf("255:%v", bgcolor))
+	boldFormatFunc := ansi.ColorFunc(fmt.Sprintf("15+b:%v", bgcolor))
+	systemFunc := ansi.ColorFunc(fmt.Sprintf("230+b:%v", bgcolor))
+	actionFunc := ansi.ColorFunc(fmt.Sprintf("247:%v", bgcolor))
+	switch item.MessageType {
+	case MESSAGECHAT:
+		return boldFormatFunc(item.Author) + formatFunc(": "+truncateRight(item.Message, width-(2+utf8.RuneCountInString(item.Author))))
+	case MESSAGESYSTEM:
+		return systemFunc(centerText(item.Message, " ", width))
+	case MESSAGEACTION:
+		return actionFunc(truncateRight(item.Message, width))
+	}
+
+	return truncateRight(item.Message, width)
 }
 
 func (screen *sshScreen) colorFunc(color string) func(string) string {
@@ -307,12 +326,10 @@ func (screen *sshScreen) renderLog() {
 	screenWidth := screen.screenSize.Width/2 - 3
 	log := screen.user.GetLog()
 	row := screen.screenSize.Height - 3
-	formatFunc := screen.colorFunc(fmt.Sprintf("255:%v", bgcolor))
 
 	for _, item := range log {
-		item = truncateRight(item, screenWidth-1)
 		move := cursor.MoveTo(row, screenX)
-		io.WriteString(screen.session, fmt.Sprintf("%s%s", move, formatFunc(item)))
+		io.WriteString(screen.session, move+item.SSHString(screenWidth-1))
 		row--
 
 		if row < y+3 {
@@ -324,6 +341,17 @@ func (screen *sshScreen) renderLog() {
 func (screen *sshScreen) ToggleChat(sticky bool) {
 	screen.chatActive = !screen.chatActive
 	screen.chatSticky = sticky
+	screen.Render()
+}
+
+func (screen *sshScreen) ActivateCommand() {
+	if screen.chatActive {
+		screen.chatText += "/"
+	} else {
+		screen.chatSticky = false
+		screen.chatText = "/"
+	}
+	screen.chatActive = true
 	screen.Render()
 }
 

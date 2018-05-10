@@ -21,7 +21,7 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 	pubKey, _ := s.Context().Value(mudPubkey).(string)
 	userSSH, ok := user.(UserSSHAuthentication)
 
-	builder.Chat(fmt.Sprintf("User %s has logged in", user.Username()))
+	builder.Chat(LogItem{Message: fmt.Sprintf("User %s has logged in", user.Username()), MessageType: MESSAGESYSTEM})
 	user.MarkActive()
 
 	if len(s.Command()) > 0 {
@@ -44,7 +44,7 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 
 	logMessage := fmt.Sprintf("Logged in as %s via %s at %s", user.Username(), s.RemoteAddr(), time.Now().UTC().Format(time.RFC3339))
 	log.Println(logMessage)
-	user.Log(logMessage)
+	user.Log(LogItem{Message: logMessage, MessageType: MESSAGESYSTEM})
 
 	done := s.Context().Done()
 	tick := time.Tick(500 * time.Millisecond)
@@ -83,6 +83,8 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 				screen.ToggleInventory()
 			case "ESCAPE":
 				screen.ToggleChat(true)
+			case "/":
+				screen.ActivateCommand()
 			case "BACKSPACE":
 				if screen.ChatActive() {
 					screen.HandleChatKey(inputString.inputString)
@@ -90,9 +92,14 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			case "ENTER":
 				if screen.ChatActive() {
 					chat := screen.GetChat()
-					chatString := fmt.Sprintf("%s: %s", user.Username(), chat)
-					if len(chatString) > 0 {
-						builder.Chat(chatString)
+					var chatItem LogItem
+					if chat[0] == '/' {
+						chatItem = LogItem{Author: user.Username(), Message: chat[1:len(chat)], MessageType: MESSAGEACTION}
+					} else {
+						chatItem = LogItem{Author: user.Username(), Message: chat, MessageType: MESSAGECHAT}
+					}
+					if len(chat) > 0 {
+						builder.Chat(chatItem)
 					}
 					screen.Render()
 				}
@@ -113,7 +120,8 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			continue
 		case <-done:
 			log.Printf("Disconnected %v", s.RemoteAddr())
-			user.Log(fmt.Sprintf("Signed off at %v", time.Now().UTC().Format(time.RFC3339)))
+			user.Log(LogItem{Message: fmt.Sprintf("Signed off at %v", time.Now().UTC().Format(time.RFC3339)),
+				MessageType: MESSAGESYSTEM})
 			screen.Reset()
 			s.Close()
 			return

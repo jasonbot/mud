@@ -6,7 +6,23 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// Message types for log items
+const (
+	MESSAGESYSTEM = iota
+	MESSAGECHAT
+	MESSAGEACTION
+)
+
+// LogItem is individual chat log line
+type LogItem struct {
+	Message     string    `json:""`
+	Author      string    `json:""`
+	Timestamp   time.Time `json:""`
+	MessageType int
+}
 
 // Point represents an (X,Y) pair in the world
 type Point struct {

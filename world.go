@@ -28,7 +28,7 @@ type World interface {
 	KillCreature(*Point, string)
 	NewPlaceID() uint64
 	OnlineUsers() []User
-	Chat(string)
+	Chat(LogItem)
 	Close()
 }
 
@@ -418,13 +418,13 @@ func (w *dbWorld) OnlineUsers() []User {
 
 	for _, name := range offlineNames {
 		log.Printf("%s has signed off", name)
-		w.Chat(fmt.Sprintf("%s has signed off", name))
+		w.Chat(LogItem{Message: fmt.Sprintf("%s has signed off", name), MessageType: MESSAGESYSTEM})
 	}
 
 	return arr
 }
 
-func (w *dbWorld) Chat(message string) {
+func (w *dbWorld) Chat(message LogItem) {
 	for _, user := range w.OnlineUsers() {
 		user.Log(message)
 	}
