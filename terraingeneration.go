@@ -86,6 +86,8 @@ func visitTendril(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerra
 func visitSpread(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	blocked := false
 
+	world.SetCellInfo(x2, y2, &CellInfo{TerrainType: cellTerrain.Name, RegionNameID: regionID})
+
 	xs, xe, ys, ye := -1, 1, -1, 1
 
 	if x1 > x2 {

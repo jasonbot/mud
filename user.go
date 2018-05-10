@@ -12,9 +12,27 @@ import (
 
 // User represents an active user in the system.
 type User interface {
+	StatInfo
+
 	Username() string
 	Location() *Point
 
+	MoveNorth()
+	MoveSouth()
+	MoveEast()
+	MoveWest()
+
+	Log(message string)
+	GetLog() []string
+
+	MarkActive()
+	LocationName() string
+
+	Reload()
+	Save()
+}
+
+type StatInfo interface {
 	HP() uint64
 	SetHP(uint64)
 	MP() uint64
@@ -31,20 +49,6 @@ type User interface {
 	SetMaxAP(uint64)
 	MaxRP() uint64
 	SetMaxRP(uint64)
-	LocationName() string
-
-	MoveNorth()
-	MoveSouth()
-	MoveEast()
-	MoveWest()
-
-	Log(message string)
-	GetLog() []string
-
-	MarkActive()
-
-	Reload()
-	Save()
 }
 
 // UserSSHAuthentication for storing SSH auth.

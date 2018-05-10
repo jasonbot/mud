@@ -48,6 +48,13 @@
             "clearing-tree"
         ],
         "PlaceName": "%s grasslands",
+        "MonsterSpawns": [
+            {
+                "Name": "grass-snake",
+                "Probability": 5,
+                "Cluster": 2
+            }
+        ],
         "Algorithm": "spread",
         "AlgorithmParameters": {},
         "FGcolor": 154,

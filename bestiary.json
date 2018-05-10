@@ -1,0 +1,11 @@
+{
+    "grass-snake": {
+        "ID": "grass-snake",
+        "Name": "Grass Snake",
+        "Hostile": true,
+        "MaxHP": 4,
+        "MaxMP": 1,
+        "MaxAP": 1,
+        "MaxRP": 1
+    }
+}

@@ -97,13 +97,21 @@ func (screen *sshScreen) renderMap() {
 			for _, value := range mapArray[row] {
 				fgcolor := value.FGColor
 				bgcolor := value.BGColor
+				bold := value.Bold
 				mGlyph := value.Glyph
 
 				if mGlyph == 0 {
 					mGlyph = rune('?')
 				}
 
-				rowText += screen.colorFunc(fmt.Sprintf("%v:%v", fgcolor, bgcolor))(string(mGlyph))
+				var fString string
+				if bold {
+					fString = fmt.Sprintf("%v+b:%v", fgcolor, bgcolor)
+				} else {
+					fString = fmt.Sprintf("%v:%v", fgcolor, bgcolor)
+				}
+
+				rowText += screen.colorFunc(fString)(string(mGlyph))
 			}
 
 			rowText += screen.colorFunc("clear")("")

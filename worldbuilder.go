@@ -1,12 +1,13 @@
 package mud
 
 import (
+	"log"
 	"math/rand"
 )
 
 // WorldBuilder handles map generation on top of the World, which is more a data store.
 type WorldBuilder interface {
-	StepInto(x1, y1, x2, y2 uint32)
+	StepInto(x1, y1, x2, y2 uint32) bool
 	World() World
 	GetUser(string) User
 	Chat(string)
@@ -21,6 +22,7 @@ type WorldBuilder interface {
 type CellRenderInfo struct {
 	FGColor byte
 	BGColor byte
+	Bold    bool
 	Glyph   rune
 }
 
@@ -57,14 +59,19 @@ func (builder *worldBuilder) populateAround(x, y uint32, xdelta, ydelta int) {
 	}
 }
 
-func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) {
+func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) bool {
 	newCell := builder.world.GetCellInfo(x2, y2)
+	returnVal := newCell == nil
+
+	log.Printf("Walking into (%v, %v) -> (%v, %v) %v", x1, y1, x2, y2, newCell)
 
 	if newCell == nil {
 		currentCell := builder.world.GetCellInfo(x1, y1)
 
+		log.Printf("  Current cell: %v", currentCell)
+
 		if currentCell == nil {
-			return
+			return returnVal
 		}
 
 		cellType := CellTypes[currentCell.TerrainType]
@@ -73,27 +80,14 @@ func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) {
 
 		if newCellType == "!origin" {
 			newCellType = currentCell.TerrainType
-		} else if newCellType == "!previous" {
-			xd := -(x2 - x1)
-			yd := -(y2 - y1)
-
-			ci := builder.world.GetCellInfo(x1+xd, y1+yd)
-
-			if ci != nil {
-				newCellType = ci.TerrainType
-			} else {
-				for _, i := range cellType.Transitions {
-					if i[0:1] != "!" {
-						newCellType = i
-					}
-				}
-			}
 		}
 
 		newCellItem, ok := CellTypes[newCellType]
 		if !ok {
 			newCellItem = CellTypes[DefaultCellType]
 		}
+
+		log.Printf("Cell nil; transitioning to %v", newCellItem)
 
 		var regionID uint64
 		if currentCell != nil {
@@ -108,6 +102,8 @@ func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) {
 
 		PopulateCellFromAlgorithm(x1, y1, x2, y2, builder.world, regionID, &newCellItem)
 	}
+
+	return returnVal
 }
 
 func (builder *worldBuilder) World() World {
@@ -131,7 +127,9 @@ func (builder *worldBuilder) MoveUserNorth(user User) {
 	}
 
 	if location.Y > 0 {
-		builder.StepInto(location.X, location.Y, location.X, location.Y-1)
+		if builder.StepInto(location.X, location.Y, location.X, location.Y-1) {
+			builder.world.ClearCreatures(location.X, location.Y-1)
+		}
 
 		newcell := builder.world.GetCellInfo(location.X, location.Y-1)
 
@@ -140,7 +138,7 @@ func (builder *worldBuilder) MoveUserNorth(user User) {
 			ct = CellTypes[newcell.TerrainType]
 		}
 
-		if (newcell != nil) && (newcell.ExitBlocks&SOUTHBIT != 0 || ct.Blocking) {
+		if (newcell == nil) || (newcell.ExitBlocks&SOUTHBIT != 0 || ct.Blocking) {
 			return
 		}
 		user.MoveNorth()
@@ -158,7 +156,9 @@ func (builder *worldBuilder) MoveUserSouth(user User) {
 	}
 
 	if location.Y < height-1 {
-		builder.StepInto(location.X, location.Y, location.X, location.Y+1)
+		if builder.StepInto(location.X, location.Y, location.X, location.Y+1) {
+			builder.world.ClearCreatures(location.X, location.Y+1)
+		}
 
 		newcell := builder.world.GetCellInfo(location.X, location.Y+1)
 
@@ -167,7 +167,7 @@ func (builder *worldBuilder) MoveUserSouth(user User) {
 			ct = CellTypes[newcell.TerrainType]
 		}
 
-		if (newcell != nil) && (newcell.ExitBlocks&NORTHBIT != 0 || ct.Blocking) {
+		if (newcell == nil) || (newcell.ExitBlocks&NORTHBIT != 0 || ct.Blocking) {
 			return
 		}
 		user.MoveSouth()
@@ -184,7 +184,9 @@ func (builder *worldBuilder) MoveUserEast(user User) {
 	}
 
 	if location.X > 0 {
-		builder.StepInto(location.X, location.Y, location.X+1, location.Y)
+		if builder.StepInto(location.X, location.Y, location.X+1, location.Y) {
+			builder.world.ClearCreatures(location.X+1, location.Y)
+		}
 
 		newcell := builder.world.GetCellInfo(location.X+1, location.Y)
 
@@ -193,7 +195,7 @@ func (builder *worldBuilder) MoveUserEast(user User) {
 			ct = CellTypes[newcell.TerrainType]
 		}
 
-		if (newcell != nil) && (newcell.ExitBlocks&WESTBIT != 0 || ct.Blocking) {
+		if (newcell == nil) || (newcell.ExitBlocks&WESTBIT != 0 || ct.Blocking) {
 			return
 		}
 		user.MoveEast()
@@ -211,7 +213,9 @@ func (builder *worldBuilder) MoveUserWest(user User) {
 	}
 
 	if location.X < width-1 {
-		builder.StepInto(location.X, location.Y, location.X-1, location.Y)
+		if builder.StepInto(location.X, location.Y, location.X-1, location.Y) {
+			builder.world.ClearCreatures(location.X-1, location.Y)
+		}
 
 		newcell := builder.world.GetCellInfo(location.X-1, location.Y)
 
@@ -220,7 +224,7 @@ func (builder *worldBuilder) MoveUserWest(user User) {
 			ct = CellTypes[newcell.TerrainType]
 		}
 
-		if (newcell != nil) && (newcell.ExitBlocks&EASTBIT != 0 || ct.Blocking) {
+		if (newcell == nil) || (newcell.ExitBlocks&EASTBIT != 0 || ct.Blocking) {
 			return
 		}
 		user.MoveWest()
@@ -260,9 +264,16 @@ func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]Cel
 					terrainInfo.BGcolor = 233
 				}
 
+				if builder.world.HasCreatures(uint32(int64(startx)+xd), uint32(int64(starty)+yd)) {
+					terrainInfo.FGcolor = 172
+					renderGlyph = rune('H')
+					terrainInfo.Bold = true
+				}
+
 				terrainMap[yd][xd] = CellRenderInfo{
 					FGColor: terrainInfo.FGcolor,
 					BGColor: terrainInfo.BGcolor,
+					Bold:    terrainInfo.Bold,
 					Glyph:   renderGlyph}
 			}
 		}

@@ -35,6 +35,12 @@ func PointFromBytes(ptBytes []byte) Point {
 // DefaultCellType is the seed land type when spawning a character.
 const DefaultCellType string = "clearing"
 
+type MonsterSpawn struct {
+	Name        string `json:""` // ID of monster in bestiary
+	Probability byte   `json:""` // 0-100
+	Cluster     byte   `json:""` // 1-100
+}
+
 // CellTerrain stores rules about different cell's terrain types.
 // For 256 color colors check https://jonasjacek.github.io/colors/
 type CellTerrain struct {
@@ -46,6 +52,7 @@ type CellTerrain struct {
 	MakeNewPlaceName    bool              `json:",omitempty"` // If leaving a cell with MakeNewPlaceName:false->MakeNewPlaceName:true, generate new place name
 	Algorithm           string            `json:""`           // Default is radiateout; should have algos for e.g. town grid building etc.
 	AlgorithmParameters map[string]string `json:""`           // Helpers for terrain generator algorithm
+	MonsterSpawns       []MonsterSpawn    `json:""`           // List of monster types and probabilities of them appearing in each terrain type
 	FGcolor             byte              `json:""`           // SSH-display specific: the 256 color xterm color for FG
 	BGcolor             byte              `json:""`           // SSH-display specific: the 256 color xterm color for BG
 	Bold                bool              `json:""`           // SSH-display specific: bold the cell FG?
@@ -118,22 +125,17 @@ func makeTransitionFunction(name string, transitionList []string) (func() string
 		total += weight
 	}
 
-	log.Printf("Made a new weight matrix: %v (%v)", total, transitionInternalList)
-
 	return func() string {
 		if transitionInternalList != nil {
 			weight := 0
 			countTo := rand.Int() % total
 
-			log.Printf("Jumping to %v (%v)", countTo, transitionInternalList)
 			for _, item := range transitionInternalList {
 				weight += item.weight
 
 				if weight > countTo {
-					log.Printf("    Returning (at %v) %v", weight, item)
 					return item.name
 				}
-				log.Printf("    Skipping (at %v) %v", weight, item)
 			}
 		}
 		return name
@@ -156,32 +158,6 @@ func init() {
 	}
 
 	if err != nil {
-		log.Printf("Terrain info file %s errored: %v; using bad defaults.", terrainInfoFile, err)
-
-		CellTypes[DefaultCellType] = CellTerrain{
-			Name:                DefaultCellType,
-			PlaceName:           "Clearing of %s",
-			Algorithm:           "once",
-			AlgorithmParameters: make(map[string]string),
-			FGcolor:             184,
-			BGcolor:             0,
-			Transitions:         []string{DefaultCellType + "-grass"},
-			Representations:     []rune{rune('+')}}
-
-		CellTypes[DefaultCellType+"-grass"] = CellTerrain{
-			Name:                DefaultCellType + "-grass",
-			PlaceName:           "%s grasslands",
-			Algorithm:           "spread",
-			AlgorithmParameters: map[string]string{"radius": "5"},
-			FGcolor:             112,
-			BGcolor:             154,
-			Transitions:         []string{DefaultCellType + "-grass"},
-			Representations:     []rune{rune('⁙'), rune('⁛'), rune('⁘'), rune('⁖')}}
-
-		outBytes, _ := json.Marshal(CellTypes)
-
-		ioutil.WriteFile(terrainInfoFile, outBytes, 0611)
-
-		return
+		log.Printf("Error parsing %s: %v", terrainInfoFile, err)
 	}
 }

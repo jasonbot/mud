@@ -3,9 +3,13 @@ package mud
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"time"
+
+	"github.com/google/uuid"
 
 	bolt "github.com/coreos/bbolt"
 )
@@ -17,6 +21,11 @@ type World interface {
 	GetUser(string) User
 	GetCellInfo(uint32, uint32) *CellInfo
 	SetCellInfo(uint32, uint32, *CellInfo)
+	GetCreatures(uint32, uint32) []*Creature
+	HasCreatures(uint32, uint32) bool
+	ClearCreatures(uint32, uint32)
+	AddStockCreature(uint32, uint32, string)
+	KillCreature(*Point, string)
 	NewPlaceID() uint64
 	OnlineUsers() []User
 	Chat(string)
@@ -111,6 +120,258 @@ func (w *dbWorld) SetCellInfo(x, y uint32, cellInfo *CellInfo) {
 
 		return err
 	})
+
+	ct, ok := CellTypes[cellInfo.TerrainType]
+
+	var spawns []MonsterSpawn
+
+	if ok {
+		spawns = ct.MonsterSpawns
+	}
+
+	if spawns != nil {
+		for _, spawn := range spawns {
+			prob := int(spawn.Probability)
+			cl := spawn.Cluster
+			if cl < 1 {
+				cl = 1
+			}
+
+			for clusterCount := 0; clusterCount < int(cl); clusterCount++ {
+				percentage := rand.Int() % 100
+
+				if percentage <= prob {
+					if clusterCount == 0 {
+						prob *= int(spawn.Cluster)
+					}
+
+					w.AddStockCreature(x, y, spawn.Name)
+				}
+			}
+		}
+	}
+}
+
+func (w *dbWorld) creatureList(x, y uint32) []string {
+	var cl CreatureList
+
+	w.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("creaturelist"))
+
+		pt := Point{X: x, Y: y}
+
+		bytes := bucket.Get(pt.Bytes())
+
+		if bytes != nil {
+			json.Unmarshal(bytes, &cl)
+		}
+
+		return nil
+	})
+
+	return cl.CreatureIDs
+}
+
+func (w *dbWorld) getCreature(id string) *Creature {
+	var creature *Creature
+
+	w.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("creatures"))
+
+		id, err := uuid.Parse(id)
+
+		if err != nil {
+			return err
+		}
+
+		byteID, err := id.MarshalBinary()
+
+		if err != nil {
+			return err
+		}
+
+		recordBytes := bucket.Get(byteID)
+
+		if recordBytes != nil {
+			creature = &Creature{}
+			json.Unmarshal(recordBytes, creature)
+		}
+
+		return err
+	})
+
+	return creature
+}
+
+func (w *dbWorld) GetCreatures(x, y uint32) []*Creature {
+	cl := w.creatureList(x, y)
+	creatures := make([]*Creature, 0)
+
+	if cl == nil || len(cl) == 0 {
+		for _, id := range cl {
+			c := w.getCreature(id)
+			if c != nil {
+				creatures = append(creatures, c)
+			}
+		}
+	}
+
+	return creatures
+}
+
+func (w *dbWorld) HasCreatures(x, y uint32) bool {
+	cl := w.creatureList(x, y)
+
+	if cl == nil || len(cl) == 0 {
+		return false
+	}
+
+	for _, id := range cl {
+		c := w.getCreature(id)
+		if c != nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (w *dbWorld) ClearCreatures(x, y uint32) {
+	creatures := w.creatureList(x, y)
+
+	pt := Point{X: x, Y: y}
+
+	if creatures != nil {
+		for _, id := range creatures {
+			w.KillCreature(&pt, id)
+		}
+	}
+}
+
+func (w *dbWorld) AddStockCreature(x, y uint32, id string) {
+	cID := uuid.New()
+	creatureType := CreatureTypes[id]
+	creature := Creature{
+		ID:           cID.String(),
+		CreatureType: creatureType.ID,
+		HP:           creatureType.MaxHP,
+		AP:           creatureType.MaxAP,
+		MP:           creatureType.MaxMP,
+		RP:           creatureType.MaxRP,
+		world:        w}
+
+	creatureList := CreatureList{}
+
+	w.database.Update(func(tx *bolt.Tx) error {
+		creatureBucket := tx.Bucket([]byte("creatures"))
+		creatureListBucket := tx.Bucket([]byte("creaturelist"))
+
+		creatureBytes, err := json.Marshal(creature)
+
+		if err != nil {
+			return err
+		}
+
+		byteKey, err := cID.MarshalBinary()
+
+		if err != nil {
+			return err
+		}
+
+		err = creatureBucket.Put(byteKey, creatureBytes)
+
+		if err != nil {
+			return err
+		}
+
+		pt := Point{X: x, Y: y}
+		creatureListBytes := creatureListBucket.Get(pt.Bytes())
+
+		if creatureListBytes != nil {
+			err = json.Unmarshal(creatureListBytes, &creatureList)
+
+			if err != nil {
+				return err
+			}
+		}
+
+		if creatureList.CreatureIDs == nil {
+			creatureList.CreatureIDs = make([]string, 0)
+		}
+
+		creatureList.CreatureIDs = append(creatureList.CreatureIDs, creature.ID)
+		creatureListBytes, _ = json.Marshal(creatureList)
+		creatureListBucket.Put(pt.Bytes(), creatureListBytes)
+
+		return nil
+	})
+}
+
+func (w *dbWorld) KillCreature(location *Point, id string) {
+	cID, err := uuid.Parse(id)
+
+	if err != nil {
+		return
+	}
+
+	byteID, err := cID.MarshalBinary()
+
+	if err != nil {
+		return
+	}
+
+	w.database.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("creatures"))
+		err := bucket.Delete(byteID)
+
+		if err != nil {
+			return err
+		}
+
+		if location != nil {
+			creatureListBucket := tx.Bucket([]byte("creaturelist"))
+			creatureListBytes := creatureListBucket.Get(location.Bytes())
+
+			if creatureListBytes != nil {
+				var creatureList CreatureList
+				err = json.Unmarshal(creatureListBytes, &creatureList)
+
+				if err != nil {
+					return err
+				}
+
+				aliveCreatureList := make([]string, 0)
+
+				if creatureList.CreatureIDs != nil {
+					for _, cid := range creatureList.CreatureIDs {
+						cuid, err := uuid.Parse(cid)
+
+						if err != nil {
+							return err
+						}
+
+						idBytes, err := cuid.MarshalBinary()
+
+						if err != nil {
+							return err
+						}
+
+						b := bucket.Get(idBytes)
+
+						if b != nil {
+							aliveCreatureList = append(aliveCreatureList, cid)
+						}
+					}
+				}
+
+				creatureList.CreatureIDs = aliveCreatureList
+				creatureListBytes, _ = json.Marshal(creatureList)
+				creatureListBucket.Put(location.Bytes(), creatureListBytes)
+			}
+		}
+
+		return nil
+	})
 }
 
 func (w *dbWorld) NewPlaceID() uint64 {
@@ -132,7 +393,7 @@ func (w *dbWorld) OnlineUsers() []User {
 			buf := bytes.NewBuffer(v)
 			binary.Read(buf, binary.BigEndian, &lastUpdate)
 
-			if (now - lastUpdate) < 5 {
+			if (now - lastUpdate) < 15 {
 				names = append(names, string(k))
 			} else {
 				offlineNames = append(offlineNames, string(k))
@@ -182,7 +443,7 @@ func (w *dbWorld) load() {
 
 	// Make default tables
 	db.Update(func(tx *bolt.Tx) error {
-		buckets := []string{"users", "terrain", "placenames", "userlog", "onlineusers"}
+		buckets := []string{"users", "terrain", "placenames", "userlog", "onlineusers", "creaturelist", "creatures"}
 
 		for _, bucket := range buckets {
 			_, err := tx.CreateBucketIfNotExists([]byte(bucket))
