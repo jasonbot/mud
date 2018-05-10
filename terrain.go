@@ -1,36 +1,10 @@
 package mud
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"io/ioutil"
 	"log"
-	"math/rand"
-	"strconv"
-	"strings"
 )
-
-// Point represents an (X,Y) pair in the world
-type Point struct {
-	X uint32
-	Y uint32
-}
-
-// Bytes Dumps a point into a byte array
-func (p *Point) Bytes() []byte {
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, p)
-	return buf.Bytes()
-}
-
-// PointFromBytes rehydrates a point struct
-func PointFromBytes(ptBytes []byte) Point {
-	var pt Point
-	buf := bytes.NewBuffer(ptBytes)
-	binary.Read(buf, binary.LittleEndian, &pt)
-	return pt
-}
 
 // DefaultCellType is the seed land type when spawning a character.
 const DefaultCellType string = "clearing"
@@ -45,11 +19,11 @@ type MonsterSpawn struct {
 // CellTerrain stores rules about different cell's terrain types.
 // For 256 color colors check https://jonasjacek.github.io/colors/
 type CellTerrain struct {
-	Name                string            `json:""`
+	ID                  string            `json:""`
 	Permeable           bool              `json:""`           // Things like paths, rivers, etc. should be permeable so biomes don't suddenly stop geneating through them.
 	Blocking            bool              `json:""`           // Some terrain types are impassable; e.g. walls
 	Transitions         []string          `json:""`           // Other cell types this can transition into when generating
-	PlaceName           string            `json:",omitempty"` // Formatstring to modify place name
+	Name                string            `json:",omitempty"` // Formatstring to modify place name
 	MakeNewPlaceName    bool              `json:",omitempty"` // If leaving a cell with MakeNewPlaceName:false->MakeNewPlaceName:true, generate new place name
 	Algorithm           string            `json:""`           // Default is radiateout; should have algos for e.g. town grid building etc.
 	AlgorithmParameters map[string]string `json:""`           // Helpers for terrain generator algorithm
@@ -77,10 +51,11 @@ const (
 
 // CellInfo holds more information on the cell: exits, items available, etc.
 type CellInfo struct {
-	TerrainType  string `json:""`
-	ExitBlocks   byte   `json:""`
-	RegionNameID uint64 `json:""`
-	RegionName   string `json:"-"`
+	TerrainID    string      `json:""`
+	TerrainData  CellTerrain `json:"-"`
+	ExitBlocks   byte        `json:""`
+	RegionNameID uint64      `json:""`
+	RegionName   string      `json:"-"`
 }
 
 // cellInfoFromBytes reads a CellInfo from raw bytes
@@ -96,64 +71,15 @@ func cellInfoToBytes(cellInfo *CellInfo) []byte {
 	return data
 }
 
-func makeTransitionFunction(name string, transitionList []string) (func() string, []string) {
-	total := 0
-
-	type transitionName struct {
-		name   string
-		weight int
-	}
-
-	transitionInternalList := make([]transitionName, 0)
-	returnTransitionList := make([]string, 0)
-
-	for _, transition := range transitionList {
-		splitString := strings.SplitN(transition, ":", 2)
-		weightString := "1"
-		returnTransitionList = append(returnTransitionList, splitString[0])
-
-		if (len(splitString)) > 1 {
-			weightString = splitString[1]
-		}
-
-		weight, err := strconv.Atoi(weightString)
-
-		if err != nil {
-			panic(err)
-		}
-
-		transitionInternalList = append(transitionInternalList, transitionName{name: splitString[0], weight: weight})
-		total += weight
-	}
-
-	return func() string {
-		if transitionInternalList != nil {
-			weight := 0
-			countTo := rand.Int() % total
-
-			for _, item := range transitionInternalList {
-				weight += item.weight
-
-				if weight > countTo {
-					return item.name
-				}
-			}
-		}
-		return ""
-	}, returnTransitionList
-}
-
-func init() {
-	CellTypes = make(map[string]CellTerrain)
-
-	terrainInfoFile := "./terrain.json"
+func loadTerrainTypes(terrainInfoFile string) {
 	data, err := ioutil.ReadFile(terrainInfoFile)
 
 	if err == nil {
 		err = json.Unmarshal(data, &CellTypes)
 
 		for k, val := range CellTypes {
-			val.GetRandomTransition, val.Transitions = makeTransitionFunction(val.Name, val.Transitions)
+			val.ID = k
+			val.GetRandomTransition, val.Transitions = MakeTransitionFunction(val.ID, val.Transitions)
 			CellTypes[k] = val
 		}
 	}
@@ -161,4 +87,8 @@ func init() {
 	if err != nil {
 		log.Printf("Error parsing %s: %v", terrainInfoFile, err)
 	}
+}
+
+func init() {
+	CellTypes = make(map[string]CellTerrain)
 }

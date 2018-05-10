@@ -50,10 +50,7 @@ type CreatureList struct {
 	CreatureIDs []string `json:""`
 }
 
-func init() {
-	CreatureTypes = make(map[string]CreatureType)
-
-	creatureInfoFile := "./bestiary.json"
+func loadCreatureTypes(creatureInfoFile string) {
 	data, err := ioutil.ReadFile(creatureInfoFile)
 
 	if err == nil {
@@ -63,6 +60,8 @@ func init() {
 	if err != nil {
 		log.Printf("Error parsing %s: %v", creatureInfoFile, err)
 	}
+}
 
-	log.Printf("BESTIARY: %v", CreatureTypes)
+func init() {
+	CreatureTypes = make(map[string]CreatureType)
 }

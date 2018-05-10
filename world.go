@@ -68,7 +68,7 @@ func (w *dbWorld) newUser(username string) UserData {
 	if cellData == nil {
 		newRegionID, _ := newPlaceNameInDB(w.database)
 		cellData = &CellInfo{
-			TerrainType:  DefaultCellType,
+			TerrainID:    DefaultCellType,
 			RegionNameID: newRegionID}
 
 		w.SetCellInfo(userData.X, userData.Y, cellData)
@@ -94,15 +94,16 @@ func (w *dbWorld) GetCellInfo(x, y uint32) *CellInfo {
 	})
 
 	placeName := getPlaceNameByIDFromDB(cellInfo.RegionNameID, w.database)
-	cellTerrain, ok := CellTypes[cellInfo.TerrainType]
+	cellTerrain, ok := CellTypes[cellInfo.TerrainID]
 
 	if ok {
 		// Format place name if it exists
-		if len(cellTerrain.PlaceName) > 0 {
-			placeName = fmt.Sprintf(cellTerrain.PlaceName, placeName)
+		if len(cellTerrain.Name) > 0 {
+			placeName = fmt.Sprintf(cellTerrain.Name, placeName)
 		}
 
 		cellInfo.RegionName = placeName
+		cellInfo.TerrainData = cellTerrain
 
 		return &cellInfo
 	}
@@ -121,7 +122,7 @@ func (w *dbWorld) SetCellInfo(x, y uint32, cellInfo *CellInfo) {
 		return err
 	})
 
-	ct, ok := CellTypes[cellInfo.TerrainType]
+	ct, ok := CellTypes[cellInfo.TerrainID]
 
 	var spawns []MonsterSpawn
 

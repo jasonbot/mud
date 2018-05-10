@@ -1,12 +1,11 @@
 {
     "clearing": {
-        "Name": "clearing",
+        "Name": "Clearing of %s",
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
             "clearing-grass"
         ],
-        "PlaceName": "Clearing of %s",
         "Algorithm": "once",
         "AlgorithmParameters": {},
         "FGcolor": 184,
@@ -17,7 +16,7 @@
         ]
     },
     "clearing-grass": {
-        "Name": "clearing-grass",
+        "Name": "%s grasslands",
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
@@ -25,7 +24,6 @@
             "clearing-deep-grass",
             "trail"
         ],
-        "PlaceName": "%s grasslands",
         "Algorithm": "spread",
         "AlgorithmParameters": {},
         "FGcolor": 112,
@@ -39,7 +37,7 @@
         ]
     },
     "clearing-deep-grass": {
-        "Name": "clearing-deep-grass",
+        "Name": "%s grasslands",
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
@@ -47,7 +45,6 @@
             "clearing-grass:6",
             "clearing-tree"
         ],
-        "PlaceName": "%s grasslands",
         "MonsterSpawns": [
             {
                 "Name": "grass-snake",
@@ -68,14 +65,13 @@
         ]
     },
     "clearing-tree": {
-        "Name": "clearing-tree",
+        "Name": "Tree in %s",
         "Permeable": false,
         "Blocking": true,
         "Transitions": [
             "clearing-deep-grass:3",
             "clearing-tree"
         ],
-        "PlaceName": "Tree in %s",
         "Algorithm": "tendril",
         "AlgorithmParameters": {
             "radius": "2",
@@ -91,7 +87,7 @@
         ]
     },
     "trailhead": {
-        "Name": "trailhead",
+        "Name": "%s grasslands",
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
@@ -99,7 +95,6 @@
             "clearing-grass",
             "!previous"
         ],
-        "PlaceName": "%s grasslands",
         "Algorithm": "once",
         "AlgorithmParameters": {},
         "FGcolor": 144,
@@ -110,14 +105,13 @@
         ]
     },
     "trail": {
-        "Name": "trail",
+        "Name": "%s trail",
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
             "trail",
             "!previous"
         ],
-        "PlaceName": "%s trail",
         "Algorithm": "path",
         "AlgorithmParameters": {
             "path": "trail",

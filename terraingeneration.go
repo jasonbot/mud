@@ -12,7 +12,7 @@ var generationAlgorithms map[string]visitFunc
 var defaultAlgorithm = "once"
 
 func visitOnce(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
-	world.SetCellInfo(x2, y2, &CellInfo{TerrainType: cellTerrain.Name, RegionNameID: regionID})
+	world.SetCellInfo(x2, y2, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 }
 
 func tendril(x, y uint32, count uint64, world World, regionID uint64, cellTerrain *CellTerrain) {
@@ -22,10 +22,10 @@ func tendril(x, y uint32, count uint64, world World, regionID uint64, cellTerrai
 
 	cell := world.GetCellInfo(x, y)
 	if cell == nil {
-		world.SetCellInfo(x, y, &CellInfo{TerrainType: cellTerrain.Name, RegionNameID: regionID})
+		world.SetCellInfo(x, y, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 		count--
-	} else if cell.TerrainType != cellTerrain.Name {
-		k, ok := CellTypes[cell.TerrainType]
+	} else if cell.TerrainID != cellTerrain.ID {
+		k, ok := CellTypes[cell.TerrainID]
 		count--
 
 		// Can pass through this and keep on going
@@ -77,7 +77,7 @@ func visitTendril(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerra
 			nx, ny := uint32(int(x2)+xd), uint32(int(y2)+yd)
 			ci := world.GetCellInfo(nx, ny)
 			if ci == nil {
-				world.SetCellInfo(nx, ny, &CellInfo{TerrainType: cellTerrain.Name, RegionNameID: regionID})
+				world.SetCellInfo(nx, ny, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 			}
 		}
 	}
@@ -86,7 +86,7 @@ func visitTendril(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerra
 func visitSpread(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	blocked := false
 
-	world.SetCellInfo(x2, y2, &CellInfo{TerrainType: cellTerrain.Name, RegionNameID: regionID})
+	world.SetCellInfo(x2, y2, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 
 	xs, xe, ys, ye := -1, 1, -1, 1
 
@@ -107,7 +107,7 @@ func visitSpread(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrai
 			nx, ny := uint32(int(x2)+xd), uint32(int(y2)+yd)
 			ci := world.GetCellInfo(nx, ny)
 			if ci == nil {
-				world.SetCellInfo(nx, ny, &CellInfo{TerrainType: cellTerrain.Name, RegionNameID: regionID})
+				world.SetCellInfo(nx, ny, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 			} else {
 				blocked = true
 			}
@@ -130,7 +130,7 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 
 	world.SetCellInfo(x1, y1,
 		&CellInfo{
-			TerrainType:  cellTerrain.Name,
+			TerrainID:    cellTerrain.ID,
 			RegionNameID: regionID})
 
 	if radiusok {
@@ -144,7 +144,7 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 	if !ok {
 		ci := world.GetCellInfo(uint32(int(x1)+(xd*-2)), uint32(int(y1)+(yd*-2)))
 		if ci != nil {
-			neighborTerrain = ci.TerrainType
+			neighborTerrain = ci.TerrainID
 		}
 	}
 
@@ -154,10 +154,10 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 	for i := 0; i < length; i++ {
 		newCell := world.GetCellInfo(uint32(nx), uint32(ny))
 
-		if newCell == nil || newCell.TerrainType == neighborTerrain {
+		if newCell == nil || newCell.TerrainID == neighborTerrain {
 			world.SetCellInfo(uint32(nx), uint32(ny),
 				&CellInfo{
-					TerrainType:  cellTerrain.Name,
+					TerrainID:    cellTerrain.ID,
 					RegionNameID: regionID})
 
 			neighborLeft := world.GetCellInfo(uint32(nx+yd), uint32(ny+xd))
@@ -166,13 +166,13 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 			if neighborLeft == nil {
 				world.SetCellInfo(uint32(nx+yd), uint32(ny+xd),
 					&CellInfo{
-						TerrainType:  neighborTerrain,
+						TerrainID:    neighborTerrain,
 						RegionNameID: regionID})
 			}
 			if neightborRight == nil {
 				world.SetCellInfo(uint32(nx-yd), uint32(ny-xd),
 					&CellInfo{
-						TerrainType:  neighborTerrain,
+						TerrainID:    neighborTerrain,
 						RegionNameID: regionID})
 			}
 		} else {
@@ -199,7 +199,7 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 		newCell := world.GetCellInfo(uint32(nx), uint32(ny))
 
 		if newCell == nil {
-			world.SetCellInfo(uint32(nx), uint32(ny), &CellInfo{TerrainType: endcap, RegionNameID: regionID})
+			world.SetCellInfo(uint32(nx), uint32(ny), &CellInfo{TerrainID: endcap, RegionNameID: regionID})
 
 			if rand.Int()%3 > 0 {
 				visitPath(uint32(nx), uint32(ny), uint32(nx+1), uint32(ny), world, regionID, cellTerrain)

@@ -70,7 +70,7 @@ func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) bool {
 			return returnVal
 		}
 
-		cellType := CellTypes[currentCell.TerrainType]
+		cellType := CellTypes[currentCell.TerrainID]
 
 		newCellType := cellType.GetRandomTransition()
 
@@ -79,7 +79,7 @@ func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) bool {
 		}
 
 		if newCellType == "!previous" {
-			newCellType = currentCell.TerrainType
+			newCellType = currentCell.TerrainID
 		}
 
 		newCellItem, ok := CellTypes[newCellType]
@@ -132,9 +132,9 @@ func (builder *worldBuilder) MoveUserNorth(user User) {
 
 		newcell := builder.world.GetCellInfo(location.X, location.Y-1)
 
-		ct := CellTypes[ci.TerrainType]
+		ct := CellTypes[ci.TerrainID]
 		if newcell != nil {
-			ct = CellTypes[newcell.TerrainType]
+			ct = CellTypes[newcell.TerrainID]
 		}
 
 		if (newcell == nil) || (newcell.ExitBlocks&SOUTHBIT != 0 || ct.Blocking) {
@@ -163,7 +163,7 @@ func (builder *worldBuilder) MoveUserSouth(user User) {
 
 		ct := CellTypes[DefaultCellType]
 		if newcell != nil {
-			ct = CellTypes[newcell.TerrainType]
+			ct = CellTypes[newcell.TerrainID]
 		}
 
 		if (newcell == nil) || (newcell.ExitBlocks&NORTHBIT != 0 || ct.Blocking) {
@@ -191,7 +191,7 @@ func (builder *worldBuilder) MoveUserEast(user User) {
 
 		ct := CellTypes[DefaultCellType]
 		if newcell != nil {
-			ct = CellTypes[newcell.TerrainType]
+			ct = CellTypes[newcell.TerrainID]
 		}
 
 		if (newcell == nil) || (newcell.ExitBlocks&WESTBIT != 0 || ct.Blocking) {
@@ -220,7 +220,7 @@ func (builder *worldBuilder) MoveUserWest(user User) {
 
 		ct := CellTypes[DefaultCellType]
 		if newcell != nil {
-			ct = CellTypes[newcell.TerrainType]
+			ct = CellTypes[newcell.TerrainID]
 		}
 
 		if (newcell == nil) || (newcell.ExitBlocks&EASTBIT != 0 || ct.Blocking) {
@@ -250,7 +250,7 @@ func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]Cel
 
 				terrainType := ""
 				if cellInfo != nil {
-					terrainType = cellInfo.TerrainType
+					terrainType = cellInfo.TerrainID
 				}
 
 				terrainInfo := CellTypes[terrainType]
