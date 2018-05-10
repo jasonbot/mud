@@ -200,6 +200,8 @@ func (w *dbWorld) getCreature(id string) *Creature {
 		return err
 	})
 
+	creature.CreatureTypeStruct = CreatureTypes[creature.CreatureType]
+
 	return creature
 }
 
@@ -207,7 +209,7 @@ func (w *dbWorld) GetCreatures(x, y uint32) []*Creature {
 	cl := w.creatureList(x, y)
 	creatures := make([]*Creature, 0)
 
-	if cl == nil || len(cl) == 0 {
+	if cl != nil && len(cl) > 0 {
 		for _, id := range cl {
 			c := w.getCreature(id)
 			if c != nil {
@@ -251,7 +253,7 @@ func (w *dbWorld) ClearCreatures(x, y uint32) {
 func (w *dbWorld) AddStockCreature(x, y uint32, id string) {
 	cID := uuid.New()
 	creatureType := CreatureTypes[id]
-	creature := Creature{
+	creature := &Creature{
 		ID:           cID.String(),
 		CreatureType: creatureType.ID,
 		HP:           creatureType.MaxHP,

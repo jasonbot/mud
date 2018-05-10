@@ -22,13 +22,14 @@ type CreatureType struct {
 
 // Creature is an instance of a Creature
 type Creature struct {
-	ID           string `json:""`
-	CreatureType string `json:""`
-	HP           uint64 `json:""`
-	MP           uint64 `json:""`
-	AP           uint64 `json:""`
-	RP           uint64 `json:""`
-	world        World
+	ID                 string       `json:""`
+	CreatureType       string       `json:""`
+	HP                 uint64       `json:""`
+	MP                 uint64       `json:""`
+	AP                 uint64       `json:""`
+	RP                 uint64       `json:""`
+	CreatureTypeStruct CreatureType `json:"-"`
+	world              World
 }
 
 // CreatureList represents the creatures in a DB
@@ -37,7 +38,7 @@ type CreatureList struct {
 }
 
 func init() {
-	CreatureTypes := make(map[string]CreatureType)
+	CreatureTypes = make(map[string]CreatureType)
 
 	creatureInfoFile := "./bestiary.json"
 	data, err := ioutil.ReadFile(creatureInfoFile)
