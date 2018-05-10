@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"unicode/utf8"
 
 	"github.com/ahmetb/go-cursor"
 	"github.com/gliderlabs/ssh"
@@ -43,30 +44,38 @@ const hpoff = "◇"
 const bgcolor = 232
 
 func truncateRight(message string, width int) string {
-	if len(message) < width {
+	if utf8.RuneCountInString(message) < width {
 		fmtString := fmt.Sprintf("%%-%vs", width)
 
 		return fmt.Sprintf(fmtString, message)
 	}
-	return message[0:width-1] + ellipsis
+	return string([]rune(message)[0:width-1]) + ellipsis
 }
 
 func truncateLeft(message string, width int) string {
-	if len(message) < width {
+	if utf8.RuneCountInString(message) < width {
 		fmtString := fmt.Sprintf("%%-%vs", width)
 
 		return fmt.Sprintf(fmtString, message)
 	}
-	return ellipsis + message[len(message)-width:len(message)-1]
+	strLen := utf8.RuneCountInString(message)
+	return ellipsis + string([]rune(message)[strLen-width:strLen-1])
 }
 
-func flushLeft(message string, width int) string {
-	if len(message) < width {
-		fmtString := fmt.Sprintf("%%%vs", width)
-
-		return fmt.Sprintf(fmtString, message)
+func centerText(message, pad string, width int) string {
+	if utf8.RuneCountInString(message) > width {
+		return truncateRight(message, width)
 	}
-	return ellipsis + message[len(message)-width:len(message)-1]
+	leftover := width - utf8.RuneCountInString(message)
+	left := leftover / 2
+	right := leftover - left
+
+	leftString := ""
+	for utf8.RuneCountInString(leftString) <= left && utf8.RuneCountInString(leftString) <= right {
+		leftString += pad
+	}
+
+	return fmt.Sprintf("%s%s%s", string([]rune(leftString)[0:left]), message, string([]rune(leftString)[0:right]))
 }
 
 func (screen *sshScreen) colorFunc(color string) func(string) string {
@@ -132,10 +141,7 @@ func (screen *sshScreen) renderChatInput() {
 		chatFunc = screen.colorFunc(fmt.Sprintf("0+b:%v", bgcolor-1))
 	}
 
-	fixedChat := screen.chatText
-	if len(fixedChat) > int(inputWidth-4) {
-		fixedChat = truncateLeft(fixedChat, int(inputWidth-4))
-	}
+	fixedChat := truncateLeft(screen.chatText, int(inputWidth-4))
 
 	chatText := fmt.Sprintf("%s%s%s", move, chat, chatFunc(fmt.Sprintf(fmtString, fixedChat)))
 
@@ -152,8 +158,8 @@ func (screen *sshScreen) drawBox(x, y, width, height int) {
 
 	for i := 1; i < height; i++ {
 		midString := fmt.Sprintf("%%s%%s│%%%vs│", (width - 1))
-		/* io.WriteString(screen.session, fmt.Sprintf("%s%s│", cursor.MoveTo(y+i, x), color))
-		io.WriteString(screen.session, fmt.Sprintf("%s%s│", cursor.MoveTo(y+i, x+width), color)) */
+		io.WriteString(screen.session, fmt.Sprintf("%s%s│", cursor.MoveTo(y+i, x), color))
+		io.WriteString(screen.session, fmt.Sprintf("%s%s│", cursor.MoveTo(y+i, x+width), color))
 		io.WriteString(screen.session, fmt.Sprintf(midString, cursor.MoveTo(y+i, x), color, " "))
 	}
 
@@ -161,6 +167,15 @@ func (screen *sshScreen) drawBox(x, y, width, height int) {
 	io.WriteString(screen.session, fmt.Sprintf("%s%s╰", cursor.MoveTo(y+height, x), color))
 	io.WriteString(screen.session, fmt.Sprintf("%s%s╮", cursor.MoveTo(y, x+width), color))
 	io.WriteString(screen.session, fmt.Sprintf("%s%s╯", cursor.MoveTo(y+height, x+width), color))
+}
+
+func (screen *sshScreen) drawFill(x, y, width, height int) {
+	color := ansi.ColorCode(fmt.Sprintf("0:%v", bgcolor))
+
+	midString := fmt.Sprintf("%%s%%s%%%vs", (width))
+	for i := 0; i <= height; i++ {
+		io.WriteString(screen.session, fmt.Sprintf(midString, cursor.MoveTo(y+i, x), color, " "))
+	}
 }
 
 func (screen *sshScreen) drawProgressMeter(min, max, fgcolor, bgcolor, width uint64) string {
@@ -236,21 +251,45 @@ func (screen *sshScreen) redrawBorders() {
 
 func (screen *sshScreen) renderCharacterSheet() {
 	x := screen.screenSize.Width/2 - 1
-	width := screen.screenSize.Width - x
+	width := (screen.screenSize.Width - x)
 	fmtFunc := screen.colorFunc(fmt.Sprintf("white:%v", bgcolor))
 	pos := screen.user.Location()
 
 	infoLines := []string{
-		screen.user.Username(),
+		centerText(screen.user.Username(), " ", width),
+		centerText("", "─", width),
 		truncateRight(fmt.Sprintf("%s (%v, %v)", screen.user.LocationName(), pos.X, pos.Y), width),
-		truncateRight(fmt.Sprintf("HP: %v/%v", screen.user.HP(), screen.user.MaxHP()), width-10) + screen.drawProgressMeter(screen.user.HP(), screen.user.MaxHP(), 196, bgcolor, 10),
-		truncateRight(fmt.Sprintf("AP: %v/%v", screen.user.AP(), screen.user.MaxAP()), width-10) + screen.drawProgressMeter(screen.user.AP(), screen.user.MaxAP(), 208, bgcolor, 10),
-		truncateRight(fmt.Sprintf("MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-10) + screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10),
-		truncateRight(fmt.Sprintf("RP: %v/%v", screen.user.RP(), screen.user.MaxRP()), width-10) + screen.drawProgressMeter(screen.user.RP(), screen.user.MaxRP(), 117, bgcolor, 10)}
+		screen.drawProgressMeter(screen.user.HP(), screen.user.MaxHP(), 196, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" HP: %v/%v", screen.user.HP(), screen.user.MaxHP()), width-11)),
+		screen.drawProgressMeter(screen.user.AP(), screen.user.MaxAP(), 208, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" AP: %v/%v", screen.user.AP(), screen.user.MaxAP()), width-11)),
+		screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-11)),
+		screen.drawProgressMeter(screen.user.RP(), screen.user.MaxRP(), 117, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" RP: %v/%v", screen.user.RP(), screen.user.MaxRP()), width-11))}
+
+	creatures := screen.builder.World().GetCreatures(pos.X, pos.Y)
+
+	if creatures != nil && len(creatures) > 0 {
+		extraLines := []string{centerText(" Creatures ", "─", width)}
+
+		for _, creature := range creatures {
+			extraLines = append(extraLines, truncateRight(fmt.Sprintf("%s (%v/%v)",
+				creature.CreatureTypeStruct.Name,
+				creature.HP,
+				creature.CreatureTypeStruct.MaxHP), width))
+		}
+
+		infoLines = append(infoLines, extraLines...)
+	}
+
+	infoLines = append(infoLines, centerText(" ❦ ", "─", width))
 
 	for index, line := range infoLines {
 		io.WriteString(screen.session, fmt.Sprintf("%s%s", cursor.MoveTo(2+index, x), fmtFunc(line)))
+		if index+2 > int(screen.screenSize.Height) {
+			break
+		}
 	}
+
+	lastLine := len(infoLines) + 1
+	screen.drawFill(x, lastLine+1, width, screen.screenSize.Height-(lastLine+2))
 }
 
 func (screen *sshScreen) renderInventory() {
@@ -293,12 +332,12 @@ func (screen *sshScreen) ChatActive() bool {
 }
 
 func (screen *sshScreen) HandleChatKey(input string) {
-	if input == "BACKSPACE" && len(input) > 1 {
-		if len(screen.chatText) > 0 {
-			screen.chatText = screen.chatText[0 : len(screen.chatText)-1]
+	if input == "BACKSPACE" {
+		if utf8.RuneCountInString(screen.chatText) > 0 {
+			screen.chatText = string([]rune(screen.chatText)[0 : utf8.RuneCountInString(screen.chatText)-1])
 			screen.Render()
 		}
-	} else if len(input) == 1 {
+	} else if utf8.RuneCountInString(input) == 1 {
 		screen.chatText += input
 		screen.Render()
 	}
