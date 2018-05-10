@@ -13,10 +13,12 @@ import (
 
 // Screen represents a UI screen. For now, just an SSH terminal.
 type Screen interface {
-	ToggleChat(bool)
-	ActivateCommand()
-	ChatActive() bool
-	HandleChatKey(string)
+	ToggleInput()
+	ToggleChat()
+	ToggleCommand()
+	InputActive() bool
+	InCommandMode() bool
+	HandleInputKey(string)
 	GetChat() string
 	ToggleInventory()
 	InventoryActive() bool
@@ -31,9 +33,10 @@ type sshScreen struct {
 	screenSize      ssh.Window
 	refreshed       bool
 	colorCodeCache  map[string](func(string) string)
-	chatActive      bool
+	inputActive     bool
 	chatSticky      bool
-	chatText        string
+	inputText       string
+	commandMode     bool
 	inventoryActive bool
 }
 
@@ -152,19 +155,22 @@ func (screen *sshScreen) renderChatInput() {
 	inputWidth := uint32(screen.screenSize.Width/2) - 2
 	move := cursor.MoveTo(screen.screenSize.Height-1, 2)
 
-	fmtString := fmt.Sprintf("%%-%vs", inputWidth-4)
+	fmtString := fmt.Sprintf("%%-%vs", inputWidth-7)
 
 	chatFunc := screen.colorFunc(fmt.Sprintf("231:%v", bgcolor))
-	chat := chatFunc("> ")
-	if screen.ChatActive() {
+	chat := chatFunc("SAY▶ ")
+	if screen.commandMode {
+		chat = chatFunc("CMD◊ ")
+	}
+	if screen.InputActive() {
 		chatFunc = screen.colorFunc(fmt.Sprintf("0+b:%v", bgcolor-1))
 	}
 
-	fixedChat := truncateLeft(screen.chatText, int(inputWidth-4))
+	fixedChat := truncateLeft(screen.inputText, int(inputWidth-7))
 
-	chatText := fmt.Sprintf("%s%s%s", move, chat, chatFunc(fmt.Sprintf(fmtString, fixedChat)))
+	inputText := fmt.Sprintf("%s%s%s", move, chat, chatFunc(fmt.Sprintf(fmtString, fixedChat)))
 
-	io.WriteString(screen.session, chatText)
+	io.WriteString(screen.session, inputText)
 }
 
 func (screen *sshScreen) drawBox(x, y, width, height int) {
@@ -338,43 +344,66 @@ func (screen *sshScreen) renderLog() {
 	}
 }
 
-func (screen *sshScreen) ToggleChat(sticky bool) {
-	screen.chatActive = !screen.chatActive
-	screen.chatSticky = sticky
+func (screen *sshScreen) ToggleInput() {
+	screen.inputActive = !screen.inputActive
+	screen.chatSticky = true
 	screen.Render()
 }
 
-func (screen *sshScreen) ActivateCommand() {
-	if screen.chatActive {
-		screen.chatText += "/"
-	} else {
-		screen.chatSticky = false
-		screen.chatText = "/"
+func (screen *sshScreen) ToggleChat() {
+	screen.inputActive = !screen.inputActive
+	screen.chatSticky = false
+	screen.commandMode = false
+	screen.Render()
+}
+
+func (screen *sshScreen) ToggleCommand() {
+	screen.commandMode = true
+	if screen.inputActive {
+		screen.HandleInputKey("/")
 	}
-	screen.chatActive = true
+	screen.inputActive = true
 	screen.Render()
 }
 
-func (screen *sshScreen) ChatActive() bool {
-	return !screen.inventoryActive && screen.chatActive
+func (screen *sshScreen) InputActive() bool {
+	return !screen.inventoryActive && screen.inputActive
 }
 
-func (screen *sshScreen) HandleChatKey(input string) {
+func (screen *sshScreen) InCommandMode() bool {
+	return screen.commandMode
+}
+
+func (screen *sshScreen) HandleInputKey(input string) {
+	if screen.inputText == "" {
+		if input == "/" {
+			screen.commandMode = true
+			screen.inputText = ""
+			input = ""
+		} else if input == "!" {
+			screen.commandMode = false
+			screen.inputText = ""
+			input = ""
+		}
+	}
+
 	if input == "BACKSPACE" {
-		if utf8.RuneCountInString(screen.chatText) > 0 {
-			screen.chatText = string([]rune(screen.chatText)[0 : utf8.RuneCountInString(screen.chatText)-1])
+		if utf8.RuneCountInString(screen.inputText) > 0 {
+			screen.inputText = string([]rune(screen.inputText)[0 : utf8.RuneCountInString(screen.inputText)-1])
 			screen.Render()
 		}
 	} else if utf8.RuneCountInString(input) == 1 {
-		screen.chatText += input
-		screen.Render()
+		screen.inputText += input
 	}
+
+	screen.Render()
+
 }
 
 func (screen *sshScreen) GetChat() string {
-	ct := screen.chatText
-	screen.chatText = ""
-	screen.chatActive = screen.chatSticky
+	ct := screen.inputText
+	screen.inputText = ""
+	screen.inputActive = screen.chatSticky
 	return ct
 }
 

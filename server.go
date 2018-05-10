@@ -82,21 +82,27 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			case "TAB":
 				screen.ToggleInventory()
 			case "ESCAPE":
-				screen.ToggleChat(true)
+				screen.ToggleInput()
 			case "/":
-				screen.ActivateCommand()
+				screen.ToggleCommand()
 			case "BACKSPACE":
-				if screen.ChatActive() {
-					screen.HandleChatKey(inputString.inputString)
+				if screen.InputActive() {
+					screen.HandleInputKey(inputString.inputString)
 				}
 			case "ENTER":
-				if screen.ChatActive() {
+				if screen.InputActive() {
 					chat := screen.GetChat()
 					var chatItem LogItem
-					if chat[0] == '/' {
-						chatItem = LogItem{Author: user.Username(), Message: chat[1:len(chat)], MessageType: MESSAGEACTION}
+					if screen.InCommandMode() {
+						chatItem = LogItem{
+							Author:      user.Username(),
+							Message:     chat,
+							MessageType: MESSAGEACTION}
 					} else {
-						chatItem = LogItem{Author: user.Username(), Message: chat, MessageType: MESSAGECHAT}
+						chatItem = LogItem{
+							Author:      user.Username(),
+							Message:     chat,
+							MessageType: MESSAGECHAT}
 					}
 					if len(chat) > 0 {
 						builder.Chat(chatItem)
@@ -104,10 +110,10 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 					screen.Render()
 				}
 			default:
-				if screen.ChatActive() {
-					screen.HandleChatKey(inputString.inputString)
+				if screen.InputActive() {
+					screen.HandleInputKey(inputString.inputString)
 				} else if inputString.inputString == "t" || inputString.inputString == "T" {
-					screen.ToggleChat(false)
+					screen.ToggleChat()
 				}
 			}
 		case <-ctx.Done():

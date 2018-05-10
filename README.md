@@ -61,10 +61,12 @@ The layout of the skill system is similar to Strength: a People solution trumps 
 
 `ctrl-C`: log off.
 
-`esc`: toggle chat mode.
-
 `tab`: toggle log/inventory view.
 
-`/`: activate command input mode (any chat message that starts with `/` is treated as a command).
+`esc`: toggle input mode.
+
+`/`: activate command input mode (any input message that starts with `/` is treated as a command).
+
+`T`: activate chat input mode (and input string that starts with `!` is treated a a chat)
 
 > **Note:** No commands have been implemented yet.
