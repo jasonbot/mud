@@ -35,6 +35,7 @@ func PointFromBytes(ptBytes []byte) Point {
 // DefaultCellType is the seed land type when spawning a character.
 const DefaultCellType string = "clearing"
 
+// MonsterSpawn is a JSON struct used for the generation of monsters
 type MonsterSpawn struct {
 	Name        string `json:""` // ID of monster in bestiary
 	Probability byte   `json:""` // 0-100
@@ -138,7 +139,7 @@ func makeTransitionFunction(name string, transitionList []string) (func() string
 				}
 			}
 		}
-		return name
+		return ""
 	}, returnTransitionList
 }
 
