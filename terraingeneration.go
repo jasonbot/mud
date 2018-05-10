@@ -144,13 +144,7 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 	if !ok {
 		ci := world.GetCellInfo(uint32(int(x1)+(xd*-2)), uint32(int(y1)+(yd*-2)))
 		if ci != nil {
-			if ci.TerrainType == cellTerrain.Name {
-				neighborTerrain = DefaultCellType
-			} else {
-				neighborTerrain = ci.TerrainType
-			}
-		} else {
-			neighborTerrain = DefaultCellType
+			neighborTerrain = ci.TerrainType
 		}
 	}
 

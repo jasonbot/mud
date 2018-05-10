@@ -63,12 +63,8 @@ func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) bool {
 	newCell := builder.world.GetCellInfo(x2, y2)
 	returnVal := newCell == nil
 
-	log.Printf("Walking into (%v, %v) -> (%v, %v) %v", x1, y1, x2, y2, newCell)
-
 	if newCell == nil {
 		currentCell := builder.world.GetCellInfo(x1, y1)
-
-		log.Printf("  Current cell: %v", currentCell)
 
 		if currentCell == nil {
 			return returnVal
@@ -78,16 +74,19 @@ func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) bool {
 
 		newCellType := cellType.GetRandomTransition()
 
-		if newCellType == "!origin" {
+		if len(newCellType) == 0 {
+			return false
+		}
+
+		if newCellType == "!previous" {
 			newCellType = currentCell.TerrainType
 		}
 
 		newCellItem, ok := CellTypes[newCellType]
 		if !ok {
+			log.Printf("Found an invaid terrain type: %s", newCellType)
 			newCellItem = CellTypes[DefaultCellType]
 		}
-
-		log.Printf("Cell nil; transitioning to %v", newCellItem)
 
 		var regionID uint64
 		if currentCell != nil {
@@ -133,7 +132,7 @@ func (builder *worldBuilder) MoveUserNorth(user User) {
 
 		newcell := builder.world.GetCellInfo(location.X, location.Y-1)
 
-		ct := CellTypes[DefaultCellType]
+		ct := CellTypes[ci.TerrainType]
 		if newcell != nil {
 			ct = CellTypes[newcell.TerrainType]
 		}
