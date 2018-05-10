@@ -54,6 +54,10 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 
 	go handleKeys(reader, stringInput, cancel)
 
+	if !user.IsInitialized() {
+		setupSSHUser(ctx, cancel, done, s, user, stringInput)
+	}
+
 	for {
 		select {
 		case inputString := <-stringInput:

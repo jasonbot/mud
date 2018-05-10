@@ -10,11 +10,42 @@ import (
 	bolt "github.com/coreos/bbolt"
 )
 
+// Strengths
+const (
+	MELEESECONDARY = byte(1)
+	RANGESECONDARY = byte(2)
+	MAGICSECONDARY = byte(3)
+	MELEEPRIMARY   = byte(4)
+	RANGEPRIMARY   = byte(8)
+	MAGICPRIMARY   = byte(12)
+)
+
+// Skills
+const (
+	PEOPLESECONDARY = byte(16)
+	PLACESSECONDARY = byte(32)
+	THINGSSECONDARY = byte(48)
+	PEOPLEPRIMARY   = byte(64)
+	PLACESPRIMARY   = byte(128)
+	THINGSPRIMARY   = byte(192)
+)
+
+// Masks for strenths/skills
+const (
+	SECONDARYSTRENGTHMASK = byte(3)
+	PRIMARYSTRENGTHMASK   = byte(12)
+	SECONDARYSKILLMASK    = byte(48)
+	PRIMARYSKILLMASK      = byte(192)
+)
+
 // User represents an active user in the system.
 type User interface {
 	StatInfo
+	ClassInfo
 
 	Username() string
+	IsInitialized() bool
+	Initialize(bool)
 	Location() *Point
 
 	MoveNorth()
@@ -52,6 +83,17 @@ type StatInfo interface {
 	SetMaxRP(uint64)
 }
 
+// ClassInfo handles user/NPC class orientation
+type ClassInfo interface {
+	ClassInfo() byte
+	SetClassInfo(byte)
+
+	Strengths() (byte, byte)
+	SetStrengths(byte, byte)
+	Skills() (byte, byte)
+	SetSkills(byte, byte)
+}
+
 // UserSSHAuthentication for storing SSH auth.
 type UserSSHAuthentication interface {
 	SSHKeysEmpty() bool
@@ -74,6 +116,7 @@ type UserData struct {
 	MaxMP       uint64          `json:""`
 	RP          uint64          `json:""`
 	MaxRP       uint64          `json:""`
+	ClassInfo   byte            `json:""`
 	Initialized bool            `json:""`
 	PublicKeys  map[string]bool `json:""`
 }
@@ -85,6 +128,16 @@ type dbUser struct {
 
 func (user *dbUser) Username() string {
 	return user.UserData.Username
+}
+
+func (user *dbUser) Initialize(initialize bool) {
+	user.Reload()
+	user.Initialized = initialize
+	user.Save()
+}
+
+func (user *dbUser) IsInitialized() bool {
+	return user.UserData.Initialized
 }
 
 func (user *dbUser) Location() *Point {
@@ -153,6 +206,42 @@ func (user *dbUser) MaxRP() uint64 {
 
 func (user *dbUser) SetMaxRP(maxrp uint64) {
 	user.UserData.MaxRP = maxrp
+}
+
+func (user *dbUser) ClassInfo() byte {
+	return user.UserData.ClassInfo
+}
+
+func (user *dbUser) SetClassInfo(classinfo byte) {
+	user.Reload()
+	user.UserData.ClassInfo = classinfo
+	user.Save()
+}
+
+func (user *dbUser) Strengths() (byte, byte) {
+	return user.UserData.ClassInfo & PRIMARYSTRENGTHMASK, user.UserData.ClassInfo & SECONDARYSTRENGTHMASK
+}
+
+func (user *dbUser) SetStrengths(primary, secondary byte) {
+	primary &= PRIMARYSTRENGTHMASK
+	secondary &= SECONDARYSTRENGTHMASK
+
+	user.Reload()
+	user.UserData.ClassInfo = (user.UserData.ClassInfo &^ (PRIMARYSTRENGTHMASK | SECONDARYSTRENGTHMASK)) | primary | secondary
+	user.Save()
+}
+
+func (user *dbUser) Skills() (byte, byte) {
+	return user.UserData.ClassInfo & PRIMARYSKILLMASK, user.UserData.ClassInfo & SECONDARYSKILLMASK
+}
+
+func (user *dbUser) SetSkills(primary, secondary byte) {
+	primary &= PRIMARYSKILLMASK
+	secondary &= SECONDARYSKILLMASK
+
+	user.Reload()
+	user.UserData.ClassInfo = (user.UserData.ClassInfo &^ (PRIMARYSKILLMASK | SECONDARYSKILLMASK)) | primary | secondary
+	user.Save()
 }
 
 // Location returns the name of the current cell
