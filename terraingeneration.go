@@ -11,6 +11,34 @@ var generationAlgorithms map[string]visitFunc
 
 var defaultAlgorithm = "once"
 
+func getIntSetting(settings map[string]string, settingName string, defaultValue int) int {
+	if settings != nil {
+		value, ok := settings[settingName]
+
+		if ok && len(value) > 0 {
+			val, err := strconv.Atoi(value)
+
+			if err == nil {
+				return val
+			}
+		}
+	}
+
+	return defaultValue
+}
+
+func getStringSetting(settings map[string]string, settingName string, defaultValue string) string {
+	if settings != nil {
+		value, ok := settings[settingName]
+
+		if ok && len(value) > 0 {
+			return value
+		}
+	}
+
+	return defaultValue
+}
+
 func visitOnce(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	world.SetCellInfo(x2, y2, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 }
@@ -45,31 +73,12 @@ func tendril(x, y uint32, count uint64, world World, regionID uint64, cellTerrai
 }
 
 func visitTendril(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
-	radius := uint64(4)
-	tendrilcount := uint64(0)
-	if cellTerrain.AlgorithmParameters != nil {
-		radiusString, ok := cellTerrain.AlgorithmParameters["radius"]
-		if ok {
-			radiusI, err := strconv.Atoi(radiusString)
+	radius := getIntSetting(cellTerrain.AlgorithmParameters, "radius", 4)
 
-			if err != nil {
-				radius = uint64(radiusI)
-			}
-		}
+	tendrilcount := getIntSetting(cellTerrain.AlgorithmParameters, "tendrilcount", radius)
 
-		tendrilcount = radius
-		tendrilcountString, ok := cellTerrain.AlgorithmParameters["tendrilcount"]
-		if ok {
-			tendrilcountI, err := strconv.Atoi(tendrilcountString)
-
-			if err != nil {
-				tendrilcount = uint64(tendrilcountI)
-			}
-		}
-	}
-
-	for i := 0; i < int(tendrilcount); i++ {
-		tendril(x2, y2, radius, world, regionID, cellTerrain)
+	for i := 0; i < tendrilcount; i++ {
+		tendril(x2, y2, uint64(radius), world, regionID, cellTerrain)
 	}
 
 	for xd := -1; xd < 2; xd++ {
@@ -125,21 +134,12 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 	nx, ny := (int(x2)), (int(y2))
 	neighborTerrain, ok := cellTerrain.AlgorithmParameters["neighbor"]
 	endcap, endok := cellTerrain.AlgorithmParameters["endcap"]
-	radiusString, radiusok := cellTerrain.AlgorithmParameters["radius"]
-	radius := uint64(5)
+	radius := getIntSetting(cellTerrain.AlgorithmParameters, "radius", 5)
 
 	world.SetCellInfo(x1, y1,
 		&CellInfo{
 			TerrainID:    cellTerrain.ID,
 			RegionNameID: regionID})
-
-	if radiusok {
-		radiusI, err := strconv.Atoi(radiusString)
-
-		if err != nil {
-			radius = uint64(radiusI)
-		}
-	}
 
 	if !ok {
 		ci := world.GetCellInfo(uint32(int(x1)+(xd*-2)), uint32(int(y1)+(yd*-2)))
@@ -211,6 +211,100 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 	}
 }
 
+func visitDungeonRoom(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
+	minRadius := getIntSetting(cellTerrain.AlgorithmParameters, "minradius", 5)
+	maxRadius := getIntSetting(cellTerrain.AlgorithmParameters, "maxradius", 5)
+	wall := getStringSetting(cellTerrain.AlgorithmParameters, "wall", cellTerrain.ID)
+	exit := getStringSetting(cellTerrain.AlgorithmParameters, "exit", cellTerrain.ID)
+	fallback := getStringSetting(cellTerrain.AlgorithmParameters, "fallback", cellTerrain.ID)
+
+	radius := minRadius
+	if (maxRadius - minRadius) > 0 {
+		radius += rand.Int() % (maxRadius - minRadius)
+	}
+
+	xd := int(x2) - int(x1)
+	yd := int(y2) - int(y1)
+
+	ux, lx, uy, ly := int(x2), int(x2), int(y2), int(y2)
+
+	if yd == 0 {
+		ly -= radius
+		uy += radius
+
+		if xd > 0 {
+			ux += (radius * 2)
+		} else {
+			lx -= (radius * 2)
+		}
+	} else if xd == 0 {
+		lx -= radius
+		ux += radius
+
+		if yd > 0 {
+			uy += (radius * 2)
+		} else {
+			ly -= (radius * 2)
+		}
+	}
+
+	free := true
+
+BlockCheck:
+	for xc := lx; xc <= ux; xc++ {
+		for yc := ly; yc <= uy; yc++ {
+			if world.GetCellInfo(uint32(xc), uint32(yc)) != nil {
+				free = false
+				break BlockCheck
+			}
+		}
+	}
+
+	if !free {
+		mnx, mny, mxx, mxy := x2, y2, x2, y2
+		if xd == 0 {
+			mnx--
+			mxx++
+		} else if yd == 0 {
+			mny--
+			mxy++
+		}
+
+		for x := mnx; x <= mxx; x++ {
+			for y := mny; y <= mxy; y++ {
+				if world.GetCellInfo(x, y) == nil {
+					world.SetCellInfo(x, y, &CellInfo{TerrainID: wall, RegionNameID: regionID})
+				}
+			}
+		}
+
+		world.SetCellInfo(x2, y2, &CellInfo{TerrainID: fallback, RegionNameID: regionID})
+	} else {
+		regionID = world.NewPlaceID()
+		for xdd := lx; xdd <= ux; xdd++ {
+			for ydd := ly; ydd <= uy; ydd++ {
+				if uint32(xdd) == x2 && uint32(ydd) == y2 {
+					world.SetCellInfo(x2, y2, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
+				} else if xdd == ux || xdd == lx || ydd == uy || ydd == ly {
+					world.SetCellInfo(uint32(xdd), uint32(ydd), &CellInfo{TerrainID: wall, RegionNameID: regionID})
+				} else {
+					world.SetCellInfo(uint32(xdd), uint32(ydd), &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
+				}
+			}
+		}
+
+		for _, pt := range []Point{
+			Point{X: uint32(ux + (lx-ux)/2), Y: uint32(uy)},
+			Point{X: uint32(ux + (lx-ux)/2), Y: uint32(ly)},
+			Point{X: uint32(lx), Y: uint32(ly + (ly-uy)/2)},
+			Point{X: uint32(ux), Y: uint32(ly + (ly-uy)/2)}} {
+			if rand.Int()%4 != 0 {
+				world.SetCellInfo(pt.X, pt.Y, &CellInfo{TerrainID: exit, RegionNameID: regionID})
+			}
+		}
+	}
+}
+
 // PopulateCellFromAlgorithm will run the specified algorithm to generate terrain
 func PopulateCellFromAlgorithm(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	if cellTerrain == nil {
@@ -233,4 +327,5 @@ func init() {
 	generationAlgorithms["tendril"] = visitTendril
 	generationAlgorithms["spread"] = visitSpread
 	generationAlgorithms["path"] = visitPath
+	generationAlgorithms["dungeon-room"] = visitDungeonRoom
 }

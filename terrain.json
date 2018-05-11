@@ -91,9 +91,9 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
-            "trail:4",
-            "clearing-grass",
-            "!previous"
+            "trail:14",
+            "clearing-grass:10",
+            "!previous:10"
         ],
         "Algorithm": "once",
         "AlgorithmParameters": {},
@@ -109,8 +109,9 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
-            "trail",
-            "!previous"
+            "trail:20",
+            "!previous:15",
+            "clearing-trail-ruin:100"
         ],
         "Algorithm": "path",
         "AlgorithmParameters": {
@@ -125,6 +126,38 @@
         "Representations": [
             8280,
             8281
+        ]
+    },
+    "clearing-trail-ruin": {
+        "Name": "Ruins of %s",
+        "MakeNewPlaceName": false,
+        "Permeable": false,
+        "Transitions": [
+            "clearing-trail-ruin:10",
+            "clearing-grass:1"
+        ],
+        "Algorithm": "dungeon-room",
+        "AlgorithmParameters": {
+            "minradius": "1",
+            "maxradius": "3",
+            "wall": "ruin-wall",
+            "exit": "clearing-trail-ruin",
+            "fallback": "clearing-deep-grass"
+        },
+        "FGColor": 142,
+        "BGColor": 118,
+        "Representations": [
+            9618
+        ]
+    },
+    "ruin-wall": {
+        "Name": "Ruin Walls of %s",
+        "Permeable": false,
+        "FGColor": 142,
+        "BGColor": 118,
+        "Blocking": true,
+        "Representations": [
+            9619
         ]
     }
 }

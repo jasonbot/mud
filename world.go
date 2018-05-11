@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,8 +34,16 @@ type World interface {
 }
 
 type dbWorld struct {
-	filename string
-	database *bolt.DB
+	filename         string
+	database         *bolt.DB
+	closeActiveCells chan struct{}
+	activeCellCache  sync.Map
+}
+
+type recentCellInfo struct {
+	x, y      uint32
+	lastVisit int64
+	cellInfo  *CellInfo
 }
 
 // GetDimensions returns the size of the world
@@ -431,8 +440,22 @@ func (w *dbWorld) Chat(message LogItem) {
 }
 
 func (w *dbWorld) Close() {
+	w.closeActiveCells <- struct{}{}
 	if w.database != nil {
 		w.database.Close()
+	}
+}
+
+func (w *dbWorld) watchActiveCells() {
+	tick := time.Tick(1 * time.Second)
+
+	for {
+		select {
+		case <-w.closeActiveCells:
+			return
+		case <-tick:
+			return
+		}
 	}
 }
 
@@ -460,6 +483,8 @@ func (w *dbWorld) load() {
 	})
 
 	w.database = db
+	w.closeActiveCells = make(chan struct{})
+	go w.watchActiveCells()
 }
 
 // LoadWorldFromDB will set up an on-disk based world

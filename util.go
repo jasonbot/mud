@@ -83,7 +83,7 @@ func MakeTransitionFunction(name string, transitionList []string) (func() string
 	}
 
 	return func() string {
-		if transitionInternalList != nil {
+		if transitionInternalList != nil && len(transitionInternalList) != 0 {
 			weight := 0
 			countTo := rand.Int() % total
 

@@ -2,7 +2,6 @@ package mud
 
 import (
 	"encoding/binary"
-	"log"
 	"math/rand"
 	"strings"
 
@@ -92,12 +91,9 @@ func newPlaceNameInDB(db *bolt.DB) (uint64, string) {
 		binary.BigEndian.PutUint64(b, uint64(id))
 		err = bucket.Put(b, []byte(placeName))
 
-		log.Printf("New place: %s (%v)", placeName, id)
-
 		return err
 	})
 
-	log.Printf("Returning %v - %v", id, placeName)
 	return id, placeName
 }
 
