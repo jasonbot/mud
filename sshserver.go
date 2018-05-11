@@ -135,8 +135,8 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 	}
 }
 
-// Serve runs the main server loop.
-func Serve() {
+// ServeSSH runs the main SSH server loop.
+func ServeSSH(listen string) {
 	rand.Seed(time.Now().Unix())
 
 	world := LoadWorldFromDB("./world.db")
@@ -151,8 +151,8 @@ func Serve() {
 		return true
 	})
 
-	log.Println("Starting SSH server on :2222")
-	log.Fatal(ssh.ListenAndServe(":2222", func(s ssh.Session) {
+	log.Printf("Starting SSH server on %v", listen)
+	log.Fatal(ssh.ListenAndServe(listen, func(s ssh.Session) {
 		handleConnection(builder, s)
 	}, publicKeyOption, ssh.HostKeyFile(privateKey)))
 }

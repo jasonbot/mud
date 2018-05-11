@@ -145,20 +145,29 @@
             "exit": "clearing-trail-ruin",
             "fallback": "clearing-deep-grass"
         },
-        "FGColor": 142,
-        "BGColor": 118,
+        "FGColor": 64,
+        "BGColor": 142,
         "Representations": [
-            9618
+            32
         ]
     },
     "ruin-wall": {
         "Name": "Ruin Walls of %s",
         "Permeable": false,
-        "FGColor": 142,
-        "BGColor": 118,
+        "FGColor": 64,
+        "BGColor": 247,
         "Blocking": true,
         "Representations": [
-            9619
+            9622,
+            9623,
+            9624,
+            9625,
+            9626,
+            9627,
+            9628,
+            9629,
+            9630,
+            9631
         ]
     },
     "savannah": {
@@ -173,7 +182,7 @@
         ],
         "Algorithm": "spread",
         "AlgorithmParameters": {
-            "radius": "4"
+            "radius": "1"
         },
         "FGcolor": 106,
         "BGcolor": 149,
@@ -187,7 +196,7 @@
         ]
     },
     "desert": {
-        "Name": "%s desert",
+        "Name": "%s sands",
         "MakeNewPlaceName": true,
         "Permeable": false,
         "Blocking": false,
@@ -199,7 +208,7 @@
         "Algorithm": "path",
         "AlgorithmParameters": {
             "neighbor": "desert",
-            "radius": "2",
+            "radius": "10",
             "endcap": "desert"
         },
         "FGcolor": 220,

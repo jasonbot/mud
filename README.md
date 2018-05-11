@@ -23,6 +23,8 @@ in order to get it set up on your platform of choice. From there it's a simple m
 
 assuming you're running the mud server locally.
 
+Your terminal needs to support 256 colors. iTerm2 and Terminal.app on macOS both support 256 colors as does pretty much any terminal you can think of on Linux. Pretty sure Putty works too if you et your terminal type to `xterm-256color`. Also [here is a very detailed amount of information](https://stackoverflow.com/questions/15375992/vim-difference-between-t-co-256-and-term-xterm-256color-in-conjunction-with-tmu/15378816#15378816).
+
 ## Playing
 
 ### Game mechanics
@@ -45,15 +47,13 @@ The layout of the Melee/Range/Magic system is similar to Rock/Paper/Scissors: a 
 
 ### Skills
 
-Your primary and secondary skill determine how you best solve problems.
+This is not fully fleshed out.
 
 **People**: Strength is in persuasion and social skills. An understanding of the human landscape will reveal information.
 
 **Places**: Ability to notice obscure details and a gift for exploration. An understanding of the environment leads to clever solutions.
 
 **Things**: Ability to work with the physical world and tinker. An understanding of crafting and tools leads to engineered solutions.
-
-The layout of the skill system is similar to Strength: a People solution trumps a Place solution (chatting up a guard will be more successful in finding a trap exit over surveying the walls), a Place solution succeeds over a Thing solution (walking around the trap beats disarming it), a Thing solution trumps a People solution (knife to a gunfight).
 
 ### Keyboard commands
 

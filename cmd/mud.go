@@ -1,12 +1,32 @@
 package main
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/jasonbot/mud"
 )
+
+var configFile = "./config.json"
+
+type serverconfig struct {
+	Listen string `json:""`
+}
+
+func loadConfig(config *serverconfig) {
+	data, err := ioutil.ReadFile(configFile)
+
+	if err == nil {
+		err = json.Unmarshal(data, config)
+	}
+
+	if err != nil {
+		log.Printf("Error parsing %s: %v", configFile, err)
+	}
+}
 
 func main() {
 	log.Println("Starting")
@@ -15,7 +35,7 @@ func main() {
 		panic(err)
 	}
 
-	if _, err := os.Stat("./terrain.json"); err != nil {
+	if _, err := os.Stat(configFile); err != nil {
 		executablePath, err := filepath.Abs(filepath.Dir(executable))
 		if err != nil {
 			panic(err)
@@ -26,6 +46,10 @@ func main() {
 		os.Chdir(executablePath)
 	}
 
+	var config serverconfig
+
+	loadConfig(&config)
+
 	mud.LoadResources()
-	mud.Serve()
+	mud.ServeSSH(config.Listen)
 }

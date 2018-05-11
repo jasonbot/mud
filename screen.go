@@ -214,8 +214,8 @@ func (screen *sshScreen) drawProgressMeter(min, max, fgcolor, bgcolor, width uin
 	onColor := screen.colorFunc(fmt.Sprintf("%v:%v", fgcolor, bgcolor))
 	offColor := onColor
 
-	if proportion < 1.5 {
-		onColor = screen.colorFunc(fmt.Sprintf("%v+Bbh:%v", fgcolor, bgcolor))
+	if proportion < 0.05 {
+		onColor = screen.colorFunc(fmt.Sprintf("%v+B:%v", fgcolor, bgcolor))
 	}
 
 	if (onWidth + offWidth) > width {
