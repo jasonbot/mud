@@ -525,7 +525,7 @@ func (w *dbWorld) load() {
 
 	// Make default tables
 	db.Update(func(tx *bolt.Tx) error {
-		buckets := []string{"users", "terrain", "placenames", "userlog", "onlineusers", "creaturelist", "creatures"}
+		buckets := []string{"users", "userlog", "onlineusers", "lastuseraction", "terrain", "placenames", "creaturelist", "creatures"}
 
 		for _, bucket := range buckets {
 			_, err := tx.CreateBucketIfNotExists([]byte(bucket))

@@ -34,7 +34,7 @@ type sshScreen struct {
 	refreshed       bool
 	colorCodeCache  map[string](func(string) string)
 	inputActive     bool
-	chatSticky      bool
+	inputSticky     bool
 	inputText       string
 	commandMode     bool
 	inventoryActive bool
@@ -284,6 +284,7 @@ func (screen *sshScreen) renderCharacterSheet() {
 		centerText(screen.user.Username(), " ", width),
 		centerText("", "─", width),
 		truncateRight(fmt.Sprintf("%s (%v, %v)", screen.user.LocationName(), pos.X, pos.Y), width),
+		truncateRight(fmt.Sprintf("Charge: %v", screen.user.GetLastAction()), width),
 		screen.drawProgressMeter(screen.user.HP(), screen.user.MaxHP(), 196, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" HP: %v/%v", screen.user.HP(), screen.user.MaxHP()), width-11)),
 		screen.drawProgressMeter(screen.user.AP(), screen.user.MaxAP(), 208, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" AP: %v/%v", screen.user.AP(), screen.user.MaxAP()), width-11)),
 		screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-11)),
@@ -346,13 +347,13 @@ func (screen *sshScreen) renderLog() {
 
 func (screen *sshScreen) ToggleInput() {
 	screen.inputActive = !screen.inputActive
-	screen.chatSticky = true
+	screen.inputSticky = true
 	screen.Render()
 }
 
 func (screen *sshScreen) ToggleChat() {
 	screen.inputActive = !screen.inputActive
-	screen.chatSticky = false
+	screen.inputSticky = false
 	screen.commandMode = false
 	screen.Render()
 }
@@ -403,7 +404,7 @@ func (screen *sshScreen) HandleInputKey(input string) {
 func (screen *sshScreen) GetChat() string {
 	ct := screen.inputText
 	screen.inputText = ""
-	screen.inputActive = screen.chatSticky
+	screen.inputActive = screen.inputSticky
 	return ct
 }
 

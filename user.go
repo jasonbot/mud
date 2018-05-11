@@ -42,6 +42,7 @@ const (
 type User interface {
 	StatInfo
 	ClassInfo
+	LastAction
 
 	Username() string
 	IsInitialized() bool
@@ -92,6 +93,12 @@ type ClassInfo interface {
 	SetStrengths(byte, byte)
 	Skills() (byte, byte)
 	SetSkills(byte, byte)
+}
+
+// LastAction tracks the last time an actor performed an action, for charging action bar.
+type LastAction interface {
+	Act()
+	GetLastAction() int64
 }
 
 // UserSSHAuthentication for storing SSH auth.
@@ -258,6 +265,7 @@ func (user *dbUser) MoveNorth() {
 	if user.Y > 0 {
 		user.Y--
 		user.world.activateCell(user.X, user.Y)
+		user.Act()
 		user.Save()
 	}
 }
@@ -269,6 +277,7 @@ func (user *dbUser) MoveSouth() {
 	if user.Y < height-1 {
 		user.Y++
 		user.world.activateCell(user.X, user.Y)
+		user.Act()
 		user.Save()
 	}
 }
@@ -280,6 +289,7 @@ func (user *dbUser) MoveEast() {
 	if user.X < width-1 {
 		user.X++
 		user.world.activateCell(user.X, user.Y)
+		user.Act()
 		user.Save()
 	}
 }
@@ -289,6 +299,7 @@ func (user *dbUser) MoveWest() {
 	if user.X > 0 {
 		user.X--
 		user.world.activateCell(user.X, user.Y)
+		user.Act()
 		user.Save()
 	}
 }
@@ -401,6 +412,36 @@ func (user *dbUser) Save() {
 
 		return err
 	})
+}
+
+func (user *dbUser) Act() {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, time.Now().UTC().UnixNano())
+
+	user.world.database.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("lastuseraction"))
+		return bucket.Put([]byte(user.UserData.Username), buf.Bytes())
+	})
+}
+
+func (user *dbUser) GetLastAction() int64 {
+	timeDelta := int64(0)
+
+	user.world.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("lastuseraction"))
+		stamp := bucket.Get([]byte(user.UserData.Username))
+		buf := bytes.NewBuffer(stamp)
+
+		var last int64
+
+		if binary.Read(buf, binary.BigEndian, &last) == nil {
+			timeDelta = time.Now().UTC().UnixNano() - last
+		}
+
+		return nil
+	})
+
+	return timeDelta / 1000000000
 }
 
 func (user *dbUser) SSHKeysEmpty() bool {

@@ -23,6 +23,7 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 
 	builder.Chat(LogItem{Message: fmt.Sprintf("User %s has logged in", user.Username()), MessageType: MESSAGESYSTEM})
 	user.MarkActive()
+	user.Act()
 
 	if len(s.Command()) > 0 {
 		s.Write([]byte("Commands are not supported.\n"))

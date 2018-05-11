@@ -15,7 +15,7 @@ Then run `bin/mud` from this folder.
 
 ## Connecting to Play
 
-You need ssh installed and a key generated. This is beyond the scope of this `README` but you
+This MUD is a terminal-based SSH server. You need an ssh client installed and a private key generated. This is beyond the scope of this `README` but you
 [can probably follow these Github instructions](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/)
 in order to get it set up on your platform of choice. From there it's a simple matter of connecting:
 
