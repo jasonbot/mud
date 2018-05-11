@@ -28,7 +28,8 @@
         "MonsterSpawns": [
             {
                 "Name": "goat",
-                "Probability": 0.0001
+                "Probability": 0.001,
+                "Cluster": 10
             }
         ],
         "Algorithm": "spread",
