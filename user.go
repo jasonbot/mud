@@ -257,6 +257,7 @@ func (user *dbUser) MoveNorth() {
 	user.Reload()
 	if user.Y > 0 {
 		user.Y--
+		user.world.activateCell(user.X, user.Y)
 		user.Save()
 	}
 }
@@ -267,6 +268,7 @@ func (user *dbUser) MoveSouth() {
 
 	if user.Y < height-1 {
 		user.Y++
+		user.world.activateCell(user.X, user.Y)
 		user.Save()
 	}
 }
@@ -277,6 +279,7 @@ func (user *dbUser) MoveEast() {
 
 	if user.X < width-1 {
 		user.X++
+		user.world.activateCell(user.X, user.Y)
 		user.Save()
 	}
 }
@@ -285,6 +288,7 @@ func (user *dbUser) MoveWest() {
 	user.Reload()
 	if user.X > 0 {
 		user.X--
+		user.world.activateCell(user.X, user.Y)
 		user.Save()
 	}
 }
@@ -361,6 +365,8 @@ func (user *dbUser) MarkActive() {
 
 		return err
 	})
+
+	user.world.activateCell(user.X, user.Y)
 }
 
 func (user *dbUser) Reload() {

@@ -265,7 +265,7 @@ func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]Cel
 
 				if builder.world.HasCreatures(uint32(int64(startx)+xd), uint32(int64(starty)+yd)) {
 					terrainInfo.FGcolor = 172
-					renderGlyph = rune('H')
+					renderGlyph = rune('∆')
 					terrainInfo.Bold = true
 				}
 

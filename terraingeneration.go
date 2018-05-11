@@ -294,13 +294,11 @@ BlockCheck:
 		}
 
 		for _, pt := range []Point{
-			Point{X: uint32(ux + (lx-ux)/2), Y: uint32(uy)},
-			Point{X: uint32(ux + (lx-ux)/2), Y: uint32(ly)},
-			Point{X: uint32(lx), Y: uint32(ly + (ly-uy)/2)},
-			Point{X: uint32(ux), Y: uint32(ly + (ly-uy)/2)}} {
-			if rand.Int()%4 != 0 {
-				world.SetCellInfo(pt.X, pt.Y, &CellInfo{TerrainID: exit, RegionNameID: regionID})
-			}
+			Point{X: uint32(lx + (ux-lx)/2), Y: uint32(uy)},
+			Point{X: uint32(lx + (ux-lx)/2), Y: uint32(ly)},
+			Point{X: uint32(lx), Y: uint32(ly + (uy-ly)/2)},
+			Point{X: uint32(ux), Y: uint32(ly + (uy-ly)/2)}} {
+			world.SetCellInfo(pt.X, pt.Y, &CellInfo{TerrainID: exit, RegionNameID: regionID})
 		}
 	}
 }

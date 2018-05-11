@@ -166,7 +166,8 @@
         "BGColor": 247,
         "Blocking": true,
         "Transitions": [
-            "clearing-trail-ruin"
+            "clearing-trail-ruin",
+            "ruin-wall"
         ],
         "Representations": [
             9622,

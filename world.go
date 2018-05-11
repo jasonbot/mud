@@ -46,6 +46,56 @@ type recentCellInfo struct {
 	cellInfo  *CellInfo
 }
 
+const cachedCellExpirationAge = 10
+
+func (recent *recentCellInfo) IsExpired() bool {
+	now := time.Now().Unix()
+	if (now - recent.lastVisit) > cachedCellExpirationAge {
+		return true
+	}
+	return false
+}
+
+func (w *dbWorld) activateCell(x, y uint32) {
+	pt := Point{x, y}
+	key := string(pt.Bytes())
+	now := time.Now().Unix()
+
+	rci := &recentCellInfo{x: x, y: y, lastVisit: now, cellInfo: w.GetCellInfo(x, y)}
+
+	ci, ok := w.activeCellCache.LoadOrStore(key, rci)
+	cell, ok := ci.(*recentCellInfo)
+
+	if ok {
+		cell.lastVisit = now
+	}
+}
+
+func (w *dbWorld) sweepExpiredKeys() {
+	keys := make([]string, 0)
+
+	w.activeCellCache.Range(func(k, v interface{}) bool {
+		key, ok := k.(string)
+		if !ok {
+			return false
+		}
+
+		value, ok := v.(*recentCellInfo)
+		if !ok {
+			return false
+		}
+
+		if value.IsExpired() {
+			keys = append(keys, key)
+		}
+
+		return true
+	})
+	for _, key := range keys {
+		w.activeCellCache.Delete(key)
+	}
+}
+
 // GetDimensions returns the size of the world
 func (w *dbWorld) GetDimensions() (uint32, uint32) {
 	return uint32(1 << 30), uint32(1 << 30)
@@ -89,7 +139,6 @@ func (w *dbWorld) newUser(username string) UserData {
 func (w *dbWorld) GetCellInfo(x, y uint32) *CellInfo {
 	var cellInfo CellInfo
 	w.database.View(func(tx *bolt.Tx) error {
-
 		bucket := tx.Bucket([]byte("terrain"))
 
 		pt := Point{x, y}
@@ -121,15 +170,23 @@ func (w *dbWorld) GetCellInfo(x, y uint32) *CellInfo {
 }
 
 func (w *dbWorld) SetCellInfo(x, y uint32, cellInfo *CellInfo) {
+	pt := Point{x, y}
+	key := pt.Bytes()
+
 	w.database.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("terrain"))
 
-		pt := Point{x, y}
 		bytes := cellInfoToBytes(cellInfo)
-		err := bucket.Put(pt.Bytes(), bytes)
+		err := bucket.Put(key, bytes)
 
 		return err
 	})
+
+	_, ok := w.activeCellCache.Load(string(pt.Bytes()))
+
+	if ok {
+		w.activeCellCache.Store(string(key), &recentCellInfo{x: x, y: y, lastVisit: time.Now().Unix(), cellInfo: cellInfo})
+	}
 
 	ct, ok := CellTypes[cellInfo.TerrainID]
 
@@ -453,7 +510,7 @@ func (w *dbWorld) watchActiveCells() {
 		case <-w.closeActiveCells:
 			return
 		case <-tick:
-			return
+			w.sweepExpiredKeys()
 		}
 	}
 }
