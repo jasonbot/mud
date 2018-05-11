@@ -1,7 +1,7 @@
 # MUD Server
 A multiplayer MUD sever for a game jam on itch.io: [Enter the (Multi-User) Dungeon](https://itch.io/jam/enterthemud)
 
-I have a newborn and 4 days to make an MVP. **LET'S SEE IF I CAN MANAGE IT!**
+I have a newborn and 3 days to make an MVP. **LET'S SEE IF I CAN MANAGE IT!**
 
 ## Building
 
@@ -11,7 +11,7 @@ Run make.
 
     make
 
-Then run `bin/mud`.
+Then run `bin/mud` from this folder.
 
 ## Connecting to Play
 

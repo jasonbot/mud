@@ -20,9 +20,10 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
-            "clearing-grass:4",
-            "clearing-deep-grass",
-            "trail"
+            "clearing-grass:12",
+            "clearing-deep-grass:7",
+            "trail:5",
+            "savannah"
         ],
         "Algorithm": "spread",
         "AlgorithmParameters": {},
@@ -158,6 +159,75 @@
         "Blocking": true,
         "Representations": [
             9619
+        ]
+    },
+    "savannah": {
+        "Name": "Savannah %s",
+        "MakeNewPlaceName": true,
+        "Permeable": false,
+        "Blocking": false,
+        "Transitions": [
+            "clearing-grass:1",
+            "savannah:2",
+            "desert:1"
+        ],
+        "Algorithm": "spread",
+        "AlgorithmParameters": {
+            "radius": "4"
+        },
+        "FGcolor": 106,
+        "BGcolor": 149,
+        "Bold": false,
+        "Representations": [
+            8281,
+            8283,
+            8280,
+            8278,
+            32
+        ]
+    },
+    "desert": {
+        "Name": "%s desert",
+        "MakeNewPlaceName": true,
+        "Permeable": false,
+        "Blocking": false,
+        "Transitions": [
+            "savannah:2",
+            "desert:1",
+            "widedesert:2"
+        ],
+        "Algorithm": "path",
+        "AlgorithmParameters": {
+            "neighbor": "desert",
+            "radius": "2",
+            "endcap": "desert"
+        },
+        "FGcolor": 220,
+        "BGcolor": 184,
+        "Bold": false,
+        "Representations": [
+            8764,
+            8765
+        ]
+    },
+    "widedesert": {
+        "Name": "%s desert",
+        "Permeable": true,
+        "Blocking": false,
+        "Transitions": [
+            "desert"
+        ],
+        "Algorithm": "tendril",
+        "AlgorithmParameters": {
+            "radius": "40",
+            "tendrilcount": "10"
+        },
+        "FGcolor": 220,
+        "BGcolor": 226,
+        "Bold": false,
+        "Representations": [
+            8764,
+            8765
         ]
     }
 }

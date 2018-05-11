@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/mgutz/ansi"
@@ -88,7 +89,16 @@ func renderSetup(session ssh.Session, user User) {
 }
 
 func setupSSHUser(ctx context.Context, cancel context.CancelFunc, done <-chan struct{}, session ssh.Session, user User, stringInput chan inputEvent) {
-	user.SetClassInfo(MELEEPRIMARY | MELEESECONDARY | PEOPLEPRIMARY | PEOPLESECONDARY)
+	strengthPrimary := []byte{MELEEPRIMARY, RANGEPRIMARY, MAGICPRIMARY}
+	strengthSecondary := []byte{MELEESECONDARY, RANGESECONDARY, MAGICSECONDARY}
+	skillPrimary := []byte{PEOPLEPRIMARY, PLACESPRIMARY, THINGSPRIMARY}
+	skillSecondary := []byte{PEOPLESECONDARY, PLACESSECONDARY, THINGSSECONDARY}
+
+	user.SetClassInfo(
+		strengthPrimary[rand.Int()%len(strengthPrimary)] |
+			strengthSecondary[rand.Int()%len(strengthSecondary)] |
+			skillPrimary[rand.Int()%len(skillPrimary)] |
+			skillSecondary[rand.Int()%len(skillSecondary)])
 
 	renderSetup(session, user)
 
