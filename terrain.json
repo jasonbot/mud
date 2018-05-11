@@ -216,11 +216,9 @@
             "desert:1",
             "widedesert:2"
         ],
-        "Algorithm": "path",
+        "Algorithm": "spread",
         "AlgorithmParameters": {
-            "neighbor": "desert",
-            "radius": "10",
-            "endcap": "desert"
+            "radius": "4"
         },
         "FGcolor": 220,
         "BGcolor": 184,
@@ -235,12 +233,13 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
-            "desert"
+            "desert:1",
+            "desert-cactus:10"
         ],
         "Algorithm": "tendril",
         "AlgorithmParameters": {
             "radius": "10",
-            "tendrilcount": "10"
+            "tendrilcount": "3"
         },
         "FGcolor": 220,
         "BGcolor": 226,
@@ -248,6 +247,24 @@
         "Representations": [
             8764,
             8765
+        ]
+    },
+    "desert-cactus": {
+        "Name": "%s desert cactus",
+        "Permeable": false,
+        "Blocking": true,
+        "Transitions": [
+            "desert:1"
+        ],
+        "Algorithm": "once",
+        "AlgorithmParameters": {},
+        "FGcolor": 71,
+        "BGcolor": 226,
+        "Bold": true,
+        "Representations": [
+            968,
+            936,
+            969
         ]
     }
 }
