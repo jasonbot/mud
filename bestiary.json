@@ -1,6 +1,5 @@
 {
     "grass-snake": {
-        "ID": "grass-snake",
         "Name": "Grass Snake",
         "Hostile": true,
         "MaxHP": 4,
@@ -33,5 +32,14 @@
                 "Recovery": 2
             }
         ]
+    },
+    "goat": {
+        "Name": "Grumpy Goat",
+        "Hostile": true,
+        "MaxHP": 1,
+        "MaxMP": 0,
+        "MaxAP": 0,
+        "MaxRP": 0,
+        "Attacks": []
     }
 }

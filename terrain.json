@@ -25,6 +25,12 @@
             "trail:5",
             "savannah"
         ],
+        "MonsterSpawns": [
+            {
+                "Name": "goat",
+                "Probability": 0.0001
+            }
+        ],
         "Algorithm": "spread",
         "AlgorithmParameters": {},
         "FGcolor": 112,
@@ -49,7 +55,7 @@
         "MonsterSpawns": [
             {
                 "Name": "grass-snake",
-                "Probability": 1,
+                "Probability": 0.01,
                 "Cluster": 5
             }
         ],
@@ -154,9 +160,13 @@
     "ruin-wall": {
         "Name": "Ruin Walls of %s",
         "Permeable": false,
+        "MakeNewPlaceName": true,
         "FGColor": 64,
         "BGColor": 247,
         "Blocking": true,
+        "Transitions": [
+            "clearing-trail-ruin"
+        ],
         "Representations": [
             9622,
             9623,
@@ -221,14 +231,14 @@
     },
     "widedesert": {
         "Name": "%s desert",
-        "Permeable": true,
+        "Permeable": false,
         "Blocking": false,
         "Transitions": [
             "desert"
         ],
         "Algorithm": "tendril",
         "AlgorithmParameters": {
-            "radius": "40",
+            "radius": "10",
             "tendrilcount": "10"
         },
         "FGcolor": 220,

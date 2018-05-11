@@ -22,7 +22,7 @@ type Attack struct {
 
 // CreatureType is the type of creature (Hostile: true is monster, false is NPC)
 type CreatureType struct {
-	ID      string   `json:""`
+	ID      string   `json:"-"`
 	Name    string   `json:""`
 	Hostile bool     `json:""`
 	MaxHP   uint64   `json:""`
@@ -55,6 +55,11 @@ func loadCreatureTypes(creatureInfoFile string) {
 
 	if err == nil {
 		err = json.Unmarshal(data, &CreatureTypes)
+	}
+
+	for k, v := range CreatureTypes {
+		v.ID = k
+		CreatureTypes[k] = v
 	}
 
 	if err != nil {

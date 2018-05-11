@@ -11,9 +11,9 @@ const DefaultCellType string = "clearing"
 
 // MonsterSpawn is a JSON struct used for the generation of monsters
 type MonsterSpawn struct {
-	Name        string `json:""` // ID of monster in bestiary
-	Probability byte   `json:""` // 0-100
-	Cluster     byte   `json:""` // 1-100
+	Name        string  `json:""` // ID of monster in bestiary
+	Probability float32 `json:""` // 0-1.0
+	Cluster     float32 `json:""` // 0-1.0
 }
 
 // CellTerrain stores rules about different cell's terrain types.

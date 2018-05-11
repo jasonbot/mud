@@ -141,18 +141,17 @@ func (w *dbWorld) SetCellInfo(x, y uint32, cellInfo *CellInfo) {
 
 	if spawns != nil {
 		for _, spawn := range spawns {
-			prob := int(spawn.Probability)
 			cl := spawn.Cluster
 			if cl < 1 {
 				cl = 1
 			}
 
+			prob := rand.Float32()
 			for clusterCount := 0; clusterCount < int(cl); clusterCount++ {
-				percentage := rand.Int() % 100
 
-				if percentage <= prob {
-					if clusterCount == 0 {
-						prob *= int(spawn.Cluster)
+				if spawn.Probability >= prob {
+					if clusterCount > 0 {
+						prob += (spawn.Probability / 2.0)
 					}
 
 					w.AddStockCreature(x, y, spawn.Name)
