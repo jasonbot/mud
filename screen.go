@@ -87,7 +87,8 @@ func (item *LogItem) SSHString(width int) string {
 	formatFunc := ansi.ColorFunc(fmt.Sprintf("255:%v", bgcolor))
 	boldFormatFunc := ansi.ColorFunc(fmt.Sprintf("15+b:%v", bgcolor))
 	systemFunc := ansi.ColorFunc(fmt.Sprintf("230+b:%v", bgcolor))
-	actionFunc := ansi.ColorFunc(fmt.Sprintf("247:%v", bgcolor))
+	actionFunc := ansi.ColorFunc(fmt.Sprintf("247+b:%v", bgcolor))
+	activityFunc := ansi.ColorFunc(fmt.Sprintf("230:%v", bgcolor))
 	switch item.MessageType {
 	case MESSAGECHAT:
 		return boldFormatFunc(item.Author) + formatFunc(": "+truncateRight(item.Message, width-(2+utf8.RuneCountInString(item.Author))))
@@ -95,6 +96,10 @@ func (item *LogItem) SSHString(width int) string {
 		return systemFunc(centerText(item.Message, " ", width))
 	case MESSAGEACTION:
 		return actionFunc(truncateRight(item.Message, width))
+	case MESSAGEACTIVITY:
+		return activityFunc(truncateRight(item.Message, width))
+	default:
+		truncateRight(item.Message, width)
 	}
 
 	return truncateRight(item.Message, width)

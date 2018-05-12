@@ -1,0 +1,11 @@
+^Welcome!
+This is a simple graphical MUD developed for the
+Enter The Mud code jam on itch.io.
+
+^Controls
+%Cursor keys: Move
+%/: Open command mode (nonfunctional)
+%!: Open chat mode
+%Ctrl-C: Quit
+
+Other keys are labelled in the UI.

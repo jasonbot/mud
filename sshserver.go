@@ -99,21 +99,27 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 							Author:      user.Username(),
 							Message:     chat,
 							MessageType: MESSAGEACTION}
+						if len(chat) > 0 {
+							user.Log(chatItem)
+						}
 					} else {
 						chatItem = LogItem{
 							Author:      user.Username(),
 							Message:     chat,
 							MessageType: MESSAGECHAT}
+						if len(chat) > 0 {
+							builder.Chat(chatItem)
+						}
 					}
-					if len(chat) > 0 {
-						builder.Chat(chatItem)
-					}
+
 					screen.Render()
 				}
 			default:
 				if screen.InputActive() {
 					screen.HandleInputKey(inputString.inputString)
-				} else if inputString.inputString == "t" || inputString.inputString == "T" {
+				} else if inputString.inputString == "t" ||
+					inputString.inputString == "T" ||
+					inputString.inputString == "!" {
 					screen.ToggleChat()
 				}
 			}

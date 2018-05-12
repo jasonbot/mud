@@ -1,11 +1,14 @@
 package mud
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"log"
 	"math/rand"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/mgutz/ansi"
@@ -33,15 +36,41 @@ var secondaryStrengthArray = []setMapThing{
 }
 
 var primarySkillArray = []setMapThing{
-	{value: PEOPLEPRIMARY, name: "A: Melee"},
-	{value: PLACESPRIMARY, name: "S: Range"},
-	{value: THINGSPRIMARY, name: "D: Magic"},
+	{value: PEOPLEPRIMARY, name: "A: People"},
+	{value: PLACESPRIMARY, name: "S: Places"},
+	{value: THINGSPRIMARY, name: "D: Things"},
 }
 
 var secondarySkillArray = []setMapThing{
-	{value: PEOPLESECONDARY, name: "Z: Melee"},
-	{value: PLACESSECONDARY, name: "X: Range"},
-	{value: THINGSSECONDARY, name: "C: Magic"},
+	{value: PEOPLESECONDARY, name: "Z: People"},
+	{value: PLACESSECONDARY, name: "X: Places"},
+	{value: THINGSSECONDARY, name: "C: Things"},
+}
+
+func greet(user User) {
+	inFile, err := os.Open("./welcome.txt")
+	if err == nil {
+		defer inFile.Close()
+		scanner := bufio.NewScanner(inFile)
+		scanner.Split(bufio.ScanLines)
+
+		user.Log(LogItem{Message: "", MessageType: MESSAGEACTIVITY})
+
+		for scanner.Scan() {
+			logString := scanner.Text()
+
+			if len(logString) == 0 {
+				user.Log(LogItem{Message: "", MessageType: MESSAGESYSTEM})
+			} else if logString[0] == '^' {
+				user.Log(LogItem{Message: logString[1:], MessageType: MESSAGESYSTEM})
+			} else if logString[0] == '%' {
+				items := strings.SplitN(logString, ":", 2)
+				user.Log(LogItem{Author: items[0][1:len(items[0])], Message: strings.TrimSpace(items[1]), MessageType: MESSAGECHAT})
+			} else {
+				user.Log(LogItem{Message: logString, MessageType: MESSAGEACTIVITY})
+			}
+		}
+	}
 }
 
 func renderChoices(selected byte, items []setMapThing) string {
@@ -163,6 +192,7 @@ func setupSSHUser(ctx context.Context, cancel context.CancelFunc, done <-chan st
 				session.Close()
 
 			case "ENTER":
+				greet(user)
 				user.Initialize(true)
 				return
 			}

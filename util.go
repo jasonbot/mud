@@ -14,6 +14,7 @@ const (
 	MESSAGESYSTEM = iota
 	MESSAGECHAT
 	MESSAGEACTION
+	MESSAGEACTIVITY
 )
 
 // LogItem is individual chat log line
