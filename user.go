@@ -54,6 +54,7 @@ type User interface {
 	MoveSouth()
 	MoveEast()
 	MoveWest()
+	ChargePoints()
 
 	Log(message LogItem)
 	GetLog() []LogItem
@@ -385,6 +386,30 @@ func (user *dbUser) MoveWest() {
 		user.Act()
 		user.Save()
 	}
+}
+
+func (user *dbUser) ChargePoints() {
+	user.Reload()
+	ap := user.MaxAP()
+	rp := user.MaxRP()
+	mp := user.MaxMP()
+	cap := user.AP()
+	crp := user.RP()
+	cmp := user.MP()
+
+	if cap < ap {
+		user.SetAP(cap + 1)
+	}
+
+	if crp < rp {
+		user.SetRP(crp + 1)
+	}
+
+	if cmp < mp {
+		user.SetMP(cmp + 1)
+	}
+
+	user.Save()
 }
 
 func (user *dbUser) Log(message LogItem) {

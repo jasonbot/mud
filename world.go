@@ -48,6 +48,12 @@ type recentCellInfo struct {
 	lastCreatureAction map[string]int64
 }
 
+func (w *dbWorld) chargeUsers() {
+	for _, user := range w.OnlineUsers() {
+		user.ChargePoints()
+	}
+}
+
 const cachedCellExpirationAge = 10
 
 func (recent *recentCellInfo) IsExpired() bool {
@@ -616,6 +622,7 @@ func (w *dbWorld) watchActiveCells() {
 		case <-w.closeActiveCells:
 			return
 		case <-tick:
+			w.chargeUsers()
 			w.sweepExpiredKeys()
 			w.updateActivatedCells()
 		}
