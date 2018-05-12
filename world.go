@@ -41,9 +41,11 @@ type dbWorld struct {
 }
 
 type recentCellInfo struct {
-	x, y      uint32
-	lastVisit int64
-	cellInfo  *CellInfo
+	x, y               uint32
+	lastVisit          int64
+	cellInfo           *CellInfo
+	creatures          []*Creature
+	lastCreatureAction map[string]int64
 }
 
 const cachedCellExpirationAge = 10
@@ -61,14 +63,38 @@ func (w *dbWorld) activateCell(x, y uint32) {
 	key := string(pt.Bytes())
 	now := time.Now().Unix()
 
-	rci := &recentCellInfo{x: x, y: y, lastVisit: now, cellInfo: w.GetCellInfo(x, y)}
+	rci := &recentCellInfo{
+		x:         x,
+		y:         y,
+		lastVisit: now,
+		cellInfo:  w.GetCellInfo(x, y),
+		creatures: w.getCreatures(x, y)}
 
-	ci, ok := w.activeCellCache.LoadOrStore(key, rci)
+	ci, _ := w.activeCellCache.LoadOrStore(key, rci)
 	cell, ok := ci.(*recentCellInfo)
 
 	if ok {
 		cell.lastVisit = now
 	}
+}
+
+func (w *dbWorld) updateActivatedCells() {
+	now := time.Now().Unix()
+
+	w.activeCellCache.Range(func(k, v interface{}) bool {
+		cell, ok := v.(*recentCellInfo)
+
+		if ok {
+			for _, creature := range cell.creatures {
+				creature.Charge = now - creature.lastAction
+				if creature.Charge > creature.maxCharge {
+					creature.Charge = creature.maxCharge
+				}
+			}
+		}
+
+		return true
+	})
 }
 
 func (w *dbWorld) sweepExpiredKeys() {
@@ -218,6 +244,19 @@ func (w *dbWorld) SetCellInfo(x, y uint32, cellInfo *CellInfo) {
 	}
 }
 
+func (w *dbWorld) reloadStoredCreatures(x, y uint32) {
+	pt := Point{X: x, Y: y}
+	record, ok := w.activeCellCache.Load(string(pt.Bytes()))
+
+	if ok {
+		ci, cast := record.(*recentCellInfo)
+
+		if cast {
+			ci.creatures = w.getCreatures(x, y)
+		}
+	}
+}
+
 func (w *dbWorld) creatureList(x, y uint32) []string {
 	var cl CreatureList
 
@@ -267,18 +306,25 @@ func (w *dbWorld) getCreature(id string) *Creature {
 	})
 
 	creature.CreatureTypeStruct = CreatureTypes[creature.CreatureType]
+	creature.lastAction = time.Now().Unix()
+	creature.maxCharge = int64(creature.CreatureTypeStruct.MaxAP+creature.CreatureTypeStruct.MaxMP+creature.CreatureTypeStruct.MaxRP) / 3
+	creature.Charge = 0
 
 	return creature
 }
 
-func (w *dbWorld) GetCreatures(x, y uint32) []*Creature {
+func (w *dbWorld) getCreatures(x, y uint32) []*Creature {
 	cl := w.creatureList(x, y)
 	creatures := make([]*Creature, 0)
 
 	if cl != nil && len(cl) > 0 {
+		now := time.Now().Unix()
 		for _, id := range cl {
 			c := w.getCreature(id)
 			if c != nil {
+				c.lastAction = now
+				c.Charge = 0
+				c.maxCharge = int64(c.CreatureTypeStruct.MaxAP+c.CreatureTypeStruct.MaxMP+c.CreatureTypeStruct.MaxRP) / 3
 				creatures = append(creatures, c)
 			}
 		}
@@ -287,7 +333,37 @@ func (w *dbWorld) GetCreatures(x, y uint32) []*Creature {
 	return creatures
 }
 
+func (w *dbWorld) GetCreatures(x, y uint32) []*Creature {
+	pt := Point{X: x, Y: y}
+	record, ok := w.activeCellCache.Load(string(pt.Bytes()))
+
+	if ok {
+		ci, cast := record.(*recentCellInfo)
+
+		if cast && ci.creatures != nil {
+			return ci.creatures
+		}
+	}
+
+	return w.getCreatures(x, y)
+}
+
 func (w *dbWorld) HasCreatures(x, y uint32) bool {
+	pt := Point{X: x, Y: y}
+	record, ok := w.activeCellCache.Load(string(pt.Bytes()))
+
+	if ok {
+		ci, cast := record.(*recentCellInfo)
+
+		if cast && ci.creatures != nil {
+			if len(ci.creatures) > 0 {
+				return true
+			}
+
+			return false
+		}
+	}
+
 	cl := w.creatureList(x, y)
 
 	if cl == nil || len(cl) == 0 {
@@ -304,6 +380,34 @@ func (w *dbWorld) HasCreatures(x, y uint32) bool {
 	return false
 }
 
+func (w *dbWorld) UpdateCreature(x, y uint32, creature *Creature) {
+	cID, err := uuid.Parse(creature.ID)
+
+	if err != nil {
+		return
+	}
+
+	w.database.Update(func(tx *bolt.Tx) error {
+		creatureBucket := tx.Bucket([]byte("creatures"))
+
+		creatureBytes, err := json.Marshal(creature)
+
+		if err != nil {
+			return err
+		}
+
+		byteKey, err := cID.MarshalBinary()
+
+		if err != nil {
+			return err
+		}
+
+		return creatureBucket.Put(byteKey, creatureBytes)
+	})
+
+	w.reloadStoredCreatures(x, y)
+}
+
 func (w *dbWorld) ClearCreatures(x, y uint32) {
 	creatures := w.creatureList(x, y)
 
@@ -314,6 +418,8 @@ func (w *dbWorld) ClearCreatures(x, y uint32) {
 			w.KillCreature(&pt, id)
 		}
 	}
+
+	w.reloadStoredCreatures(x, y)
 }
 
 func (w *dbWorld) AddStockCreature(x, y uint32, id string) {
@@ -511,6 +617,7 @@ func (w *dbWorld) watchActiveCells() {
 			return
 		case <-tick:
 			w.sweepExpiredKeys()
+			w.updateActivatedCells()
 		}
 	}
 }

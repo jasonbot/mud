@@ -280,11 +280,13 @@ func (screen *sshScreen) renderCharacterSheet() {
 	fmtFunc := screen.colorFunc(fmt.Sprintf("white:%v", bgcolor))
 	pos := screen.user.Location()
 
+	charge, maxcharge := screen.user.Charge()
+
 	infoLines := []string{
 		centerText(screen.user.Username(), " ", width),
 		centerText("", "─", width),
 		truncateRight(fmt.Sprintf("%s (%v, %v)", screen.user.LocationName(), pos.X, pos.Y), width),
-		truncateRight(fmt.Sprintf("Charge: %v", screen.user.GetLastAction()), width),
+		truncateRight(fmt.Sprintf("Charge: %v/%v", charge, maxcharge), width),
 		screen.drawProgressMeter(screen.user.HP(), screen.user.MaxHP(), 196, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" HP: %v/%v", screen.user.HP(), screen.user.MaxHP()), width-11)),
 		screen.drawProgressMeter(screen.user.AP(), screen.user.MaxAP(), 208, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" AP: %v/%v", screen.user.AP(), screen.user.MaxAP()), width-11)),
 		screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-11)),
@@ -296,10 +298,11 @@ func (screen *sshScreen) renderCharacterSheet() {
 		extraLines := []string{centerText(" Creatures ", "─", width)}
 
 		for _, creature := range creatures {
-			extraLines = append(extraLines, truncateRight(fmt.Sprintf("%s (%v/%v)",
+			extraLines = append(extraLines, truncateRight(fmt.Sprintf("%s (%v/%v) : (%v/%v)",
 				creature.CreatureTypeStruct.Name,
 				creature.HP,
-				creature.CreatureTypeStruct.MaxHP), width))
+				creature.CreatureTypeStruct.MaxHP,
+				creature.Charge, creature.maxCharge), width))
 		}
 
 		infoLines = append(infoLines, extraLines...)

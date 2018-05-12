@@ -43,6 +43,7 @@ type User interface {
 	StatInfo
 	ClassInfo
 	LastAction
+	ChargeInfo
 
 	Username() string
 	IsInitialized() bool
@@ -99,6 +100,11 @@ type ClassInfo interface {
 type LastAction interface {
 	Act()
 	GetLastAction() int64
+}
+
+// ChargeInfo returns turn-base charge time info
+type ChargeInfo interface {
+	Charge() (int64, int64)
 }
 
 // UserSSHAuthentication for storing SSH auth.
@@ -442,6 +448,16 @@ func (user *dbUser) GetLastAction() int64 {
 	})
 
 	return timeDelta / 1000000000
+}
+
+func (user *dbUser) Charge() (int64, int64) {
+	charge := user.GetLastAction()
+	maxCharge := int64(user.MaxAP()+user.MaxMP()+user.MaxRP()) / 3
+	if charge > maxCharge {
+		charge = maxCharge
+	}
+
+	return charge, maxCharge
 }
 
 func (user *dbUser) SSHKeysEmpty() bool {

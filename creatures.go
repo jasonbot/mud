@@ -17,7 +17,7 @@ type Attack struct {
 	AP       uint64   `json:""`
 	RP       uint64   `json:""`
 	Effects  []string `json:""`
-	Recovery uint64   `json:""` // In Seconds
+	Charge   uint64   `json:""` // In Seconds
 }
 
 // CreatureType is the type of creature (Hostile: true is monster, false is NPC)
@@ -40,8 +40,10 @@ type Creature struct {
 	MP                 uint64       `json:""`
 	AP                 uint64       `json:""`
 	RP                 uint64       `json:""`
-	LastAction         uint64       `json:""`
 	CreatureTypeStruct CreatureType `json:"-"`
+	Charge             int64        `json:"-"`
+	lastAction         int64
+	maxCharge          int64
 	world              World
 }
 
