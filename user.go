@@ -105,6 +105,7 @@ type LastAction interface {
 // ChargeInfo returns turn-base charge time info
 type ChargeInfo interface {
 	Charge() (int64, int64)
+	Attacks() []*AttackInfo
 }
 
 // UserSSHAuthentication for storing SSH auth.
@@ -132,6 +133,7 @@ type UserData struct {
 	ClassInfo   byte            `json:""`
 	Initialized bool            `json:""`
 	PublicKeys  map[string]bool `json:""`
+	Attacks     []*Attack       `json:""`
 }
 
 type dbUser struct {
@@ -139,12 +141,87 @@ type dbUser struct {
 	world *dbWorld
 }
 
+// AttackInfo describes a user's attacks
+type AttackInfo struct {
+	Attack  *Attack
+	Charged bool
+}
+
 func (user *dbUser) Username() string {
 	return user.UserData.Username
 }
 
+func (user *dbUser) getDefaultAttacks() []*Attack {
+	primary, secondary := user.Strengths()
+
+	var primaryattack Attack
+	var secondaryattack Attack
+
+	switch primary {
+	case MELEEPRIMARY:
+		primaryattack = Attack{Name: "Punch",
+			Accuracy: 95,
+			MP:       0,
+			AP:       2,
+			RP:       0,
+			Charge:   2}
+	case RANGEPRIMARY:
+		primaryattack = Attack{Name: "Dart",
+			Accuracy: 95,
+			MP:       0,
+			AP:       0,
+			RP:       2,
+			Charge:   2}
+	case MAGICPRIMARY:
+		primaryattack = Attack{Name: "Mage push",
+			Accuracy: 95,
+			MP:       2,
+			AP:       0,
+			RP:       0,
+			Charge:   2}
+	}
+	switch secondary {
+	case MELEESECONDARY:
+		secondaryattack = Attack{Name: "Biff",
+			Accuracy: 95,
+			MP:       0,
+			AP:       2,
+			RP:       0,
+			Charge:   4}
+		if primary == MELEEPRIMARY {
+			secondaryattack.Charge = 1
+		}
+	case RANGESECONDARY:
+		secondaryattack = Attack{Name: "Toss",
+			Accuracy: 95,
+			MP:       0,
+			AP:       0,
+			RP:       2,
+			Charge:   4}
+		if primary == RANGEPRIMARY {
+			secondaryattack.Charge = 1
+		}
+	case MAGICSECONDARY:
+		secondaryattack = Attack{Name: "Crackle",
+			Accuracy: 95,
+			MP:       1,
+			AP:       0,
+			RP:       0,
+			Charge:   4}
+		if primary == MAGICPRIMARY {
+			secondaryattack.Charge = 1
+		}
+	}
+
+	attacks := []*Attack{&primaryattack, &secondaryattack}
+
+	return attacks
+}
+
 func (user *dbUser) Initialize(initialize bool) {
 	user.Reload()
+
+	user.UserData.Attacks = user.getDefaultAttacks()
 	user.Initialized = initialize
 	user.Save()
 }
@@ -458,6 +535,21 @@ func (user *dbUser) Charge() (int64, int64) {
 	}
 
 	return charge, maxCharge
+}
+
+func (user *dbUser) Attacks() []*AttackInfo {
+	attacks := make([]*AttackInfo, 0)
+
+	charge, _ := user.Charge()
+
+	for _, item := range user.UserData.Attacks {
+		attack := *item
+		charged := charge >= attack.Charge
+
+		attacks = append(attacks, &AttackInfo{Attack: &attack, Charged: charged})
+	}
+
+	return attacks
 }
 
 func (user *dbUser) SSHKeysEmpty() bool {
