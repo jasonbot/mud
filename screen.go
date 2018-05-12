@@ -304,10 +304,11 @@ func (screen *sshScreen) renderCharacterSheet() {
 		screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-11)),
 		screen.drawProgressMeter(screen.user.RP(), screen.user.MaxRP(), 117, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" RP: %v/%v", screen.user.RP(), screen.user.MaxRP()), width-11))}
 
-	creatures := screen.builder.World().GetCreatures(pos.X, pos.Y)
 	foundSelectedCreature := false
-
+	hasCreatures := false
+	creatures := screen.builder.World().GetCreatures(pos.X, pos.Y)
 	if creatures != nil && len(creatures) > 0 {
+		hasCreatures = true
 		extraLines := []string{centerText(" Creatures ", "─", width)}
 
 		for keyIndex, creature := range creatures {
@@ -346,6 +347,45 @@ func (screen *sshScreen) renderCharacterSheet() {
 	// Unselect creature if it's not here
 	if !foundSelectedCreature {
 		screen.selectedCreature = ""
+	}
+
+	if hasCreatures {
+		attacks := screen.user.Attacks()
+		if attacks != nil && len(attacks) > 0 {
+			extraLines := []string{centerText(" Attacks ", "─", width)}
+
+			key := 'A'
+			for idx, attack := range attacks {
+				attackkey := "  "
+				if idx < 26 {
+					if screen.selectedCreature == "" {
+						attackkey = "◊◊"
+					} else {
+						keyString := string(key)
+						attackkey = fmt.Sprintf(" %v", keyString)
+
+						selc := screen.selectedCreature
+						sela := *attack.Attack
+						screen.keyCodeMap[keyString] = func() {
+							formatString := fmt.Sprintf("Attacking creature %v with %v", selc, sela)
+							screen.user.Log(LogItem{Message: formatString,
+								MessageType: MESSAGEACTION})
+						}
+					}
+				}
+				attackName := fmtFunc(truncateRight(" "+attack.Attack.Name, width-3))
+
+				if attack.Charged {
+					attackkey = CRnumberColor(attackkey)
+				}
+
+				extraLines = append(extraLines, attackkey+attackName)
+
+				key++
+			}
+
+			infoLines = append(infoLines, extraLines...)
+		}
 	}
 
 	infoLines = append(infoLines, centerText(" ❦ ", "─", width))
@@ -432,8 +472,8 @@ func (screen *sshScreen) HandleInputKey(input string) {
 	}
 
 	if !screen.inputActive {
-		input := strings.ToLower(input)
-		if input == "t" ||
+		input := strings.ToUpper(input)
+		if input == "T" ||
 			input == "!" {
 			screen.inputActive = true
 		} else if screen.keyCodeMap != nil {
