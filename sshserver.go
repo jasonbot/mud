@@ -115,13 +115,7 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 					screen.Render()
 				}
 			default:
-				if screen.InputActive() {
-					screen.HandleInputKey(inputString.inputString)
-				} else if inputString.inputString == "t" ||
-					inputString.inputString == "T" ||
-					inputString.inputString == "!" {
-					screen.ToggleChat()
-				}
+				screen.HandleInputKey(inputString.inputString)
 			}
 		case <-ctx.Done():
 			cancel()

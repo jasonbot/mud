@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/ahmetb/go-cursor"
@@ -27,17 +28,19 @@ type Screen interface {
 }
 
 type sshScreen struct {
-	session         ssh.Session
-	builder         WorldBuilder
-	user            User
-	screenSize      ssh.Window
-	refreshed       bool
-	colorCodeCache  map[string](func(string) string)
-	inputActive     bool
-	inputSticky     bool
-	inputText       string
-	commandMode     bool
-	inventoryActive bool
+	session          ssh.Session
+	builder          WorldBuilder
+	user             User
+	screenSize       ssh.Window
+	refreshed        bool
+	colorCodeCache   map[string](func(string) string)
+	keyCodeMap       map[string]func()
+	inputActive      bool
+	inputSticky      bool
+	inputText        string
+	commandMode      bool
+	inventoryActive  bool
+	selectedCreature string
 }
 
 const allowMouseInputAndHideCursor string = "\x1b[?1003h\x1b[?25l"
@@ -285,6 +288,10 @@ func (screen *sshScreen) renderCharacterSheet() {
 	fmtFunc := screen.colorFunc(fmt.Sprintf("white:%v", bgcolor))
 	pos := screen.user.Location()
 
+	CRnumberColor := screen.colorFunc(fmt.Sprintf("%v:255", bgcolor))
+	CRitemColor := screen.colorFunc(fmt.Sprintf("255:%v", bgcolor))
+	CRhiliteColor := screen.colorFunc(fmt.Sprintf("%v+b:255", bgcolor))
+
 	charge, maxcharge := screen.user.Charge()
 
 	infoLines := []string{
@@ -298,19 +305,47 @@ func (screen *sshScreen) renderCharacterSheet() {
 		screen.drawProgressMeter(screen.user.RP(), screen.user.MaxRP(), 117, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" RP: %v/%v", screen.user.RP(), screen.user.MaxRP()), width-11))}
 
 	creatures := screen.builder.World().GetCreatures(pos.X, pos.Y)
+	foundSelectedCreature := false
 
 	if creatures != nil && len(creatures) > 0 {
 		extraLines := []string{centerText(" Creatures ", "─", width)}
 
-		for _, creature := range creatures {
-			extraLines = append(extraLines, truncateRight(fmt.Sprintf("%s (%v/%v) : (%v/%v)",
+		for keyIndex, creature := range creatures {
+			labelColumn := CRitemColor(" ")
+
+			labelColumn = fmt.Sprintf("%2v", keyIndex+1)
+			cid := creature.ID
+			if keyIndex < 10 {
+				screen.keyCodeMap[fmt.Sprintf("%v", keyIndex+1)] = func() {
+					screen.selectedCreature = cid
+				}
+			}
+
+			nameColumn := truncateRight(fmt.Sprintf("%s (%v/%v)  Charge: (%v/%v)",
 				creature.CreatureTypeStruct.Name,
 				creature.HP,
 				creature.CreatureTypeStruct.MaxHP,
-				creature.Charge, creature.maxCharge), width))
+				creature.Charge, creature.maxCharge), width-3)
+
+			if screen.selectedCreature == creature.ID {
+				labelColumn = CRhiliteColor(labelColumn)
+				nameColumn = CRhiliteColor("▸" + nameColumn)
+				foundSelectedCreature = true
+			} else {
+				labelColumn = CRnumberColor(labelColumn)
+				nameColumn = CRitemColor(" " + nameColumn)
+			}
+
+			newLine := labelColumn + nameColumn
+			extraLines = append(extraLines, newLine)
 		}
 
 		infoLines = append(infoLines, extraLines...)
+	}
+
+	// Unselect creature if it's not here
+	if !foundSelectedCreature {
+		screen.selectedCreature = ""
 	}
 
 	infoLines = append(infoLines, centerText(" ❦ ", "─", width))
@@ -396,17 +431,28 @@ func (screen *sshScreen) HandleInputKey(input string) {
 		}
 	}
 
-	if input == "BACKSPACE" {
-		if utf8.RuneCountInString(screen.inputText) > 0 {
-			screen.inputText = string([]rune(screen.inputText)[0 : utf8.RuneCountInString(screen.inputText)-1])
-			screen.Render()
+	if !screen.inputActive {
+		input := strings.ToLower(input)
+		if input == "t" ||
+			input == "!" {
+			screen.inputActive = true
+		} else if screen.keyCodeMap != nil {
+			fn, ok := screen.keyCodeMap[input]
+			if ok {
+				fn()
+			}
 		}
-	} else if utf8.RuneCountInString(input) == 1 {
-		screen.inputText += input
+	} else {
+		if input == "BACKSPACE" {
+			if utf8.RuneCountInString(screen.inputText) > 0 {
+				screen.inputText = string([]rune(screen.inputText)[0 : utf8.RuneCountInString(screen.inputText)-1])
+			}
+		} else if utf8.RuneCountInString(input) == 1 {
+			screen.inputText += input
+		}
 	}
 
 	screen.Render()
-
 }
 
 func (screen *sshScreen) GetChat() string {
@@ -427,6 +473,8 @@ func (screen *sshScreen) InventoryActive() bool {
 }
 
 func (screen *sshScreen) Render() {
+	screen.keyCodeMap = make(map[string]func())
+
 	if screen.screenSize.Height < 20 || screen.screenSize.Width < 60 {
 		clear := cursor.ClearEntireScreen()
 		move := cursor.MoveTo(1, 1)
