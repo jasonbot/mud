@@ -24,7 +24,6 @@ type CellTerrain struct {
 	Blocking            bool              `json:""`           // Some terrain types are impassable; e.g. walls
 	Transitions         []string          `json:""`           // Other cell types this can transition into when generating
 	Name                string            `json:",omitempty"` // Formatstring to modify place name
-	MakeNewPlaceName    bool              `json:",omitempty"` // If leaving a cell with MakeNewPlaceName:false->MakeNewPlaceName:true, generate new place name
 	Algorithm           string            `json:""`           // Default is radiateout; should have algos for e.g. town grid building etc.
 	AlgorithmParameters map[string]string `json:""`           // Helpers for terrain generator algorithm
 	MonsterSpawns       []MonsterSpawn    `json:""`           // List of monster types and probabilities of them appearing in each terrain type

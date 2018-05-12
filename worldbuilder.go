@@ -91,10 +91,6 @@ func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) bool {
 		var regionID uint64
 		if currentCell != nil {
 			regionID = currentCell.RegionNameID
-
-			if cellType.MakeNewPlaceName == false && newCellItem.MakeNewPlaceName == true {
-				regionID = builder.World().NewPlaceID()
-			}
 		} else {
 			regionID = builder.World().NewPlaceID()
 		}

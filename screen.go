@@ -3,6 +3,7 @@ package mud
 import (
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"strings"
 	"unicode/utf8"
@@ -212,9 +213,16 @@ func (screen *sshScreen) drawFill(x, y, width, height int) {
 }
 
 func (screen *sshScreen) drawProgressMeter(min, max, fgcolor, bgcolor, width uint64) string {
+	var blink bool
+	if min > max {
+		min = max
+		blink = true
+	}
 	proportion := float64(float64(min) / float64(max))
 	if math.IsNaN(proportion) {
 		proportion = 0.0
+	} else if proportion < 0.05 {
+		blink = true
 	}
 	onWidth := uint64(float64(width) * proportion)
 	offWidth := uint64(float64(width) * (1.0 - proportion))
@@ -222,7 +230,7 @@ func (screen *sshScreen) drawProgressMeter(min, max, fgcolor, bgcolor, width uin
 	onColor := screen.colorFunc(fmt.Sprintf("%v:%v", fgcolor, bgcolor))
 	offColor := onColor
 
-	if proportion < 0.05 {
+	if blink {
 		onColor = screen.colorFunc(fmt.Sprintf("%v+B:%v", fgcolor, bgcolor))
 	}
 
@@ -301,12 +309,13 @@ func (screen *sshScreen) renderCharacterSheet() {
 		truncateRight(fmt.Sprintf("Charge: %v/%v", charge, maxcharge), width),
 		screen.drawProgressMeter(screen.user.HP(), screen.user.MaxHP(), 196, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" HP: %v/%v", screen.user.HP(), screen.user.MaxHP()), width-11)),
 		screen.drawProgressMeter(screen.user.AP(), screen.user.MaxAP(), 208, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" AP: %v/%v", screen.user.AP(), screen.user.MaxAP()), width-11)),
-		screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-11)),
-		screen.drawProgressMeter(screen.user.RP(), screen.user.MaxRP(), 117, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" RP: %v/%v", screen.user.RP(), screen.user.MaxRP()), width-11))}
+		screen.drawProgressMeter(screen.user.RP(), screen.user.MaxRP(), 117, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" RP: %v/%v", screen.user.RP(), screen.user.MaxRP()), width-11)),
+		screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-11))}
 
 	foundSelectedCreature := false
 	hasCreatures := false
 	creatures := screen.builder.World().GetCreatures(pos.X, pos.Y)
+	var selectedCreatureItem *Creature
 	if creatures != nil && len(creatures) > 0 {
 		hasCreatures = true
 		extraLines := []string{centerText(" Creatures ", "─", width)}
@@ -332,6 +341,7 @@ func (screen *sshScreen) renderCharacterSheet() {
 				labelColumn = CRhiliteColor(labelColumn)
 				nameColumn = CRhiliteColor("▸" + nameColumn)
 				foundSelectedCreature = true
+				selectedCreatureItem = creature
 			} else {
 				labelColumn = CRnumberColor(labelColumn)
 				nameColumn = CRitemColor(" " + nameColumn)
@@ -358,28 +368,33 @@ func (screen *sshScreen) renderCharacterSheet() {
 			for idx, attack := range attacks {
 				attackkey := "  "
 				if idx < 26 {
-					if screen.selectedCreature == "" {
+					if selectedCreatureItem == nil {
 						attackkey = "◊◊"
 					} else {
 						keyString := string(key)
 						attackkey = fmt.Sprintf(" %v", keyString)
 
-						selc := screen.selectedCreature
+						selc := selectedCreatureItem
 						sela := *attack.Attack
 						screen.keyCodeMap[keyString] = func() {
-							formatString := fmt.Sprintf("Attacking creature %v with %v", selc, sela)
+							formatString := fmt.Sprintf("Attacking %v with %v", selc.CreatureTypeStruct.Name, sela.Name)
+							spell := screen.user.MusterAttack(sela.Name)
+
+							if spell != nil {
+								log.Printf("Attacking with %v", spell.String())
+							}
 							screen.user.Log(LogItem{Message: formatString,
 								MessageType: MESSAGEACTION})
 						}
 					}
 				}
-				attackName := fmtFunc(truncateRight(" "+attack.Attack.Name, width-3))
+				attackName := fmtFunc(truncateRight(" "+attack.Attack.String(), width-8))
 
 				if attack.Charged {
 					attackkey = CRnumberColor(attackkey)
 				}
 
-				extraLines = append(extraLines, attackkey+attackName)
+				extraLines = append(extraLines, attackkey+attackName+screen.drawProgressMeter(uint64(charge), uint64(attack.Attack.Charge), 73, bgcolor, 5))
 
 				key++
 			}

@@ -2,6 +2,7 @@ package mud
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 )
@@ -20,6 +21,10 @@ type Attack struct {
 	Charge   int64    `json:""` // In Seconds
 }
 
+func (atk *Attack) String() string {
+	return fmt.Sprintf("%v: ATK %v (%vAP/%vRP/%vMP)", atk.Name, atk.AP+atk.RP+atk.MP, atk.AP, atk.RP, atk.MP)
+}
+
 // CreatureType is the type of creature (Hostile: true is monster, false is NPC)
 type CreatureType struct {
 	ID      string   `json:"-"`
@@ -36,6 +41,8 @@ type CreatureType struct {
 type Creature struct {
 	ID                 string       `json:""`
 	CreatureType       string       `json:""`
+	X                  uint32       `json:""`
+	Y                  uint32       `json:""`
 	HP                 uint64       `json:""`
 	MP                 uint64       `json:""`
 	AP                 uint64       `json:""`

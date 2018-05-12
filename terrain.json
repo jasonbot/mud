@@ -138,7 +138,6 @@
     },
     "clearing-trail-ruin": {
         "Name": "Ruins of %s",
-        "MakeNewPlaceName": false,
         "Permeable": false,
         "Transitions": [
             "clearing-trail-ruin:10",
@@ -161,7 +160,6 @@
     "ruin-wall": {
         "Name": "Ruin Walls of %s",
         "Permeable": false,
-        "MakeNewPlaceName": true,
         "FGColor": 64,
         "BGColor": 247,
         "Blocking": true,
@@ -184,7 +182,6 @@
     },
     "savannah": {
         "Name": "Savannah %s",
-        "MakeNewPlaceName": true,
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
@@ -209,7 +206,6 @@
     },
     "desert": {
         "Name": "%s sands",
-        "MakeNewPlaceName": true,
         "Permeable": false,
         "Blocking": false,
         "Transitions": [

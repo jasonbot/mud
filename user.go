@@ -107,6 +107,7 @@ type LastAction interface {
 type ChargeInfo interface {
 	Charge() (int64, int64)
 	Attacks() []*AttackInfo
+	MusterAttack(string) *Attack
 }
 
 // UserSSHAuthentication for storing SSH auth.
@@ -163,7 +164,7 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 		primaryattack = Attack{Name: "Punch",
 			Accuracy: 95,
 			MP:       0,
-			AP:       2,
+			AP:       4,
 			RP:       0,
 			Charge:   2}
 	case RANGEPRIMARY:
@@ -171,12 +172,12 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 			Accuracy: 95,
 			MP:       0,
 			AP:       0,
-			RP:       2,
+			RP:       4,
 			Charge:   2}
 	case MAGICPRIMARY:
 		primaryattack = Attack{Name: "Mage push",
 			Accuracy: 95,
-			MP:       2,
+			MP:       4,
 			AP:       0,
 			RP:       0,
 			Charge:   2}
@@ -191,6 +192,10 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 			Charge:   4}
 		if primary == MELEEPRIMARY {
 			secondaryattack.Charge = 1
+		} else if primary == RANGEPRIMARY {
+			secondaryattack.RP++
+		} else if primary == MAGICPRIMARY {
+			secondaryattack.MP++
 		}
 	case RANGESECONDARY:
 		secondaryattack = Attack{Name: "Toss",
@@ -201,16 +206,24 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 			Charge:   4}
 		if primary == RANGEPRIMARY {
 			secondaryattack.Charge = 1
+		} else if primary == MELEEPRIMARY {
+			secondaryattack.AP++
+		} else if primary == MAGICPRIMARY {
+			secondaryattack.MP++
 		}
 	case MAGICSECONDARY:
 		secondaryattack = Attack{Name: "Crackle",
 			Accuracy: 95,
-			MP:       1,
+			MP:       2,
 			AP:       0,
 			RP:       0,
 			Charge:   4}
 		if primary == MAGICPRIMARY {
 			secondaryattack.Charge = 1
+		} else if primary == RANGEPRIMARY {
+			secondaryattack.RP++
+		} else if primary == MELEEPRIMARY {
+			secondaryattack.AP++
 		}
 	}
 
@@ -219,10 +232,32 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 	return attacks
 }
 
+func (user *dbUser) setupStatBonuses() {
+	primary, secondary := user.Strengths()
+
+	switch primary {
+	case MELEEPRIMARY:
+		user.UserData.MaxAP *= 5
+	case RANGEPRIMARY:
+		user.UserData.MaxRP *= 5
+	case MAGICPRIMARY:
+		user.UserData.MaxMP *= 5
+	}
+	switch secondary {
+	case MELEESECONDARY:
+		user.UserData.MaxAP *= 2
+	case RANGESECONDARY:
+		user.UserData.MaxRP *= 2
+	case MAGICSECONDARY:
+		user.UserData.MaxMP *= 2
+	}
+}
+
 func (user *dbUser) Initialize(initialize bool) {
 	user.Reload()
 
 	user.UserData.Attacks = user.getDefaultAttacks()
+	user.setupStatBonuses()
 	user.Initialized = initialize
 	user.Save()
 }
@@ -569,12 +604,39 @@ func (user *dbUser) Attacks() []*AttackInfo {
 
 	for _, item := range user.UserData.Attacks {
 		attack := *item
-		charged := charge >= attack.Charge
+		charged := charge >= attack.Charge && user.AP() >= attack.AP && user.RP() >= attack.RP && user.MP() >= attack.MP
 
 		attacks = append(attacks, &AttackInfo{Attack: &attack, Charged: charged})
 	}
 
 	return attacks
+}
+
+func (user *dbUser) MusterAttack(attackName string) *Attack {
+	for _, attack := range user.Attacks() {
+		if attack.Attack.Name == attackName {
+			potentialAttack := attack.Attack
+
+			user.Reload()
+			charge, _ := user.Charge()
+
+			if charge >= potentialAttack.Charge {
+
+				ap, rp, mp := user.AP(), user.RP(), user.MP()
+				if ap >= potentialAttack.AP && rp >= potentialAttack.RP && mp >= potentialAttack.MP {
+					user.SetAP(ap - potentialAttack.AP)
+					user.SetRP(rp - potentialAttack.RP)
+					user.SetMP(mp - potentialAttack.MP)
+					user.Save()
+					user.Act()
+
+					return &*potentialAttack
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func (user *dbUser) SSHKeysEmpty() bool {

@@ -26,7 +26,7 @@ type World interface {
 	HasCreatures(uint32, uint32) bool
 	ClearCreatures(uint32, uint32)
 	AddStockCreature(uint32, uint32, string)
-	KillCreature(*Point, string)
+	KillCreature(string)
 	NewPlaceID() uint64
 	OnlineUsers() []User
 	Chat(LogItem)
@@ -386,7 +386,7 @@ func (w *dbWorld) HasCreatures(x, y uint32) bool {
 	return false
 }
 
-func (w *dbWorld) UpdateCreature(x, y uint32, creature *Creature) {
+func (w *dbWorld) UpdateCreature(creature *Creature) {
 	cID, err := uuid.Parse(creature.ID)
 
 	if err != nil {
@@ -411,17 +411,15 @@ func (w *dbWorld) UpdateCreature(x, y uint32, creature *Creature) {
 		return creatureBucket.Put(byteKey, creatureBytes)
 	})
 
-	w.reloadStoredCreatures(x, y)
+	w.reloadStoredCreatures(creature.X, creature.Y)
 }
 
 func (w *dbWorld) ClearCreatures(x, y uint32) {
 	creatures := w.creatureList(x, y)
 
-	pt := Point{X: x, Y: y}
-
 	if creatures != nil {
 		for _, id := range creatures {
-			w.KillCreature(&pt, id)
+			w.KillCreature(id)
 		}
 	}
 
@@ -434,6 +432,8 @@ func (w *dbWorld) AddStockCreature(x, y uint32, id string) {
 	creature := &Creature{
 		ID:           cID.String(),
 		CreatureType: creatureType.ID,
+		X:            x,
+		Y:            y,
 		HP:           creatureType.MaxHP,
 		AP:           creatureType.MaxAP,
 		MP:           creatureType.MaxMP,
@@ -487,7 +487,7 @@ func (w *dbWorld) AddStockCreature(x, y uint32, id string) {
 	})
 }
 
-func (w *dbWorld) KillCreature(location *Point, id string) {
+func (w *dbWorld) KillCreature(id string) {
 	cID, err := uuid.Parse(id)
 
 	if err != nil {
@@ -500,6 +500,14 @@ func (w *dbWorld) KillCreature(location *Point, id string) {
 		return
 	}
 
+	creature := w.getCreature(id)
+
+	if creature == nil {
+		return
+	}
+
+	location := Point{X: creature.X, Y: creature.Y}
+
 	w.database.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("creatures"))
 		err := bucket.Delete(byteID)
@@ -508,46 +516,44 @@ func (w *dbWorld) KillCreature(location *Point, id string) {
 			return err
 		}
 
-		if location != nil {
-			creatureListBucket := tx.Bucket([]byte("creaturelist"))
-			creatureListBytes := creatureListBucket.Get(location.Bytes())
+		creatureListBucket := tx.Bucket([]byte("creaturelist"))
+		creatureListBytes := creatureListBucket.Get(location.Bytes())
 
-			if creatureListBytes != nil {
-				var creatureList CreatureList
-				err = json.Unmarshal(creatureListBytes, &creatureList)
+		if creatureListBytes != nil {
+			var creatureList CreatureList
+			err = json.Unmarshal(creatureListBytes, &creatureList)
 
-				if err != nil {
-					return err
-				}
+			if err != nil {
+				return err
+			}
 
-				aliveCreatureList := make([]string, 0)
+			aliveCreatureList := make([]string, 0)
 
-				if creatureList.CreatureIDs != nil {
-					for _, cid := range creatureList.CreatureIDs {
-						cuid, err := uuid.Parse(cid)
+			if creatureList.CreatureIDs != nil {
+				for _, cid := range creatureList.CreatureIDs {
+					cuid, err := uuid.Parse(cid)
 
-						if err != nil {
-							return err
-						}
+					if err != nil {
+						return err
+					}
 
-						idBytes, err := cuid.MarshalBinary()
+					idBytes, err := cuid.MarshalBinary()
 
-						if err != nil {
-							return err
-						}
+					if err != nil {
+						return err
+					}
 
-						b := bucket.Get(idBytes)
+					b := bucket.Get(idBytes)
 
-						if b != nil {
-							aliveCreatureList = append(aliveCreatureList, cid)
-						}
+					if b != nil {
+						aliveCreatureList = append(aliveCreatureList, cid)
 					}
 				}
-
-				creatureList.CreatureIDs = aliveCreatureList
-				creatureListBytes, _ = json.Marshal(creatureList)
-				creatureListBucket.Put(location.Bytes(), creatureListBytes)
 			}
+
+			creatureList.CreatureIDs = aliveCreatureList
+			creatureListBytes, _ = json.Marshal(creatureList)
+			creatureListBucket.Put(location.Bytes(), creatureListBytes)
 		}
 
 		return nil
