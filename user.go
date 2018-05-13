@@ -477,8 +477,8 @@ func (user *dbUser) ChargePoints() {
 		hp, maxhp := user.HP(), user.MaxHP()
 
 		if hp == 0 {
+			user.Save()
 			user.Respawn()
-			changed = true
 		} else {
 			chg, maxchg := user.Charge()
 			if hp < maxhp && chg == maxchg && time.Now().Unix()%5 == 0 {
@@ -605,10 +605,16 @@ func (user *dbUser) MarkActive() {
 }
 
 func (user *dbUser) Respawn() {
-	user.X = user.SpawnX
-	user.Y = user.SpawnY
-	user.SetHP(user.MaxHP())
-	user.Log(LogItem{Message: "You died. Be more careful.", MessageType: MESSAGESYSTEM})
+	user.Reload()
+	if user.HP() == 0 {
+		user.SetHP(user.MaxHP())
+		user.Save()
+		user.Log(LogItem{Message: "You died. Be more careful.", MessageType: MESSAGESYSTEM})
+		user.X = user.SpawnX
+		user.Y = user.SpawnY
+		user.SetHP(user.MaxHP())
+		user.Save()
+	}
 }
 
 func (user *dbUser) Reload() {

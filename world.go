@@ -119,15 +119,19 @@ func (w *dbWorld) updateActivatedCells() {
 				if !ok || desiredLevel == 0 {
 					resetLevel = true
 				} else if desiredLevel <= creature.Charge {
+					location := Point{X: creature.X, Y: creature.Y}
 					resetLevel = true
 					attack := creature.CreatureTypeStruct.Attacks[rand.Int()%len(creature.CreatureTypeStruct.Attacks)]
 					if attack.Charge <= creature.Charge {
-						usersInCell := w.usersInCell(Point{X: creature.X, Y: creature.Y})
+						usersInCell := w.usersInCell(location)
 
 						if len(usersInCell) > 0 {
 							user := usersInCell[rand.Int()%len(usersInCell)]
-							w.Attack(creature.CreatureTypeStruct.Name, user, &attack)
-							cell.lastCreatureAction[creature.ID] = now
+							user.Reload()
+							if *(user.Location()) == location {
+								w.Attack(creature.CreatureTypeStruct.Name, user, &attack)
+								cell.lastCreatureAction[creature.ID] = now
+							}
 						}
 					}
 				}
@@ -637,6 +641,7 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 	var location *Point
 
 	if userok {
+		user.Reload()
 		tap, trp, tmp = user.MaxAP(), user.MaxRP(), user.MaxMP()
 		location = user.Location()
 		hitTarget = user.Username()
@@ -672,6 +677,12 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 		damage := aap + arp + amp + uint64(rand.Int()%2)
 
 		if userok {
+			user.Reload()
+
+			if user.HP() == 0 {
+				message = fmt.Sprintf("%v is already dead, attack failed.", user.Username())
+			}
+
 			if user.HP() > damage {
 				user.SetHP(user.HP() - damage)
 			} else {
@@ -701,7 +712,7 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 
 		if killed {
 			message = fmt.Sprintf("%v took fatal damage from %v!", hitTarget, attack.Name)
-		} else {
+		} else if len(message) == 0 {
 			message = fmt.Sprintf("%v hit %v for %v damage!", attack.Name, hitTarget, damage)
 		}
 	} else {
@@ -710,10 +721,6 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 
 	if len(message) > 0 {
 		w.Chat(LogItem{Author: source, Message: message, MessageType: MESSAGEACTIVITY, Location: location})
-	}
-
-	if killed && userok {
-		user.Respawn()
 	}
 }
 
