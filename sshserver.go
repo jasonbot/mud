@@ -15,19 +15,19 @@ import (
 
 const mudPubkey = "MUD-pubkey"
 
-func handleConnection(builder WorldBuilder, s ssh.Session) {
-	user := builder.GetUser(s.User())
-	screen := NewSSHScreen(s, builder, user)
-	pubKey, _ := s.Context().Value(mudPubkey).(string)
+func handleConnection(builder WorldBuilder, session ssh.Session) {
+	user := builder.GetUser(session.User())
+	screen := NewSSHScreen(session, builder, user)
+	pubKey, _ := session.Context().Value(mudPubkey).(string)
 	userSSH, ok := user.(UserSSHAuthentication)
 
 	builder.Chat(LogItem{Message: fmt.Sprintf("User %s has logged in", user.Username()), MessageType: MESSAGESYSTEM})
 	user.MarkActive()
 	user.Act()
 
-	if len(s.Command()) > 0 {
-		s.Write([]byte("Commands are not supported.\n"))
-		s.Close()
+	if len(session.Command()) > 0 {
+		session.Write([]byte("Commands are not supported.\n"))
+		session.Close()
 	}
 
 	if ok {
@@ -35,7 +35,7 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			userSSH.AddSSHKey(pubKey)
 			log.Printf("Saving SSH key for %s", user.Username())
 		} else if !userSSH.ValidateSSHKey(pubKey) {
-			s.Write([]byte("This is not the SSH key verified for this user. Try another username.\n"))
+			session.Write([]byte("This is not the SSH key verified for this user. Try another username.\n"))
 			log.Printf("User %s doesn't use this key.", user.Username())
 			return
 		}
@@ -43,20 +43,20 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	logMessage := fmt.Sprintf("Logged in as %s via %s at %s", user.Username(), s.RemoteAddr(), time.Now().UTC().Format(time.RFC3339))
+	logMessage := fmt.Sprintf("Logged in as %s via %s at %s", user.Username(), session.RemoteAddr(), time.Now().UTC().Format(time.RFC3339))
 	log.Println(logMessage)
 	user.Log(LogItem{Message: logMessage, MessageType: MESSAGESYSTEM})
 
-	done := s.Context().Done()
+	done := session.Context().Done()
 	tick := time.Tick(500 * time.Millisecond)
 	tickForOnline := time.Tick(4 * time.Second)
 	stringInput := make(chan inputEvent, 1)
-	reader := bufio.NewReader(s)
+	reader := bufio.NewReader(session)
 
 	go handleKeys(reader, stringInput, cancel)
 
 	if !user.IsInitialized() {
-		setupSSHUser(ctx, cancel, done, s, user, stringInput)
+		setupSSHUser(ctx, cancel, done, session, user, stringInput)
 	}
 
 	for {
@@ -64,7 +64,7 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 		case inputString := <-stringInput:
 			if inputString.err != nil {
 				screen.Reset()
-				s.Close()
+				session.Close()
 				continue
 			}
 			switch inputString.inputString {
@@ -126,11 +126,11 @@ func handleConnection(builder WorldBuilder, s ssh.Session) {
 			screen.Render()
 			continue
 		case <-done:
-			log.Printf("Disconnected %v", s.RemoteAddr())
+			log.Printf("Disconnected %v@%v", user.Username(), session.RemoteAddr())
 			user.Log(LogItem{Message: fmt.Sprintf("Signed off at %v", time.Now().UTC().Format(time.RFC3339)),
 				MessageType: MESSAGESYSTEM})
 			screen.Reset()
-			s.Close()
+			session.Close()
 			return
 		}
 	}
