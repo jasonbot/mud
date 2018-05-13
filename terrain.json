@@ -238,6 +238,18 @@
             "radius": "10",
             "tendrilcount": "3"
         },
+        "MonsterSpawns": [
+            {
+                "Name": "scorpion",
+                "Probability": 0.01,
+                "Cluster": 1
+            },
+            {
+                "Name": "tarantula",
+                "Probability": 0.01,
+                "Cluster": 5
+            }
+        ],
         "FGcolor": 220,
         "BGcolor": 226,
         "Bold": false,

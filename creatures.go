@@ -49,7 +49,6 @@ type Creature struct {
 	RP                 uint64       `json:""`
 	CreatureTypeStruct CreatureType `json:"-"`
 	Charge             int64        `json:"-"`
-	lastAction         int64
 	maxCharge          int64
 	world              World
 }

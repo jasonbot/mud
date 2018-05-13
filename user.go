@@ -62,6 +62,7 @@ type User interface {
 	MarkActive()
 	LocationName() string
 
+	Respawn()
 	Reload()
 	Save()
 }
@@ -237,11 +238,11 @@ func (user *dbUser) setupStatBonuses() {
 
 	switch primary {
 	case MELEEPRIMARY:
-		user.UserData.MaxAP *= 5
+		user.UserData.MaxAP *= 3
 	case RANGEPRIMARY:
-		user.UserData.MaxRP *= 5
+		user.UserData.MaxRP *= 3
 	case MAGICPRIMARY:
-		user.UserData.MaxMP *= 5
+		user.UserData.MaxMP *= 3
 	}
 	switch secondary {
 	case MELEESECONDARY:
@@ -432,16 +433,34 @@ func (user *dbUser) ChargePoints() {
 	crp := user.RP()
 	cmp := user.MP()
 
+	full := true
+
 	if cap < ap {
 		user.SetAP(cap + 1)
+		full = false
 	}
 
 	if crp < rp {
 		user.SetRP(crp + 1)
+		full = false
 	}
 
 	if cmp < mp {
 		user.SetMP(cmp + 1)
+		full = false
+	}
+
+	if full {
+		hp, maxhp := user.HP(), user.MaxHP()
+
+		if hp == 0 {
+			user.Respawn()
+		} else {
+			chg, maxchg := user.Charge()
+			if hp < maxhp && chg == maxchg && time.Now().Unix()%5 == 0 {
+				user.SetHP(hp + 1)
+			}
+		}
 	}
 
 	user.Save()
@@ -521,6 +540,13 @@ func (user *dbUser) MarkActive() {
 	})
 
 	user.world.activateCell(user.X, user.Y)
+}
+
+func (user *dbUser) Respawn() {
+	user.X = user.SpawnX
+	user.Y = user.SpawnY
+	user.SetHP(user.MaxHP())
+	user.Log(LogItem{Message: "You died. Be more careful.", MessageType: MESSAGESYSTEM})
 }
 
 func (user *dbUser) Reload() {

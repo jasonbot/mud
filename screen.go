@@ -100,7 +100,15 @@ func (item *LogItem) SSHString(width int) string {
 	case MESSAGEACTION:
 		return actionFunc(truncateRight(item.Message, width))
 	case MESSAGEACTIVITY:
-		return activityFunc(truncateRight(item.Message, width))
+		strWidth := width
+		message := ""
+		if len(item.Author) > 0 {
+			strWidth -= (utf8.RuneCountInString(item.Author))
+			message = activityFunc(truncateRight(item.Message, strWidth)) + boldFormatFunc(item.Author)
+		} else {
+			message = activityFunc(truncateRight(item.Message, width))
+		}
+		return message
 	default:
 		truncateRight(item.Message, width)
 	}
@@ -390,7 +398,7 @@ func (screen *sshScreen) renderCharacterSheet() {
 								formatString := fmt.Sprintf("Attacking %v with %v", selc.CreatureTypeStruct.Name, sela.Name)
 								screen.user.Log(LogItem{Message: formatString,
 									MessageType: MESSAGEACTION})
-								screen.builder.Attack(selc, selattack)
+								screen.builder.Attack(screen.user.Username(), selc, selattack)
 							}
 						}
 					}

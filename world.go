@@ -28,6 +28,7 @@ type World interface {
 	ClearCreatures(uint32, uint32)
 	AddStockCreature(uint32, uint32, string)
 	KillCreature(string)
+	Attack(string, interface{}, *Attack)
 	NewPlaceID() uint64
 	OnlineUsers() []User
 	Chat(LogItem)
@@ -42,11 +43,12 @@ type dbWorld struct {
 }
 
 type recentCellInfo struct {
-	x, y               uint32
-	lastVisit          int64
-	cellInfo           *CellInfo
-	creatures          []*Creature
-	lastCreatureAction map[string]int64
+	x, y                  uint32
+	lastVisit             int64
+	cellInfo              *CellInfo
+	creatures             []*Creature
+	lastCreatureAction    map[string]int64
+	desiredCreatureCharge map[string]int64
 }
 
 func (w *dbWorld) chargeUsers() {
@@ -71,11 +73,13 @@ func (w *dbWorld) activateCell(x, y uint32) {
 	now := time.Now().Unix()
 
 	rci := &recentCellInfo{
-		x:         x,
-		y:         y,
-		lastVisit: now,
-		cellInfo:  w.GetCellInfo(x, y),
-		creatures: w.getCreatures(x, y)}
+		x:                     x,
+		y:                     y,
+		lastVisit:             now,
+		cellInfo:              w.GetCellInfo(x, y),
+		creatures:             w.getCreatures(x, y),
+		lastCreatureAction:    make(map[string]int64),
+		desiredCreatureCharge: make(map[string]int64)}
 
 	ci, _ := w.activeCellCache.LoadOrStore(key, rci)
 	cell, ok := ci.(*recentCellInfo)
@@ -93,9 +97,46 @@ func (w *dbWorld) updateActivatedCells() {
 
 		if ok {
 			for _, creature := range cell.creatures {
-				creature.Charge = now - creature.lastAction
+				if creature.HP <= 0 {
+					continue
+				}
+
+				lastAction, ok := cell.lastCreatureAction[creature.ID]
+
+				if !ok {
+					cell.lastCreatureAction[creature.ID] = now
+					lastAction = now
+				}
+
+				creature.Charge = now - lastAction
 				if creature.Charge > creature.maxCharge {
 					creature.Charge = creature.maxCharge
+				}
+
+				desiredLevel, ok := cell.desiredCreatureCharge[creature.ID]
+				resetLevel := false
+
+				if !ok || desiredLevel == 0 {
+					resetLevel = true
+				} else if desiredLevel <= creature.Charge {
+					resetLevel = true
+					attack := creature.CreatureTypeStruct.Attacks[rand.Int()%len(creature.CreatureTypeStruct.Attacks)]
+					if attack.Charge <= creature.Charge {
+						usersInCell := w.usersInCell(Point{X: creature.X, Y: creature.Y})
+
+						if len(usersInCell) > 0 {
+							user := usersInCell[rand.Int()%len(usersInCell)]
+							w.Attack(creature.CreatureTypeStruct.Name, user, &attack)
+							cell.lastCreatureAction[creature.ID] = now
+						}
+					}
+				}
+
+				if resetLevel {
+					if (creature.maxCharge) > 0 {
+						desiredLevel = int64(1 + rand.Int()%int(creature.maxCharge))
+						cell.desiredCreatureCharge[creature.ID] = desiredLevel
+					}
 				}
 			}
 		}
@@ -157,12 +198,12 @@ func (w *dbWorld) newUser(username string) UserData {
 		SpawnY:     height / 2,
 		HP:         10,
 		MaxHP:      10,
-		AP:         10,
-		MaxAP:      10,
-		MP:         10,
-		MaxMP:      10,
-		RP:         10,
-		MaxRP:      10,
+		AP:         2,
+		MaxAP:      2,
+		MP:         2,
+		MaxMP:      2,
+		RP:         2,
+		MaxRP:      2,
 		PublicKeys: make(map[string]bool)}
 	cellData := w.GetCellInfo(userData.X, userData.Y)
 
@@ -322,7 +363,6 @@ func (w *dbWorld) getCreature(id string) *Creature {
 	})
 
 	creature.CreatureTypeStruct = CreatureTypes[creature.CreatureType]
-	creature.lastAction = time.Now().Unix()
 	creature.maxCharge = int64(creature.CreatureTypeStruct.MaxAP+creature.CreatureTypeStruct.MaxMP+creature.CreatureTypeStruct.MaxRP) / 3
 	creature.Charge = 0
 
@@ -336,7 +376,6 @@ func (w *dbWorld) getCreatures(x, y uint32) []*Creature {
 	nameFixers := make(map[string]int)
 
 	if cl != nil && len(cl) > 0 {
-		now := time.Now().Unix()
 		for _, id := range cl {
 			c := w.getCreature(id)
 			if c != nil {
@@ -348,9 +387,12 @@ func (w *dbWorld) getCreatures(x, y uint32) []*Creature {
 					nameFixers[c.CreatureTypeStruct.Name] = 1
 				}
 
-				c.lastAction = now
-				c.Charge = 0
-				c.maxCharge = int64(c.CreatureTypeStruct.MaxAP+c.CreatureTypeStruct.MaxMP+c.CreatureTypeStruct.MaxRP) / 3
+				for _, attack := range c.CreatureTypeStruct.Attacks {
+					if attack.Charge > c.maxCharge {
+						c.maxCharge = attack.Charge
+					}
+				}
+
 				creatures = append(creatures, c)
 			}
 		}
@@ -580,6 +622,91 @@ func (w *dbWorld) KillCreature(id string) {
 	})
 }
 
+func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
+	if attack == nil {
+		log.Println("Attack is nil")
+		return
+	}
+	var tap, trp, tmp uint64
+	message := ""
+	hitTarget := "target"
+
+	user, userok := target.(User)
+	creature, creatureok := target.(*Creature)
+
+	var location *Point
+
+	if userok {
+		tap, trp, tmp = user.MaxAP(), user.MaxRP(), user.MaxMP()
+		location = user.Location()
+		hitTarget = user.Username()
+	} else if creatureok {
+		tap, trp, tmp = creature.CreatureTypeStruct.MaxAP, creature.CreatureTypeStruct.MaxRP, creature.CreatureTypeStruct.MaxMP
+		location = &Point{X: creature.X, Y: creature.Y}
+		hitTarget = creature.CreatureTypeStruct.Name
+	}
+
+	aap, arp, amp := attack.AP, attack.RP, attack.MP
+	if trp > aap {
+		aap = 0
+	} else {
+		aap -= trp
+	}
+
+	if tmp > arp {
+		arp = 0
+	} else {
+		arp -= tmp
+	}
+
+	if tap > amp {
+		amp = 0
+	} else {
+		amp -= tap
+	}
+
+	hit := rand.Int()%100 < int(attack.Accuracy)
+	killed := false
+
+	if hit {
+		damage := aap + arp + amp + uint64(rand.Int()%2)
+
+		if userok {
+			if user.HP() > damage {
+				user.SetHP(user.HP() - damage)
+			} else {
+				user.SetHP(0)
+				killed = true
+			}
+
+			user.Save()
+		} else if creatureok {
+			if creature.HP > damage {
+				creature.HP -= damage
+			} else {
+				creature.HP = 0
+				killed = true
+			}
+
+			w.UpdateCreature(creature)
+		} else {
+			log.Printf("How do I handle %v for attacks?", target)
+		}
+
+		if killed {
+			message = fmt.Sprintf("%v took fatal damage from %v!", hitTarget, attack.Name)
+		} else {
+			message = fmt.Sprintf("%v hit %v for %v damage!", attack.Name, hitTarget, damage)
+		}
+	} else {
+		message = fmt.Sprintf("%v missed!", attack.Name)
+	}
+
+	if len(message) > 0 {
+		w.Chat(LogItem{Author: source, Message: message, MessageType: MESSAGEACTIVITY, Location: location})
+	}
+}
+
 func (w *dbWorld) NewPlaceID() uint64 {
 	id, _ := newPlaceNameInDB(w.database)
 	return id
@@ -622,6 +749,18 @@ func (w *dbWorld) OnlineUsers() []User {
 	for _, name := range offlineNames {
 		log.Printf("%s has signed off", name)
 		w.Chat(LogItem{Message: fmt.Sprintf("%s has signed off", name), MessageType: MESSAGESYSTEM})
+	}
+
+	return arr
+}
+
+func (w *dbWorld) usersInCell(p Point) []User {
+	arr := make([]User, 0)
+
+	for _, user := range w.OnlineUsers() {
+		if *(user.Location()) == p {
+			arr = append(arr, user)
+		}
 	}
 
 	return arr
