@@ -85,6 +85,9 @@ type StatInfo interface {
 	SetMaxAP(uint64)
 	MaxRP() uint64
 	SetMaxRP(uint64)
+	XP() uint64
+	AddXP(uint64)
+	XPToNextLevel() uint64
 }
 
 // ClassInfo handles user/NPC class orientation
@@ -133,6 +136,7 @@ type UserData struct {
 	MaxMP       uint64          `json:""`
 	RP          uint64          `json:""`
 	MaxRP       uint64          `json:""`
+	XP          uint64          `json:""`
 	ClassInfo   byte            `json:""`
 	Initialized bool            `json:""`
 	PublicKeys  map[string]bool `json:""`
@@ -335,6 +339,20 @@ func (user *dbUser) SetMaxRP(maxrp uint64) {
 	user.UserData.MaxRP = maxrp
 }
 
+func (user *dbUser) XP() uint64 {
+	return user.UserData.XP
+}
+
+func (user *dbUser) AddXP(xp uint64) {
+	user.Reload()
+	user.UserData.XP += xp
+	user.Save()
+}
+
+func (user *dbUser) XPToNextLevel() uint64 {
+	return user.MaxAP() + user.MaxRP() + user.MaxMP()
+}
+
 func (user *dbUser) ClassInfo() byte {
 	return user.UserData.ClassInfo
 }
@@ -426,28 +444,33 @@ func (user *dbUser) MoveWest() {
 
 func (user *dbUser) ChargePoints() {
 	user.Reload()
-	ap := user.MaxAP()
-	rp := user.MaxRP()
-	mp := user.MaxMP()
-	cap := user.AP()
-	crp := user.RP()
-	cmp := user.MP()
+	ap, rp, mp, xp := user.MaxAP(), user.MaxRP(), user.MaxMP(), user.XPToNextLevel()
+	cap, crp, cmp, cxp := user.AP(), user.RP(), user.MP(), user.XP()
 
+	changed := false
 	full := true
 
 	if cap < ap {
 		user.SetAP(cap + 1)
+		changed = true
 		full = false
 	}
 
 	if crp < rp {
 		user.SetRP(crp + 1)
+		changed = true
 		full = false
 	}
 
 	if cmp < mp {
 		user.SetMP(cmp + 1)
+		changed = true
 		full = false
+	}
+
+	if cxp >= xp {
+		user.levelUp()
+		changed = true
 	}
 
 	if full {
@@ -455,15 +478,54 @@ func (user *dbUser) ChargePoints() {
 
 		if hp == 0 {
 			user.Respawn()
+			changed = true
 		} else {
 			chg, maxchg := user.Charge()
 			if hp < maxhp && chg == maxchg && time.Now().Unix()%5 == 0 {
 				user.SetHP(hp + 1)
+				changed = true
 			}
 		}
 	}
 
-	user.Save()
+	if changed {
+		user.Save()
+	}
+}
+
+func (user *dbUser) levelUp() {
+	if user.XP() >= user.XPToNextLevel() {
+		var apbonus, rpbonus, mpbonus, hpbonus uint64 = 1, 1, 1, 1
+
+		user.UserData.XP -= user.XPToNextLevel()
+
+		primary, secondary := user.Strengths()
+
+		switch primary {
+		case MELEEPRIMARY:
+			apbonus += 2
+		case RANGEPRIMARY:
+			rpbonus += 2
+		case MAGICPRIMARY:
+			mpbonus += 2
+		}
+
+		switch secondary {
+		case MELEESECONDARY:
+			apbonus++
+		case RANGESECONDARY:
+			rpbonus++
+		case MAGICSECONDARY:
+			mpbonus++
+		}
+
+		user.SetMaxAP(user.MaxAP() + apbonus)
+		user.SetMaxRP(user.MaxRP() + rpbonus)
+		user.SetMaxMP(user.MaxMP() + mpbonus)
+		user.SetMaxHP(user.MaxHP() + hpbonus)
+
+		user.Log(LogItem{Message: "Leveled Up!", MessageType: MESSAGEACTIVITY})
+	}
 }
 
 func (user *dbUser) Log(message LogItem) {

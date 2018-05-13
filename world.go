@@ -689,6 +689,12 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 			}
 
 			w.UpdateCreature(creature)
+
+			if killed {
+				for _, user := range w.usersInCell(Point{X: creature.X, Y: creature.Y}) {
+					user.AddXP(uint64(creature.maxCharge))
+				}
+			}
 		} else {
 			log.Printf("How do I handle %v for attacks?", target)
 		}
@@ -704,6 +710,10 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 
 	if len(message) > 0 {
 		w.Chat(LogItem{Author: source, Message: message, MessageType: MESSAGEACTIVITY, Location: location})
+	}
+
+	if killed && userok {
+		user.Respawn()
 	}
 }
 
