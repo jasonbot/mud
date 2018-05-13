@@ -64,7 +64,7 @@
                 "MP": 1,
                 "AP": 2,
                 "RP": 1,
-                "Charge": 1
+                "Charge": 2
             },
             {
                 "Name": "Sting",
@@ -72,7 +72,7 @@
                 "MP": 9,
                 "AP": 5,
                 "RP": 3,
-                "Charge": 6,
+                "Charge": 4,
                 "Effects": [
                     "poison"
                 ]
@@ -113,6 +113,66 @@
                 "AP": 1,
                 "RP": 3,
                 "Charge": 3
+            }
+        ]
+    },
+    "rat": {
+        "Name": "Small Rat",
+        "Hostile": true,
+        "MaxHP": 5,
+        "MaxMP": 3,
+        "MaxAP": 3,
+        "MaxRP": 3,
+        "Attacks": [
+            {
+                "Name": "Bite",
+                "Accuracy": 100,
+                "MP": 0,
+                "AP": 3,
+                "RP": 0,
+                "Charge": 3
+            },
+            {
+                "Name": "Leap",
+                "Accuracy": 100,
+                "MP": 0,
+                "AP": 0,
+                "RP": 3,
+                "Charge": 3
+            },
+            {
+                "Name": "Scurry",
+                "Accuracy": 100,
+                "MP": 3,
+                "AP": 0,
+                "RP": 0,
+                "Charge": 3
+            }
+        ]
+    },
+    "mouse": {
+        "Name": "Mouse",
+        "Hostile": true,
+        "MaxHP": 1,
+        "MaxMP": 1,
+        "MaxAP": 1,
+        "MaxRP": 1,
+        "Attacks": [
+            {
+                "Name": "Bite",
+                "Accuracy": 5,
+                "MP": 0,
+                "AP": 1,
+                "RP": 0,
+                "Charge": 1
+            },
+            {
+                "Name": "Squeak",
+                "Accuracy": 0,
+                "MP": 0,
+                "AP": 0,
+                "RP": 0,
+                "Charge": 1
             }
         ]
     }

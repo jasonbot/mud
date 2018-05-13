@@ -23,7 +23,7 @@
             "clearing-grass:12",
             "clearing-deep-grass:7",
             "trail:5",
-            "savannah"
+            "savannah:3"
         ],
         "MonsterSpawns": [
             {
@@ -151,6 +151,18 @@
             "exit": "clearing-trail-ruin",
             "fallback": "clearing-deep-grass"
         },
+        "MonsterSpawns": [
+            {
+                "Name": "rat",
+                "Probability": 0.1,
+                "Cluster": 2
+            },
+            {
+                "Name": "mouse",
+                "Probability": 0.1,
+                "Cluster": 6
+            }
+        ],
         "FGColor": 64,
         "BGColor": 142,
         "Representations": [
@@ -217,6 +229,13 @@
         "AlgorithmParameters": {
             "radius": "4"
         },
+        "MonsterSpawns": [
+            {
+                "Name": "tarantula",
+                "Probability": 0.1,
+                "Cluster": 2
+            }
+        ],
         "FGcolor": 220,
         "BGcolor": 184,
         "Bold": false,
@@ -236,7 +255,7 @@
         "Algorithm": "tendril",
         "AlgorithmParameters": {
             "radius": "10",
-            "tendrilcount": "3"
+            "tendrilcount": "5"
         },
         "MonsterSpawns": [
             {
