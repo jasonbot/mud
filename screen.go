@@ -315,6 +315,7 @@ func (screen *sshScreen) renderCharacterSheet() {
 		truncateRight(fmt.Sprintf("%s (%v, %v)", screen.user.LocationName(), pos.X, pos.Y), width),
 		truncateRight(fmt.Sprintf("Charge: %v/%v", charge, maxcharge), width),
 		screen.drawProgressMeter(screen.user.HP(), screen.user.MaxHP(), 196, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" HP: %v/%v", screen.user.HP(), screen.user.MaxHP()), width-11)),
+		screen.drawProgressMeter(screen.user.XP(), screen.user.XPToNextLevel(), 225, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" XP: %v/%v", screen.user.XP(), screen.user.XPToNextLevel()), width-11)),
 		screen.drawProgressMeter(screen.user.AP(), screen.user.MaxAP(), 208, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" AP: %v/%v", screen.user.AP(), screen.user.MaxAP()), width-11)),
 		screen.drawProgressMeter(screen.user.RP(), screen.user.MaxRP(), 117, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" RP: %v/%v", screen.user.RP(), screen.user.MaxRP()), width-11)),
 		screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-11))}
@@ -481,7 +482,7 @@ func (screen *sshScreen) ToggleCommand() {
 }
 
 func (screen *sshScreen) InputActive() bool {
-	return !screen.inventoryActive && screen.inputActive
+	return screen.inputActive
 }
 
 func (screen *sshScreen) InCommandMode() bool {
@@ -489,22 +490,23 @@ func (screen *sshScreen) InCommandMode() bool {
 }
 
 func (screen *sshScreen) HandleInputKey(input string) {
-	if screen.inputText == "" {
-		if input == "/" {
-			screen.commandMode = true
-			screen.inputText = ""
-			input = ""
-		} else if input == "!" {
-			screen.commandMode = false
-			screen.inputText = ""
-			input = ""
+	if screen.inputActive {
+		if screen.inputText == "" {
+			if input == "/" {
+				screen.commandMode = true
+				screen.inputText = ""
+				input = ""
+			} else if input == "!" {
+				screen.commandMode = false
+				screen.inputText = ""
+				input = ""
+			}
 		}
 	}
 
 	if !screen.inputActive {
 		input := strings.ToUpper(input)
-		if input == "T" ||
-			input == "!" {
+		if input == "T" || input == "!" {
 			screen.inputActive = true
 		} else if screen.keyCodeMap != nil {
 			fn, ok := screen.keyCodeMap[input]
@@ -544,6 +546,8 @@ func (screen *sshScreen) InventoryActive() bool {
 
 func (screen *sshScreen) Render() {
 	screen.keyCodeMap = make(map[string]func())
+
+	screen.user.Reload()
 
 	if screen.screenSize.Height < 20 || screen.screenSize.Width < 60 {
 		clear := cursor.ClearEntireScreen()
