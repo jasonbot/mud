@@ -20,7 +20,8 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
-            "clearing-grass:12",
+            "castle-clearing:1",
+            "clearing-grass:20",
             "clearing-deep-grass:7",
             "trail:5",
             "savannah:3"
@@ -293,6 +294,52 @@
             968,
             936,
             969
+        ]
+    },
+    "castle-clearing": {
+        "Algorithm": "great-wall",
+        "AlgorithmParameters": {
+            "radius": "20",
+            "wall-thickness": "3",
+            "wall-texture": "castle-clearing-wall",
+            "seed-entry": "castle-gravel",
+            "seed-exit": "clearing-deep-grass"
+        },
+        "FGcolor": 15,
+        "BGcolor": 15,
+        "Bold": false,
+        "Representations": [
+            32
+        ]
+    },
+    "castle-clearing-wall": {
+        "Permeable": false,
+        "Blocking": true,
+        "FGcolor": 242,
+        "BGcolor": 245,
+        "Representations": [
+            9625,
+            9626,
+            9627,
+            9628,
+            9629,
+            9630,
+            9631
+        ]
+    },
+    "castle-gravel": {
+        "Name": "Courtyard of Castle %s",
+        "Permeable": false,
+        "Blocking": false,
+        "Algorithm": "spread",
+        "Transitions": [
+            "castle-gravel"
+        ],
+        "FGcolor": 245,
+        "BGcolor": 15,
+        "Representations": [
+            8281,
+            8282
         ]
     }
 }

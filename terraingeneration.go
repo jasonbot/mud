@@ -53,20 +53,22 @@ func tendril(x, y uint32, count uint64, world World, regionID uint64, cellTerrai
 		world.SetCellInfo(x, y, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 		count--
 	} else if cell.TerrainID != cellTerrain.ID {
-		k, ok := CellTypes[cell.TerrainID]
 		count--
 
 		// Can pass through this and keep on going
-		if (ok) && k.Permeable {
+		if !cell.TerrainData.Permeable {
 			return
 		}
 	}
 
 	width, height := world.GetDimensions()
-	if x > 0 && y > 0 && x < width-2 && y < height-2 {
+	if x > 1 && y > 1 && x < width-2 && y < height-2 {
 		nx, ny := x, y
-		for nx == x && ny == y {
-			nx, ny = uint32(int(x)+rand.Int()%3-1), uint32(int(y)+rand.Int()%3-1)
+		num := rand.Int() % 4
+		if num%2 == 0 {
+			nx += uint32(num - 1)
+		} else {
+			ny += uint32(num - 2)
 		}
 		tendril(nx, ny, count, world, regionID, cellTerrain)
 	}
@@ -81,14 +83,12 @@ func visitTendril(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerra
 		tendril(x2, y2, uint64(radius), world, regionID, cellTerrain)
 	}
 
-	for xd := -1; xd < 2; xd++ {
-		for yd := -1; yd < 2; yd++ {
-			nx, ny := uint32(int(x2)+xd), uint32(int(y2)+yd)
-			ci := world.GetCellInfo(nx, ny)
-			if ci == nil {
-				world.SetCellInfo(nx, ny, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
-			}
-		}
+	world.SetCellInfo(x2, y2, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
+
+	nx, ny := x2+(x2-x1), y2+(y2-y1)
+	ci := world.GetCellInfo(nx, ny)
+	if ci == nil {
+		world.SetCellInfo(nx, ny, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 	}
 }
 
@@ -211,40 +211,29 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 	}
 }
 
-func visitDungeonRoom(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
-	minRadius := getIntSetting(cellTerrain.AlgorithmParameters, "minradius", 5)
-	maxRadius := getIntSetting(cellTerrain.AlgorithmParameters, "maxradius", 5)
-	wall := getStringSetting(cellTerrain.AlgorithmParameters, "wall", cellTerrain.ID)
-	exit := getStringSetting(cellTerrain.AlgorithmParameters, "exit", cellTerrain.ID)
-	fallback := getStringSetting(cellTerrain.AlgorithmParameters, "fallback", cellTerrain.ID)
-
-	radius := minRadius
-	if (maxRadius - minRadius) > 0 {
-		radius += rand.Int() % (maxRadius - minRadius)
-	}
-
+func getAvailableBox(x1, y1, x2, y2 uint32, world World, height, width int) (int, int, int, int, int, int, bool) {
 	xd := int(x2) - int(x1)
 	yd := int(y2) - int(y1)
 
 	ux, lx, uy, ly := int(x2), int(x2), int(y2), int(y2)
 
 	if yd == 0 {
-		ly -= radius
-		uy += radius
+		ly -= int(height / 2)
+		uy += int(height / 2)
 
 		if xd > 0 {
-			ux += (radius * 2)
+			ux += int(width)
 		} else {
-			lx -= (radius * 2)
+			lx -= int(width)
 		}
 	} else if xd == 0 {
-		lx -= radius
-		ux += radius
+		lx -= int(width / 2)
+		ux += int(width / 2)
 
 		if yd > 0 {
-			uy += (radius * 2)
+			uy += int(height)
 		} else {
-			ly -= (radius * 2)
+			ly -= int(height)
 		}
 	}
 
@@ -260,8 +249,25 @@ BlockCheck:
 		}
 	}
 
+	return lx, ly, ux, uy, xd, yd, free
+}
+
+func visitDungeonRoom(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
+	minRadius := getIntSetting(cellTerrain.AlgorithmParameters, "minradius", 5)
+	maxRadius := getIntSetting(cellTerrain.AlgorithmParameters, "maxradius", 5)
+	wall := getStringSetting(cellTerrain.AlgorithmParameters, "wall", cellTerrain.ID)
+	exit := getStringSetting(cellTerrain.AlgorithmParameters, "exit", cellTerrain.ID)
+	fallback := getStringSetting(cellTerrain.AlgorithmParameters, "fallback", cellTerrain.ID)
+
+	radius := minRadius
+	if (maxRadius - minRadius) > 0 {
+		radius += rand.Int() % (maxRadius - minRadius)
+	}
+
+	lx, ly, ux, uy, xd, yd, free := getAvailableBox(x1, y1, x2, y2, world, radius*2, radius*2)
+
 	if !free {
-		mnx, mny, mxx, mxy := x2, y2, x2, y2
+		mnx, mny, mxx, mxy := lx, ly, ux, uy
 		if xd == 0 {
 			mnx--
 			mxx++
@@ -272,8 +278,8 @@ BlockCheck:
 
 		for x := mnx; x <= mxx; x++ {
 			for y := mny; y <= mxy; y++ {
-				if world.GetCellInfo(x, y) == nil {
-					world.SetCellInfo(x, y, &CellInfo{TerrainID: wall, RegionNameID: regionID})
+				if world.GetCellInfo(uint32(x), uint32(y)) == nil {
+					world.SetCellInfo(uint32(x), uint32(y), &CellInfo{TerrainID: wall, RegionNameID: regionID})
 				}
 			}
 		}
@@ -302,6 +308,91 @@ BlockCheck:
 	}
 }
 
+func visitGreatWall(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
+	settings := cellTerrain.AlgorithmParameters
+
+	radius := getIntSetting(settings, "radius", 50)
+	seedExit := getStringSetting(settings, "seed-exit", "clearing-grass")
+
+	lx, ly, ux, uy, _, _, free := getAvailableBox(x1, y1, x2, y2, world, radius*2, radius*2)
+
+	if free {
+		newRegionID := world.NewPlaceID()
+		wallThickness := getIntSetting(settings, "wall-thickness", 3)
+		seedEntry := getStringSetting(settings, "seed-entry", "gravel")
+		wallTexture := getStringSetting(settings, "wall-texture", "castle-clearing-wall")
+		wallTextureInfo := CellInfo{
+			TerrainID:    wallTexture,
+			RegionNameID: newRegionID}
+		entryTextureInfo := CellInfo{
+			TerrainID:    seedEntry,
+			RegionNameID: newRegionID}
+
+		// Outline
+		for x := 0; x < (ux - lx); x++ {
+			if rand.Int()%2 == 0 {
+				world.SetCellInfo(uint32(lx+x), uint32(uy), &wallTextureInfo)
+				world.SetCellInfo(uint32(ux-x), uint32(ly), &wallTextureInfo)
+				world.SetCellInfo(uint32(ux-x), uint32(uy-wallThickness), &wallTextureInfo)
+				world.SetCellInfo(uint32(lx+x), uint32(ly+wallThickness), &wallTextureInfo)
+			} else if x > 1 && x < (ux-lx)-1 {
+				world.SetCellInfo(uint32(ux-x), uint32(uy-wallThickness), &entryTextureInfo)
+				world.SetCellInfo(uint32(lx+x), uint32(ly+wallThickness), &entryTextureInfo)
+			}
+		}
+		for y := 0; y < (uy - ly); y++ {
+			if rand.Int()%2 == 0 {
+				world.SetCellInfo(uint32(lx), uint32(uy-y), &wallTextureInfo)
+				world.SetCellInfo(uint32(ux), uint32(ly+y), &wallTextureInfo)
+				world.SetCellInfo(uint32(lx+wallThickness), uint32(ly+y), &wallTextureInfo)
+				world.SetCellInfo(uint32(ux-wallThickness), uint32(uy-y), &wallTextureInfo)
+			} else if y > 1 && y < (uy-ly)-1 {
+				world.SetCellInfo(uint32(lx+wallThickness), uint32(ly+y), &entryTextureInfo)
+				world.SetCellInfo(uint32(ux-wallThickness), uint32(uy-y), &entryTextureInfo)
+			}
+		}
+		// Thick wall part
+		for thickness := 1; thickness < wallThickness; thickness++ {
+			for x := lx + thickness; x <= ux-thickness; x++ {
+				world.SetCellInfo(uint32(x), uint32(ly+thickness), &wallTextureInfo)
+				world.SetCellInfo(uint32(x), uint32(uy-thickness), &wallTextureInfo)
+			}
+			for y := ly + thickness; y <= uy-thickness; y++ {
+				world.SetCellInfo(uint32(lx+thickness), uint32(y), &wallTextureInfo)
+				world.SetCellInfo(uint32(ux-thickness), uint32(y), &wallTextureInfo)
+			}
+		}
+
+		walkwayCell := CellInfo{
+			TerrainID:    seedExit,
+			RegionNameID: newRegionID}
+		for i := 0; i <= wallThickness; i++ {
+			midx, midy := lx+(ux-lx)/2, ly+(uy-ly)/2
+			if i >= wallThickness-1 {
+				walkwayCell.TerrainID = seedEntry
+			}
+
+			world.SetCellInfo(uint32(midx), uint32(ly+i), &walkwayCell)
+			world.SetCellInfo(uint32(midx), uint32(uy-i), &walkwayCell)
+			world.SetCellInfo(uint32(lx+i), uint32(midy), &walkwayCell)
+			world.SetCellInfo(uint32(ux-i), uint32(midy), &walkwayCell)
+		}
+	} else {
+		var cellTerrain *CellTerrain
+
+		cellInfo := world.GetCellInfo(x1, y1)
+		if cellInfo != nil {
+			cellTerrain = &cellInfo.TerrainData
+		} else {
+			*cellTerrain = CellTypes[seedExit]
+		}
+		visitSpread(x1, y1, x2, y2, world, regionID, &cellInfo.TerrainData)
+	}
+}
+
+func visitCircle(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
+}
+
 // PopulateCellFromAlgorithm will run the specified algorithm to generate terrain
 func PopulateCellFromAlgorithm(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	if cellTerrain == nil {
@@ -325,4 +416,6 @@ func init() {
 	generationAlgorithms["spread"] = visitSpread
 	generationAlgorithms["path"] = visitPath
 	generationAlgorithms["dungeon-room"] = visitDungeonRoom
+	generationAlgorithms["great-wall"] = visitGreatWall
+	generationAlgorithms["circle"] = visitCircle
 }
