@@ -3,7 +3,6 @@ package mud
 import (
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"strings"
 	"unicode/utf8"
@@ -314,6 +313,7 @@ func (screen *sshScreen) renderCharacterSheet() {
 
 	foundSelectedCreature := false
 	hasCreatures := false
+	firstID := ""
 	creatures := screen.builder.World().GetCreatures(pos.X, pos.Y)
 	var selectedCreatureItem *Creature
 	if creatures != nil && len(creatures) > 0 {
@@ -325,9 +325,15 @@ func (screen *sshScreen) renderCharacterSheet() {
 
 			labelColumn = fmt.Sprintf("%2v", keyIndex+1)
 			cid := creature.ID
-			if keyIndex < 10 {
+			if creature.HP <= 0 {
+				labelColumn = "✘✘"
+			} else if keyIndex < 10 {
 				screen.keyCodeMap[fmt.Sprintf("%v", keyIndex+1)] = func() {
 					screen.selectedCreature = cid
+				}
+
+				if firstID == "" {
+					firstID = creature.ID
 				}
 			}
 
@@ -337,7 +343,7 @@ func (screen *sshScreen) renderCharacterSheet() {
 				creature.CreatureTypeStruct.MaxHP,
 				creature.Charge, creature.maxCharge), width-3)
 
-			if screen.selectedCreature == creature.ID {
+			if screen.selectedCreature == creature.ID && creature.HP > 0 {
 				labelColumn = CRhiliteColor(labelColumn)
 				nameColumn = CRhiliteColor("▸" + nameColumn)
 				foundSelectedCreature = true
@@ -356,7 +362,9 @@ func (screen *sshScreen) renderCharacterSheet() {
 
 	// Unselect creature if it's not here
 	if !foundSelectedCreature {
-		screen.selectedCreature = ""
+		if screen.selectedCreature != "" {
+			screen.selectedCreature = firstID
+		}
 	}
 
 	if hasCreatures {
@@ -377,24 +385,23 @@ func (screen *sshScreen) renderCharacterSheet() {
 						selc := selectedCreatureItem
 						sela := *attack.Attack
 						screen.keyCodeMap[keyString] = func() {
-							formatString := fmt.Sprintf("Attacking %v with %v", selc.CreatureTypeStruct.Name, sela.Name)
-							spell := screen.user.MusterAttack(sela.Name)
-
-							if spell != nil {
-								log.Printf("Attacking with %v", spell.String())
+							selattack := screen.user.MusterAttack(sela.Name)
+							if selattack != nil {
+								formatString := fmt.Sprintf("Attacking %v with %v", selc.CreatureTypeStruct.Name, sela.Name)
+								screen.user.Log(LogItem{Message: formatString,
+									MessageType: MESSAGEACTION})
+								screen.builder.Attack(selc, selattack)
 							}
-							screen.user.Log(LogItem{Message: formatString,
-								MessageType: MESSAGEACTION})
 						}
 					}
 				}
-				attackName := fmtFunc(truncateRight(" "+attack.Attack.String(), width-8))
+				attackName := fmtFunc(truncateRight(" "+attack.Attack.String(), width-12))
 
 				if attack.Charged {
 					attackkey = CRnumberColor(attackkey)
 				}
 
-				extraLines = append(extraLines, attackkey+attackName+screen.drawProgressMeter(uint64(charge), uint64(attack.Attack.Charge), 73, bgcolor, 5))
+				extraLines = append(extraLines, attackkey+attackName+screen.drawProgressMeter(uint64(charge), uint64(attack.Attack.Charge), 73, bgcolor, 10))
 
 				key++
 			}

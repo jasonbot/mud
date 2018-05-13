@@ -24,6 +24,7 @@ type World interface {
 	SetCellInfo(uint32, uint32, *CellInfo)
 	GetCreatures(uint32, uint32) []*Creature
 	HasCreatures(uint32, uint32) bool
+	UpdateCreature(*Creature)
 	ClearCreatures(uint32, uint32)
 	AddStockCreature(uint32, uint32, string)
 	KillCreature(string)
@@ -124,6 +125,15 @@ func (w *dbWorld) sweepExpiredKeys() {
 		return true
 	})
 	for _, key := range keys {
+		v, _ := w.activeCellCache.Load(key)
+		value, ok := v.(*recentCellInfo)
+		if ok {
+			for _, creature := range value.creatures {
+				if creature.HP <= 0 {
+					w.KillCreature(creature.ID)
+				}
+			}
+		}
 		w.activeCellCache.Delete(key)
 	}
 }
@@ -323,11 +333,21 @@ func (w *dbWorld) getCreatures(x, y uint32) []*Creature {
 	cl := w.creatureList(x, y)
 	creatures := make([]*Creature, 0)
 
+	nameFixers := make(map[string]int)
+
 	if cl != nil && len(cl) > 0 {
 		now := time.Now().Unix()
 		for _, id := range cl {
 			c := w.getCreature(id)
 			if c != nil {
+				_, gotName := nameFixers[c.CreatureTypeStruct.Name]
+				if gotName {
+					nameFixers[c.CreatureTypeStruct.Name] = nameFixers[c.CreatureTypeStruct.Name] + 1
+					c.CreatureTypeStruct.Name = fmt.Sprintf("%v (%v)", c.CreatureTypeStruct.Name, nameFixers[c.CreatureTypeStruct.Name])
+				} else {
+					nameFixers[c.CreatureTypeStruct.Name] = 1
+				}
+
 				c.lastAction = now
 				c.Charge = 0
 				c.maxCharge = int64(c.CreatureTypeStruct.MaxAP+c.CreatureTypeStruct.MaxMP+c.CreatureTypeStruct.MaxRP) / 3
@@ -609,7 +629,9 @@ func (w *dbWorld) OnlineUsers() []User {
 
 func (w *dbWorld) Chat(message LogItem) {
 	for _, user := range w.OnlineUsers() {
-		user.Log(message)
+		if message.Location == nil || *(message.Location) == *(user.Location()) {
+			user.Log(message)
+		}
 	}
 }
 
@@ -620,7 +642,7 @@ func (w *dbWorld) Close() {
 	}
 }
 
-func (w *dbWorld) watchActiveCells() {
+func (w *dbWorld) tickOnActiveItems() {
 	tick := time.Tick(1 * time.Second)
 
 	for {
@@ -660,7 +682,7 @@ func (w *dbWorld) load() {
 
 	w.database = db
 	w.closeActiveCells = make(chan struct{})
-	go w.watchActiveCells()
+	go w.tickOnActiveItems()
 }
 
 // LoadWorldFromDB will set up an on-disk based world

@@ -1,6 +1,7 @@
 package mud
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 )
@@ -11,6 +12,7 @@ type WorldBuilder interface {
 	World() World
 	GetUser(string) User
 	Chat(LogItem)
+	Attack(interface{}, *Attack)
 
 	MoveUserNorth(user User)
 	MoveUserSouth(user User)
@@ -111,6 +113,91 @@ func (builder *worldBuilder) GetUser(username string) User {
 
 func (builder *worldBuilder) Chat(message LogItem) {
 	builder.world.Chat(message)
+}
+
+func (builder *worldBuilder) Attack(target interface{}, attack *Attack) {
+	if attack == nil {
+		log.Println("Attack is nil")
+		return
+	}
+	var tap, trp, tmp uint64
+	message := ""
+	hitTarget := "target"
+
+	user, userok := target.(User)
+	creature, creatureok := target.(*Creature)
+
+	var location *Point
+
+	if userok {
+		tap, trp, tmp = user.MaxAP(), user.MaxRP(), user.MaxMP()
+		location = user.Location()
+		hitTarget = user.Username()
+	} else if creatureok {
+		tap, trp, tmp = creature.CreatureTypeStruct.MaxAP, creature.CreatureTypeStruct.MaxRP, creature.CreatureTypeStruct.MaxMP
+		location = &Point{X: creature.X, Y: creature.Y}
+		hitTarget = creature.CreatureTypeStruct.Name
+	}
+
+	aap, arp, amp := attack.AP, attack.RP, attack.MP
+	if trp > aap {
+		aap = 0
+	} else {
+		aap -= trp
+	}
+
+	if tmp > arp {
+		arp = 0
+	} else {
+		arp -= tmp
+	}
+
+	if tap > amp {
+		amp = 0
+	} else {
+		amp -= tap
+	}
+
+	hit := rand.Int()%100 < int(attack.Accuracy)
+	killed := false
+
+	if hit {
+		damage := aap + arp + amp
+
+		if userok {
+			if user.HP() > damage {
+				user.SetHP(0)
+				killed = true
+			} else {
+				user.SetHP(user.HP() - damage)
+			}
+
+			user.Save()
+		} else if creatureok {
+			if creature.HP > damage {
+				creature.HP -= damage
+			} else {
+				creature.HP = 0
+				killed = true
+			}
+
+			builder.world.UpdateCreature(creature)
+		} else {
+			log.Printf("How do I handle %v for attacks?", target)
+		}
+
+		if killed {
+			message = fmt.Sprintf("%v took fatal damage from %v!", hitTarget, attack.Name)
+		} else {
+			message = fmt.Sprintf("%v hit %v for %v damage!", attack.Name, hitTarget, damage)
+		}
+	} else {
+		message = fmt.Sprintf("%v missed!", attack.Name)
+	}
+
+	if len(message) > 0 {
+		builder.Chat(LogItem{Message: message, MessageType: MESSAGEACTIVITY, Location: location})
+	}
 }
 
 func (builder *worldBuilder) MoveUserNorth(user User) {

@@ -280,7 +280,6 @@ BlockCheck:
 
 		world.SetCellInfo(x2, y2, &CellInfo{TerrainID: fallback, RegionNameID: regionID})
 	} else {
-		regionID = world.NewPlaceID()
 		for xdd := lx; xdd <= ux; xdd++ {
 			for ydd := ly; ydd <= uy; ydd++ {
 				if uint32(xdd) == x2 && uint32(ydd) == y2 {

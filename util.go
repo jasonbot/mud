@@ -22,7 +22,8 @@ type LogItem struct {
 	Message     string    `json:""`
 	Author      string    `json:""`
 	Timestamp   time.Time `json:""`
-	MessageType int
+	MessageType int       `json:""`
+	Location    *Point    `json:",omit"`
 }
 
 // Point represents an (X,Y) pair in the world
