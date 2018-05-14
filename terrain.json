@@ -21,10 +21,10 @@
         "Blocking": false,
         "Transitions": [
             "castle-clearing:1",
-            "clearing-grass:20",
-            "clearing-deep-grass:7",
-            "trail:5",
-            "savannah:3"
+            "clearing-grass:55",
+            "clearing-deep-grass:20",
+            "trail:12",
+            "savannah:8"
         ],
         "MonsterSpawns": [
             {
@@ -334,6 +334,23 @@
         "Algorithm": "spread",
         "Transitions": [
             "castle-gravel"
+        ],
+        "MonsterSpawns": [
+            {
+                "Name": "skeltal",
+                "Probability": 0.01,
+                "Cluster": 1
+            },
+            {
+                "Name": "vagabond",
+                "Probability": 0.01,
+                "Cluster": 1
+            },
+            {
+                "Name": "centipede",
+                "Probability": 0.05,
+                "Cluster": 10
+            }
         ],
         "FGcolor": 245,
         "BGcolor": 15,

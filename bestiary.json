@@ -175,5 +175,102 @@
                 "Charge": 1
             }
         ]
+    },
+    "skeltal": {
+        "Name": "Mr. Skeltal",
+        "Hostile": true,
+        "MaxHP": 8,
+        "MaxMP": 4,
+        "MaxAP": 4,
+        "MaxRP": 4,
+        "Attacks": [
+            {
+                "Name": "Shake",
+                "Accuracy": 5,
+                "MP": 4,
+                "AP": 1,
+                "RP": 1,
+                "Charge": 1
+            },
+            {
+                "Name": "Rattle",
+                "Accuracy": 0,
+                "MP": 1,
+                "AP": 0,
+                "RP": 0,
+                "Charge": 1
+            },
+            {
+                "Name": "Doot doot",
+                "Accuracy": 100,
+                "MP": 7,
+                "AP": 1,
+                "RP": 1,
+                "Charge": 12
+            }
+        ]
+    },
+    "vagabond": {
+        "Name": "Vagabond",
+        "Hostile": true,
+        "MaxHP": 6,
+        "MaxMP": 4,
+        "MaxAP": 4,
+        "MaxRP": 4,
+        "Attacks": [
+            {
+                "Name": "Stab",
+                "Accuracy": 75,
+                "MP": 5,
+                "AP": 4,
+                "RP": 2,
+                "Charge": 3
+            },
+            {
+                "Name": "Shank",
+                "Accuracy": 75,
+                "MP": 4,
+                "AP": 3,
+                "RP": 2,
+                "Charge": 4
+            },
+            {
+                "Name": "Rock Throw",
+                "Accuracy": 90,
+                "MP": 0,
+                "AP": 2,
+                "RP": 6,
+                "Charge": 5
+            }
+        ]
+    },
+    "centipede": {
+        "Name": "Centipede",
+        "Hostile": true,
+        "MaxHP": 8,
+        "MaxMP": 4,
+        "MaxAP": 4,
+        "MaxRP": 4,
+        "Attacks": [
+            {
+                "Name": "Skitter",
+                "Accuracy": 50,
+                "MP": 1,
+                "AP": 1,
+                "RP": 1,
+                "Charge": 1
+            },
+            {
+                "Name": "Bite",
+                "Accuracy": 80,
+                "MP": 0,
+                "AP": 0,
+                "RP": 0,
+                "Charge": 6,
+                "Effects": [
+                    "poison"
+                ]
+            }
+        ]
     }
 }
