@@ -346,11 +346,15 @@ func (screen *sshScreen) renderCharacterSheet() {
 				}
 			}
 
-			nameColumn := truncateRight(fmt.Sprintf("%s (%v/%v)  Charge: (%v/%v)",
+			chargeMeter := screen.drawProgressMeter(uint64(creature.Charge), uint64(creature.maxCharge), 73, bgcolor, 10)
+
+			nameColumn := truncateRight(fmt.Sprintf("%s (%v/%v)  AP:%v RP:%v MP:%v",
 				creature.CreatureTypeStruct.Name,
 				creature.HP,
 				creature.CreatureTypeStruct.MaxHP,
-				creature.Charge, creature.maxCharge), width-3)
+				creature.AP,
+				creature.RP,
+				creature.MP), width-13) + chargeMeter
 
 			if screen.selectedCreature == creature.ID && creature.HP > 0 {
 				labelColumn = CRhiliteColor(labelColumn)
@@ -554,6 +558,13 @@ func (screen *sshScreen) Render() {
 		move := cursor.MoveTo(1, 1)
 		io.WriteString(screen.session,
 			fmt.Sprintf("%s%sScreen is too small. Make your terminal larger. (60x20 minimum)", clear, move))
+		return
+	} else if screen.user.HP() == 0 {
+		clear := cursor.ClearEntireScreen()
+		dead := "You died. Respawning..."
+		move := cursor.MoveTo(screen.screenSize.Height/2, screen.screenSize.Width/2-utf8.RuneCountInString(dead)/2)
+		io.WriteString(screen.session, clear+move+dead)
+		screen.refreshed = false
 		return
 	}
 

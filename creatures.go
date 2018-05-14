@@ -22,7 +22,7 @@ type Attack struct {
 }
 
 func (atk *Attack) String() string {
-	return fmt.Sprintf("%v: ATK %v (%vAP/%vRP/%vMP)", atk.Name, atk.AP+atk.RP+atk.MP, atk.AP, atk.RP, atk.MP)
+	return fmt.Sprintf("%v: AP:%v RP:%v MP:%v", atk.Name, atk.AP, atk.RP, atk.MP)
 }
 
 // CreatureType is the type of creature (Hostile: true is monster, false is NPC)
