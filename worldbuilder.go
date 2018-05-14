@@ -249,45 +249,44 @@ func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]Cel
 				xcoord, ycoord := uint32(int64(startx)+xd), uint32(int64(starty)+yd)
 				cellInfo := builder.world.GetCellInfo(xcoord, ycoord)
 
-				terrainType := ""
 				if cellInfo != nil {
-					terrainType = cellInfo.TerrainID
-				}
+					terrainInfo := cellInfo.TerrainData
 
-				terrainInfo := CellTypes[terrainType]
-
-				renderGlyph := rune('·')
-				if cellInfo != nil && len(terrainInfo.Representations) > 0 {
-					renderGlyph = terrainInfo.Representations[(xcoord^ycoord)%uint32(len(terrainInfo.Representations))]
-				} else {
-					terrainInfo.FGcolor = 232
-					terrainInfo.BGcolor = 233
-				}
-
-				hasItems := false
-				if builder.world.HasInventoryItems(uint32(int64(startx)+xd), uint32(int64(starty)+yd)) {
-					hasItems = true
-					terrainInfo.FGcolor = 178
-					renderGlyph = rune('≡')
-					terrainInfo.Bold = true
-				}
-
-				if builder.world.HasCreatures(uint32(int64(startx)+xd), uint32(int64(starty)+yd)) {
-					if hasItems {
-						terrainInfo.FGcolor = 175
-						renderGlyph = rune('≜')
+					renderGlyph := rune('·')
+					if cellInfo != nil && len(terrainInfo.Representations) > 0 {
+						renderGlyph = terrainInfo.Representations[(xcoord^ycoord)%uint32(len(terrainInfo.Representations))]
 					} else {
-						terrainInfo.FGcolor = 172
-						renderGlyph = rune('∆')
-						terrainInfo.Bold = true
+						terrainInfo.FGcolor = 232
+						terrainInfo.BGcolor = 233
 					}
-				}
 
-				terrainMap[yd][xd] = CellRenderInfo{
-					FGColor: terrainInfo.FGcolor,
-					BGColor: terrainInfo.BGcolor,
-					Bold:    terrainInfo.Bold,
-					Glyph:   renderGlyph}
+					if cellInfo.TerrainData.Blocking == false {
+						hasItems := false
+						if builder.world.HasInventoryItems(uint32(int64(startx)+xd), uint32(int64(starty)+yd)) {
+							hasItems = true
+							terrainInfo.FGcolor = 178
+							renderGlyph = rune('≡')
+							terrainInfo.Bold = true
+						}
+
+						if builder.world.HasCreatures(uint32(int64(startx)+xd), uint32(int64(starty)+yd)) {
+							if hasItems {
+								terrainInfo.FGcolor = 175
+								renderGlyph = rune('≜')
+							} else {
+								terrainInfo.FGcolor = 172
+								renderGlyph = rune('∆')
+								terrainInfo.Bold = true
+							}
+						}
+					}
+
+					terrainMap[yd][xd] = CellRenderInfo{
+						FGColor: terrainInfo.FGcolor,
+						BGColor: terrainInfo.BGcolor,
+						Bold:    terrainInfo.Bold,
+						Glyph:   renderGlyph}
+				}
 			}
 		}
 	}

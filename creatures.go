@@ -9,16 +9,24 @@ import (
 // CreatureTypes is a mapping of string IDs to creature types
 var CreatureTypes map[string]CreatureType
 
+// CreatureSpawn is a JSON struct used for the generation of monsters
+type CreatureSpawn struct {
+	Name        string  `json:""` // ID of creature in bestiary
+	Probability float32 `json:""` // 0-1.0
+	Cluster     float32 `json:""` // 0-1.0
+}
+
 // CreatureType is the type of creature (Hostile: true is monster, false is NPC)
 type CreatureType struct {
-	ID      string   `json:"-"`
-	Name    string   `json:""`
-	Hostile bool     `json:""`
-	MaxHP   uint64   `json:""`
-	MaxMP   uint64   `json:""`
-	MaxAP   uint64   `json:""`
-	MaxRP   uint64   `json:""`
-	Attacks []Attack `json:""`
+	ID        string     `json:"-"`
+	Name      string     `json:""`
+	Hostile   bool       `json:""`
+	MaxHP     uint64     `json:""`
+	MaxMP     uint64     `json:""`
+	MaxAP     uint64     `json:""`
+	MaxRP     uint64     `json:""`
+	Attacks   []Attack   `json:""`
+	ItemDrops []ItemDrop `json:""` // List of items and probabilities of them appearing in each terrain type
 }
 
 // Creature is an instance of a Creature

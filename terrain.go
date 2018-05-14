@@ -9,13 +9,6 @@ import (
 // DefaultCellType is the seed land type when spawning a character.
 const DefaultCellType string = "clearing"
 
-// MonsterSpawn is a JSON struct used for the generation of monsters
-type MonsterSpawn struct {
-	Name        string  `json:""` // ID of monster in bestiary
-	Probability float32 `json:""` // 0-1.0
-	Cluster     float32 `json:""` // 0-1.0
-}
-
 // CellTerrain stores rules about different cell's terrain types.
 // For 256 color colors check https://jonasjacek.github.io/colors/
 type CellTerrain struct {
@@ -26,7 +19,8 @@ type CellTerrain struct {
 	Name                string            `json:",omitempty"` // Formatstring to modify place name
 	Algorithm           string            `json:""`           // Default is radiateout; should have algos for e.g. town grid building etc.
 	AlgorithmParameters map[string]string `json:""`           // Helpers for terrain generator algorithm
-	MonsterSpawns       []MonsterSpawn    `json:""`           // List of monster types and probabilities of them appearing in each terrain type
+	CreatureSpawns      []CreatureSpawn   `json:""`           // List of monster types and probabilities of them appearing in each terrain type
+	ItemDrops           []ItemDrop        `json:""`           // List of items and probabilities of them appearing in each terrain type
 	FGcolor             byte              `json:""`           // SSH-display specific: the 256 color xterm color for FG
 	BGcolor             byte              `json:""`           // SSH-display specific: the 256 color xterm color for BG
 	Bold                bool              `json:""`           // SSH-display specific: bold the cell FG?

@@ -1,0 +1,58 @@
+{
+    "Simple Sword": {
+        "Type": "Weapon",
+        "Subtype": "Sword",
+        "Description": "The most basic melee weapon imaginable",
+        "Attacks": [
+            {
+                "Name": "Hack",
+                "Accuracy": 80,
+                "MP": 0,
+                "AP": 8,
+                "RP": 0,
+                "Trample": 4,
+                "Charge": 3,
+                "Bonuses": "AP+50%AP;TP+10%MP"
+            }
+        ]
+    },
+    "Simple Bow": {
+        "Type": "Weapon",
+        "Subtype": "Bow",
+        "Description": "The most basic ranged weapon imaginable",
+        "Attacks": [
+            {
+                "Name": "Arrow",
+                "Accuracy": 80,
+                "MP": 0,
+                "AP": 0,
+                "RP": 8,
+                "Trample": 4,
+                "Charge": 3,
+                "Bonuses": "RP+50%AP;TP+10%RP"
+            }
+        ]
+    },
+    "Simple Wand": {
+        "Description": "The most basic magical weapon imaginable",
+        "Type": "Weapon",
+        "Subtype": "Wand",
+        "Attacks": [
+            {
+                "Name": "Arrow",
+                "Accuracy": 80,
+                "MP": 8,
+                "AP": 0,
+                "RP": 0,
+                "Trample": 4,
+                "Charge": 3,
+                "Bonuses": "MP+50%AP;TP+10%MP"
+            }
+        ]
+    },
+    "Shiny Rock": {
+        "Description": "You've spent too long in the grasses if you think this is interesting",
+        "Type": "Artifact",
+        "Subtype": "Curiosity"
+    }
+}

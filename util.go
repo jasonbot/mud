@@ -50,6 +50,7 @@ func PointFromBytes(ptBytes []byte) Point {
 // LoadResources loads data for the game
 func LoadResources() {
 	loadCreatureTypes("./bestiary.json")
+	loadItemTypes("./items.json")
 	loadTerrainTypes("./terrain.json")
 }
 

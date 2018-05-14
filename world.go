@@ -288,10 +288,12 @@ func (w *dbWorld) SetCellInfo(x, y uint32, cellInfo *CellInfo) {
 
 	ct, ok := CellTypes[cellInfo.TerrainID]
 
-	var spawns []MonsterSpawn
+	var spawns []CreatureSpawn
+	var drops []ItemDrop
 
 	if ok {
-		spawns = ct.MonsterSpawns
+		spawns = ct.CreatureSpawns
+		drops = ct.ItemDrops
 	}
 
 	if spawns != nil {
@@ -311,6 +313,16 @@ func (w *dbWorld) SetCellInfo(x, y uint32, cellInfo *CellInfo) {
 
 					w.AddStockCreature(x, y, spawn.Name)
 				}
+			}
+		}
+	}
+
+	if drops != nil {
+		for _, drop := range drops {
+			prob := rand.Float32()
+			if drop.Probability >= prob {
+				dropItem := ItemTypes[drop.Name]
+				w.AddInventoryItem(x, y, &dropItem)
 			}
 		}
 	}
@@ -694,6 +706,7 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 				creature.HP -= damage
 			} else {
 				creature.HP = 0
+				w.creatureDrop(creature)
 				killed = true
 			}
 
@@ -719,6 +732,20 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 
 	if len(message) > 0 {
 		w.Chat(LogItem{Author: source, Message: message, MessageType: MESSAGEACTIVITY, Location: location})
+	}
+}
+
+func (w *dbWorld) creatureDrop(creature *Creature) {
+	drops := creature.CreatureTypeStruct.ItemDrops
+
+	if drops != nil && len(drops) > 0 {
+		for _, drop := range drops {
+			prob := rand.Float32()
+			if drop.Probability >= prob {
+				dropItem := ItemTypes[drop.Name]
+				w.AddInventoryItem(creature.X, creature.Y, &dropItem)
+			}
+		}
 	}
 }
 
@@ -781,7 +808,7 @@ func (w *dbWorld) AddInventoryItem(x, y uint32, item *InventoryItem) bool {
 	binary.Write(keyBuf, binary.BigEndian, pt.Bytes())
 	binary.Write(keyBuf, binary.BigEndian, byte(0))
 	binary.Write(keyBuf, binary.BigEndian, idBytes)
-	dataBytes, err := json.Marshal(item)
+	dataBytes, err := json.Marshal(inventoryItem)
 
 	if err != nil {
 		return false
@@ -815,11 +842,10 @@ func (w *dbWorld) inventoryItem(x, y uint32, id string, pull bool) *InventoryIte
 
 	found := false
 	var inventoryItem InventoryItem
-	w.database.View(func(tx *bolt.Tx) error {
+	w.database.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("placeitems"))
 
 		itemBytes := bucket.Get(keyBuf.Bytes())
-
 		if itemBytes != nil {
 			if json.Unmarshal(itemBytes, &inventoryItem) == nil {
 				inventoryItem.ID = id
@@ -828,7 +854,7 @@ func (w *dbWorld) inventoryItem(x, y uint32, id string, pull bool) *InventoryIte
 		}
 
 		if pull && found {
-			bucket.Delete(keyBuf.Bytes())
+			return bucket.Delete(keyBuf.Bytes())
 		}
 
 		return nil

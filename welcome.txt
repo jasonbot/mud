@@ -2,6 +2,12 @@
 This is a simple graphical MUD developed for the
 Enter The Mud code jam on itch.io.
 
+^Map
+≡ means stuff is on the ground
+∆ means bad guys are hanging out
+≜ means there are bad guys and stuff
+* is a player, middle one is you
+
 ^Controls
 %Cursor keys: Move
 %/: Open command mode (nonfunctional)

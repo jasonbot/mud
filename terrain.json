@@ -26,7 +26,13 @@
             "trail:12",
             "savannah:8"
         ],
-        "MonsterSpawns": [
+        "ItemDrops": [
+            {
+                "Name": "Shiny Rock",
+                "Probability": 0.05
+            }
+        ],
+        "CreatureSpawns": [
             {
                 "Name": "goat",
                 "Probability": 0.001,
@@ -54,7 +60,7 @@
             "clearing-grass:6",
             "clearing-tree"
         ],
-        "MonsterSpawns": [
+        "CreatureSpawns": [
             {
                 "Name": "grass-snake",
                 "Probability": 0.01,
@@ -152,7 +158,7 @@
             "exit": "clearing-trail-ruin",
             "fallback": "clearing-deep-grass"
         },
-        "MonsterSpawns": [
+        "CreatureSpawns": [
             {
                 "Name": "rat",
                 "Probability": 0.1,
@@ -230,7 +236,7 @@
         "AlgorithmParameters": {
             "radius": "4"
         },
-        "MonsterSpawns": [
+        "CreatureSpawns": [
             {
                 "Name": "tarantula",
                 "Probability": 0.1,
@@ -258,7 +264,7 @@
             "radius": "10",
             "tendrilcount": "5"
         },
-        "MonsterSpawns": [
+        "CreatureSpawns": [
             {
                 "Name": "scorpion",
                 "Probability": 0.01,
@@ -335,7 +341,7 @@
         "Transitions": [
             "castle-gravel"
         ],
-        "MonsterSpawns": [
+        "CreatureSpawns": [
             {
                 "Name": "skeltal",
                 "Probability": 0.01,
@@ -350,6 +356,20 @@
                 "Name": "centipede",
                 "Probability": 0.05,
                 "Cluster": 10
+            }
+        ],
+        "ItemDrops": [
+            {
+                "Name": "Simple Sword",
+                "Probability": 0.01
+            },
+            {
+                "Name": "Simple Bow",
+                "Probability": 0.01
+            },
+            {
+                "Name": "Simple Wand",
+                "Probability": 0.01
             }
         ],
         "FGcolor": 245,

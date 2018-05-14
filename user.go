@@ -737,7 +737,7 @@ func (user *dbUser) AddInventoryItem(item *InventoryItem) bool {
 	binary.Write(keyBuf, binary.BigEndian, []byte(user.UserData.Username))
 	binary.Write(keyBuf, binary.BigEndian, byte(0))
 	binary.Write(keyBuf, binary.BigEndian, idBytes)
-	dataBytes, err := json.Marshal(item)
+	dataBytes, err := json.Marshal(inventoryItem)
 
 	if err != nil {
 		return false
@@ -770,7 +770,7 @@ func (user *dbUser) inventoryItem(id string, pull bool) *InventoryItem {
 
 	found := false
 	var inventoryItem InventoryItem
-	user.world.database.View(func(tx *bolt.Tx) error {
+	user.world.database.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("userinventory"))
 
 		itemBytes := bucket.Get(keyBuf.Bytes())

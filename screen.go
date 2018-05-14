@@ -116,6 +116,13 @@ func (item *LogItem) SSHString(width int) string {
 	return truncateRight(item.Message, width)
 }
 
+// SSHString render inventory item for console
+func (item *InventoryItem) SSHString(width int) string {
+	formatFunc := ansi.ColorFunc(fmt.Sprintf("255:%v", bgcolor))
+
+	return formatFunc(truncateRight(item.Name, width))
+}
+
 func (screen *sshScreen) colorFunc(color string) func(string) string {
 	_, ok := screen.colorCodeCache[color]
 
@@ -298,6 +305,16 @@ func (screen *sshScreen) redrawBorders() {
 }
 
 func (screen *sshScreen) renderCharacterSheet() {
+	bgcolor := uint64(bgcolor)
+	warning := ""
+	if float32(screen.user.HP()) < float32(screen.user.MaxHP())*.25 {
+		bgcolor = 124
+		warning = " (Health low) "
+	} else if float32(screen.user.HP()) < float32(screen.user.MaxHP())*.1 {
+		bgcolor = 160
+		warning = " (Health CRITICAL) "
+	}
+
 	x := screen.screenSize.Width/2 - 1
 	width := (screen.screenSize.Width - x)
 	fmtFunc := screen.colorFunc(fmt.Sprintf("white:%v", bgcolor))
@@ -311,14 +328,14 @@ func (screen *sshScreen) renderCharacterSheet() {
 
 	infoLines := []string{
 		centerText(screen.user.Username(), " ", width),
-		centerText("", "─", width),
+		centerText(warning, "─", width),
 		truncateRight(fmt.Sprintf("%s (%v, %v)", screen.user.LocationName(), pos.X, pos.Y), width),
 		truncateRight(fmt.Sprintf("Charge: %v/%v", charge, maxcharge), width),
-		screen.drawProgressMeter(screen.user.HP(), screen.user.MaxHP(), 196, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" HP: %v/%v", screen.user.HP(), screen.user.MaxHP()), width-11)),
-		screen.drawProgressMeter(screen.user.XP(), screen.user.XPToNextLevel(), 225, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" XP: %v/%v", screen.user.XP(), screen.user.XPToNextLevel()), width-11)),
-		screen.drawProgressMeter(screen.user.AP(), screen.user.MaxAP(), 208, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" AP: %v/%v", screen.user.AP(), screen.user.MaxAP()), width-11)),
-		screen.drawProgressMeter(screen.user.RP(), screen.user.MaxRP(), 117, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" RP: %v/%v", screen.user.RP(), screen.user.MaxRP()), width-11)),
-		screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-11))}
+		screen.drawProgressMeter(screen.user.HP(), screen.user.MaxHP(), 196, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" HP: %v/%v", screen.user.HP(), screen.user.MaxHP()), width-10)),
+		screen.drawProgressMeter(screen.user.XP(), screen.user.XPToNextLevel(), 225, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" XP: %v/%v", screen.user.XP(), screen.user.XPToNextLevel()), width-10)),
+		screen.drawProgressMeter(screen.user.AP(), screen.user.MaxAP(), 208, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" AP: %v/%v", screen.user.AP(), screen.user.MaxAP()), width-10)),
+		screen.drawProgressMeter(screen.user.RP(), screen.user.MaxRP(), 117, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" RP: %v/%v", screen.user.RP(), screen.user.MaxRP()), width-10)),
+		screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-10))}
 
 	foundSelectedCreature := false
 	hasCreatures := false
@@ -380,15 +397,15 @@ func (screen *sshScreen) renderCharacterSheet() {
 		}
 	}
 
+	key := 'A'
 	if hasCreatures {
 		attacks := screen.user.Attacks()
 		if attacks != nil && len(attacks) > 0 {
 			extraLines := []string{centerText(" Attacks ", "─", width)}
 
-			key := 'A'
-			for idx, attack := range attacks {
+			for _, attack := range attacks {
 				attackkey := "  "
-				if idx < 26 {
+				if key <= 'Z' {
 					if selectedCreatureItem == nil {
 						attackkey = "◊◊"
 					} else {
@@ -423,6 +440,45 @@ func (screen *sshScreen) renderCharacterSheet() {
 		}
 	}
 
+	//hasItems := false
+	items := screen.builder.World().InventoryItems(pos.X, pos.Y)
+	if items != nil && len(items) > 0 {
+		//hasItems = true
+		extraLines := []string{centerText(" Items ", "─", width)}
+		screen.builder.World()
+		world := screen.builder.World()
+
+		for _, item := range items {
+			itemKey := "  "
+			i := item
+			itemID := item.ID
+
+			if key < 'Z' {
+				itemKey = fmt.Sprintf(" %v", string(key))
+				user := screen.user
+
+				screen.keyCodeMap[string(key)] = func() {
+					item := screen.builder.World().PullInventoryItem(pos.X, pos.Y, itemID)
+
+					if item != nil {
+						if user.AddInventoryItem(item) == false {
+							world.AddInventoryItem(pos.X, pos.Y, i)
+						} else {
+							user.AddInventoryItem(item)
+						}
+					}
+				}
+
+				key++
+			}
+
+			itemString := CRnumberColor(itemKey) + fmtFunc(truncateRight(" "+item.Name, width-3))
+			extraLines = append(extraLines, itemString)
+		}
+
+		infoLines = append(infoLines, extraLines...)
+	}
+
 	infoLines = append(infoLines, centerText(" ❦ ", "─", width))
 
 	for index, line := range infoLines {
@@ -437,6 +493,26 @@ func (screen *sshScreen) renderCharacterSheet() {
 }
 
 func (screen *sshScreen) renderInventory() {
+	y := screen.screenSize.Height
+	if y < 20 {
+		y = 5
+	} else {
+		y = (y / 2) - 2
+	}
+
+	screenX := 2
+	screenWidth := screen.screenSize.Width/2 - 3
+	row := y + 3
+
+	for _, item := range screen.user.InventoryItems() {
+		move := cursor.MoveTo(row, screenX)
+		io.WriteString(screen.session, move+item.SSHString(screenWidth-1))
+
+		row++
+		if row > screen.screenSize.Height-3 {
+			return
+		}
+	}
 }
 
 func (screen *sshScreen) renderLog() {
