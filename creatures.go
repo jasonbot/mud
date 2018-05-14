@@ -2,28 +2,12 @@ package mud
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 )
 
 // CreatureTypes is a mapping of string IDs to creature types
 var CreatureTypes map[string]CreatureType
-
-// Attack is a type of attack a creature can inflict
-type Attack struct {
-	Name     string   `json:""`
-	Accuracy byte     `json:""`
-	MP       uint64   `json:""`
-	AP       uint64   `json:""`
-	RP       uint64   `json:""`
-	Effects  []string `json:""`
-	Charge   int64    `json:""` // In Seconds
-}
-
-func (atk *Attack) String() string {
-	return fmt.Sprintf("%v: AP:%v RP:%v MP:%v", atk.Name, atk.AP, atk.RP, atk.MP)
-}
 
 // CreatureType is the type of creature (Hostile: true is monster, false is NPC)
 type CreatureType struct {
@@ -44,13 +28,21 @@ type Creature struct {
 	X                  uint32       `json:""`
 	Y                  uint32       `json:""`
 	HP                 uint64       `json:""`
-	MP                 uint64       `json:""`
 	AP                 uint64       `json:""`
 	RP                 uint64       `json:""`
+	MP                 uint64       `json:""`
 	CreatureTypeStruct CreatureType `json:"-"`
 	Charge             int64        `json:"-"`
 	maxCharge          int64
 	world              World
+}
+
+// StatPoints is for StatPointable
+func (creature *Creature) StatPoints() StatPoints {
+	return StatPoints{
+		AP: creature.CreatureTypeStruct.MaxAP,
+		RP: creature.CreatureTypeStruct.MaxRP,
+		MP: creature.CreatureTypeStruct.MaxMP}
 }
 
 // CreatureList represents the creatures in a DB

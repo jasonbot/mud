@@ -264,10 +264,23 @@ func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]Cel
 					terrainInfo.BGcolor = 233
 				}
 
-				if builder.world.HasCreatures(uint32(int64(startx)+xd), uint32(int64(starty)+yd)) {
-					terrainInfo.FGcolor = 172
-					renderGlyph = rune('∆')
+				hasItems := false
+				if builder.world.HasInventoryItems(uint32(int64(startx)+xd), uint32(int64(starty)+yd)) {
+					hasItems = true
+					terrainInfo.FGcolor = 178
+					renderGlyph = rune('≡')
 					terrainInfo.Bold = true
+				}
+
+				if builder.world.HasCreatures(uint32(int64(startx)+xd), uint32(int64(starty)+yd)) {
+					if hasItems {
+						terrainInfo.FGcolor = 175
+						renderGlyph = rune('≜')
+					} else {
+						terrainInfo.FGcolor = 172
+						renderGlyph = rune('∆')
+						terrainInfo.Bold = true
+					}
 				}
 
 				terrainMap[yd][xd] = CellRenderInfo{

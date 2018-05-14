@@ -29,6 +29,7 @@
                 "MP": 1,
                 "AP": 1,
                 "RP": 0,
+                "Trample": 1,
                 "Charge": 2
             }
         ]
@@ -72,6 +73,7 @@
                 "MP": 9,
                 "AP": 5,
                 "RP": 3,
+                "Trample": 3,
                 "Charge": 4,
                 "Effects": [
                     "poison"
@@ -101,6 +103,7 @@
                 "MP": 5,
                 "AP": 10,
                 "RP": 2,
+                "Trample": 1,
                 "Charge": 10,
                 "Effects": [
                     "poison"
@@ -130,6 +133,7 @@
                 "MP": 0,
                 "AP": 3,
                 "RP": 0,
+                "Trample": 1,
                 "Charge": 3
             },
             {
@@ -138,6 +142,7 @@
                 "MP": 0,
                 "AP": 0,
                 "RP": 3,
+                "Trample": 1,
                 "Charge": 3
             },
             {
@@ -146,6 +151,7 @@
                 "MP": 3,
                 "AP": 0,
                 "RP": 0,
+                "Trample": 1,
                 "Charge": 3
             }
         ]
@@ -162,9 +168,10 @@
                 "Name": "Bite",
                 "Accuracy": 5,
                 "MP": 0,
-                "AP": 1,
+                "AP": 0,
                 "RP": 0,
-                "Charge": 1
+                "Trample": 1,
+                "Charge": 2
             },
             {
                 "Name": "Squeak",
@@ -185,12 +192,20 @@
         "MaxRP": 4,
         "Attacks": [
             {
+                "Name": "Thank",
+                "Accuracy": 0,
+                "MP": 1,
+                "AP": 1,
+                "RP": 1,
+                "Charge": 1
+            },
+            {
                 "Name": "Shake",
                 "Accuracy": 5,
                 "MP": 4,
                 "AP": 1,
                 "RP": 1,
-                "Charge": 1
+                "Charge": 2
             },
             {
                 "Name": "Rattle",
@@ -198,7 +213,15 @@
                 "MP": 1,
                 "AP": 0,
                 "RP": 0,
-                "Charge": 1
+                "Charge": 2
+            },
+            {
+                "Name": "Roll",
+                "Accuracy": 0,
+                "MP": 1,
+                "AP": 0,
+                "RP": 3,
+                "Charge": 2
             },
             {
                 "Name": "Doot doot",
@@ -206,7 +229,8 @@
                 "MP": 7,
                 "AP": 1,
                 "RP": 1,
-                "Charge": 12
+                "Trample": "5",
+                "Charge": 8
             }
         ]
     },

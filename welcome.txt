@@ -7,5 +7,8 @@ Enter The Mud code jam on itch.io.
 %/: Open command mode (nonfunctional)
 %!: Open chat mode
 %Ctrl-C: Quit
+%Tab: Toggle log/inventory panel view
 
 Other keys are labelled in the UI.
+
+^❦

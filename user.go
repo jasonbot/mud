@@ -7,35 +7,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
+
 	bolt "github.com/coreos/bbolt"
-)
-
-// Strengths
-const (
-	MELEESECONDARY = byte(1)
-	RANGESECONDARY = byte(2)
-	MAGICSECONDARY = byte(3)
-	MELEEPRIMARY   = byte(4)
-	RANGEPRIMARY   = byte(8)
-	MAGICPRIMARY   = byte(12)
-)
-
-// Skills
-const (
-	PEOPLESECONDARY = byte(16)
-	PLACESSECONDARY = byte(32)
-	THINGSSECONDARY = byte(48)
-	PEOPLEPRIMARY   = byte(64)
-	PLACESPRIMARY   = byte(128)
-	THINGSPRIMARY   = byte(192)
-)
-
-// Masks for strenths/skills
-const (
-	SECONDARYSTRENGTHMASK = byte(3)
-	PRIMARYSTRENGTHMASK   = byte(12)
-	SECONDARYSKILLMASK    = byte(48)
-	PRIMARYSKILLMASK      = byte(192)
 )
 
 // User represents an active user in the system.
@@ -44,6 +18,7 @@ type User interface {
 	ClassInfo
 	LastAction
 	ChargeInfo
+	InventoryInfo
 
 	Username() string
 	IsInitialized() bool
@@ -65,40 +40,6 @@ type User interface {
 	Respawn()
 	Reload()
 	Save()
-}
-
-// StatInfo handles user/NPC stats
-type StatInfo interface {
-	HP() uint64
-	SetHP(uint64)
-	MP() uint64
-	SetMP(uint64)
-	AP() uint64
-	SetAP(uint64)
-	RP() uint64
-	SetRP(uint64)
-	MaxHP() uint64
-	SetMaxHP(uint64)
-	MaxMP() uint64
-	SetMaxMP(uint64)
-	MaxAP() uint64
-	SetMaxAP(uint64)
-	MaxRP() uint64
-	SetMaxRP(uint64)
-	XP() uint64
-	AddXP(uint64)
-	XPToNextLevel() uint64
-}
-
-// ClassInfo handles user/NPC class orientation
-type ClassInfo interface {
-	ClassInfo() byte
-	SetClassInfo(byte)
-
-	Strengths() (byte, byte)
-	SetStrengths(byte, byte)
-	Skills() (byte, byte)
-	SetSkills(byte, byte)
 }
 
 // LastAction tracks the last time an actor performed an action, for charging action bar.
@@ -197,6 +138,7 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 			Charge:   4}
 		if primary == MELEEPRIMARY {
 			secondaryattack.Charge = 1
+			secondaryattack.Trample = 1
 		} else if primary == RANGEPRIMARY {
 			secondaryattack.RP++
 		} else if primary == MAGICPRIMARY {
@@ -211,6 +153,7 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 			Charge:   4}
 		if primary == RANGEPRIMARY {
 			secondaryattack.Charge = 1
+			secondaryattack.Trample = 1
 		} else if primary == MELEEPRIMARY {
 			secondaryattack.AP++
 		} else if primary == MAGICPRIMARY {
@@ -225,6 +168,7 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 			Charge:   4}
 		if primary == MAGICPRIMARY {
 			secondaryattack.Charge = 1
+			secondaryattack.Trample = 1
 		} else if primary == RANGEPRIMARY {
 			secondaryattack.RP++
 		} else if primary == MELEEPRIMARY {
@@ -724,13 +668,139 @@ func (user *dbUser) MusterAttack(attackName string) *Attack {
 					user.Save()
 					user.Act()
 
-					return &*potentialAttack
+					userSP := GetStatPoints(user)
+					attack := potentialAttack.ApplyBonuses(&userSP)
+
+					return &attack
 				}
 			}
 		}
 	}
 
 	return nil
+}
+
+func (user *dbUser) InventoryItems() []*InventoryItem {
+	items := make([]*InventoryItem, 0)
+
+	minBuf := new(bytes.Buffer)
+	maxBuf := new(bytes.Buffer)
+	binary.Write(minBuf, binary.BigEndian, []byte(user.UserData.Username))
+	binary.Write(minBuf, binary.BigEndian, byte(0))
+	binary.Write(maxBuf, binary.BigEndian, []byte(user.UserData.Username))
+	binary.Write(maxBuf, binary.BigEndian, byte(1))
+
+	min := minBuf.Bytes()
+	max := maxBuf.Bytes()
+
+	user.world.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("userinventory"))
+
+		cur := bucket.Cursor()
+
+		for k, v := cur.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = cur.Next() {
+			var inventoryItem InventoryItem
+
+			err := json.Unmarshal(v, &inventoryItem)
+
+			if err != nil {
+				return err
+			}
+
+			items = append(items, &inventoryItem)
+		}
+
+		return nil
+	})
+
+	return items
+}
+
+func (user *dbUser) AddInventoryItem(item *InventoryItem) bool {
+	inventoryItem := *item
+
+	if inventoryItem.ID == "" {
+		inventoryItem.ID = uuid.New().String()
+	}
+
+	itemID, err := uuid.Parse(inventoryItem.ID)
+	if err != nil {
+		return false
+	}
+
+	idBytes, err := itemID.MarshalBinary()
+	if err != nil {
+		return false
+	}
+
+	keyBuf := new(bytes.Buffer)
+	binary.Write(keyBuf, binary.BigEndian, []byte(user.UserData.Username))
+	binary.Write(keyBuf, binary.BigEndian, byte(0))
+	binary.Write(keyBuf, binary.BigEndian, idBytes)
+	dataBytes, err := json.Marshal(item)
+
+	if err != nil {
+		return false
+	}
+
+	user.world.database.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("userinventory"))
+
+		return bucket.Put(keyBuf.Bytes(), dataBytes)
+	})
+
+	return true
+}
+
+func (user *dbUser) inventoryItem(id string, pull bool) *InventoryItem {
+	itemID, err := uuid.Parse(id)
+	if err != nil {
+		return nil
+	}
+
+	idBytes, err := itemID.MarshalBinary()
+	if err != nil {
+		return nil
+	}
+
+	keyBuf := new(bytes.Buffer)
+	binary.Write(keyBuf, binary.BigEndian, []byte(user.UserData.Username))
+	binary.Write(keyBuf, binary.BigEndian, byte(0))
+	binary.Write(keyBuf, binary.BigEndian, idBytes)
+
+	found := false
+	var inventoryItem InventoryItem
+	user.world.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("userinventory"))
+
+		itemBytes := bucket.Get(keyBuf.Bytes())
+
+		if itemBytes != nil {
+			if json.Unmarshal(itemBytes, &inventoryItem) == nil {
+				inventoryItem.ID = id
+				found = true
+			}
+		}
+
+		if pull && found {
+			bucket.Delete(keyBuf.Bytes())
+		}
+
+		return nil
+	})
+
+	if found {
+		return &inventoryItem
+	}
+	return nil
+}
+
+func (user *dbUser) InventoryItem(id string) *InventoryItem {
+	return user.inventoryItem(id, false)
+}
+
+func (user *dbUser) PullInventoryItem(id string) *InventoryItem {
+	return user.inventoryItem(id, true)
 }
 
 func (user *dbUser) SSHKeysEmpty() bool {

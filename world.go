@@ -20,8 +20,10 @@ import (
 type World interface {
 	GetDimensions() (uint32, uint32)
 	GetUser(string) User
+
 	GetCellInfo(uint32, uint32) *CellInfo
 	SetCellInfo(uint32, uint32, *CellInfo)
+
 	GetCreatures(uint32, uint32) []*Creature
 	HasCreatures(uint32, uint32) bool
 	UpdateCreature(*Creature)
@@ -29,6 +31,13 @@ type World interface {
 	AddStockCreature(uint32, uint32, string)
 	KillCreature(string)
 	Attack(string, interface{}, *Attack)
+
+	InventoryItems(uint32, uint32) []*InventoryItem
+	AddInventoryItem(uint32, uint32, *InventoryItem) bool
+	InventoryItem(uint32, uint32, string) *InventoryItem
+	PullInventoryItem(uint32, uint32, string) *InventoryItem
+	HasInventoryItems(uint32, uint32) bool
+
 	NewPlaceID() uint64
 	OnlineUsers() []User
 	Chat(LogItem)
@@ -122,6 +131,8 @@ func (w *dbWorld) updateActivatedCells() {
 					location := Point{X: creature.X, Y: creature.Y}
 					resetLevel = true
 					attack := creature.CreatureTypeStruct.Attacks[rand.Int()%len(creature.CreatureTypeStruct.Attacks)]
+					csp := creature.StatPoints()
+					attack = attack.ApplyBonuses(&csp)
 					if attack.Charge <= creature.Charge {
 						usersInCell := w.usersInCell(location)
 
@@ -631,7 +642,8 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 		log.Println("Attack is nil")
 		return
 	}
-	var tap, trp, tmp uint64
+	var targetpoints StatPoints
+
 	message := ""
 	hitTarget := "target"
 
@@ -642,39 +654,25 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 
 	if userok {
 		user.Reload()
-		tap, trp, tmp = user.MaxAP(), user.MaxRP(), user.MaxMP()
+		targetpoints = GetStatPoints(user)
 		location = user.Location()
 		hitTarget = user.Username()
 	} else if creatureok {
-		tap, trp, tmp = creature.CreatureTypeStruct.MaxAP, creature.CreatureTypeStruct.MaxRP, creature.CreatureTypeStruct.MaxMP
+		targetpoints = creature.StatPoints()
 		location = &Point{X: creature.X, Y: creature.Y}
 		hitTarget = creature.CreatureTypeStruct.Name
-	}
-
-	aap, arp, amp := attack.AP, attack.RP, attack.MP
-	if trp > aap {
-		aap = 0
-	} else {
-		aap -= trp
-	}
-
-	if tmp > arp {
-		arp = 0
-	} else {
-		arp -= tmp
-	}
-
-	if tap > amp {
-		amp = 0
-	} else {
-		amp -= tap
 	}
 
 	hit := rand.Int()%100 < int(attack.Accuracy)
 	killed := false
 
 	if hit {
-		damage := aap + arp + amp + uint64(rand.Int()%2)
+		attackpoints := attack.StatPoints()
+		damagepoints := attackpoints.ApplyDefense(&targetpoints)
+		damage := damagepoints.Damage()
+		if attack.Trample > 0 {
+			damage += uint64(rand.Int() % int(attack.Trample+1))
+		}
 
 		if userok {
 			user.Reload()
@@ -722,6 +720,163 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 	if len(message) > 0 {
 		w.Chat(LogItem{Author: source, Message: message, MessageType: MESSAGEACTIVITY, Location: location})
 	}
+}
+
+func (w *dbWorld) InventoryItems(x, y uint32) []*InventoryItem {
+	items := make([]*InventoryItem, 0)
+
+	pt := Point{X: x, Y: y}
+	minBuf := new(bytes.Buffer)
+	maxBuf := new(bytes.Buffer)
+	binary.Write(minBuf, binary.BigEndian, pt.Bytes())
+	binary.Write(minBuf, binary.BigEndian, byte(0))
+	binary.Write(maxBuf, binary.BigEndian, pt.Bytes())
+	binary.Write(maxBuf, binary.BigEndian, byte(1))
+
+	min := minBuf.Bytes()
+	max := maxBuf.Bytes()
+
+	w.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("placeitems"))
+
+		cur := bucket.Cursor()
+
+		for k, v := cur.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = cur.Next() {
+			var inventoryItem InventoryItem
+
+			err := json.Unmarshal(v, &inventoryItem)
+
+			if err != nil {
+				return err
+			}
+
+			items = append(items, &inventoryItem)
+		}
+
+		return nil
+	})
+
+	return items
+}
+
+func (w *dbWorld) AddInventoryItem(x, y uint32, item *InventoryItem) bool {
+	inventoryItem := *item
+
+	if inventoryItem.ID == "" {
+		inventoryItem.ID = uuid.New().String()
+	}
+
+	itemID, err := uuid.Parse(inventoryItem.ID)
+	if err != nil {
+		return false
+	}
+
+	idBytes, err := itemID.MarshalBinary()
+	if err != nil {
+		return false
+	}
+
+	pt := Point{X: x, Y: y}
+	keyBuf := new(bytes.Buffer)
+	binary.Write(keyBuf, binary.BigEndian, pt.Bytes())
+	binary.Write(keyBuf, binary.BigEndian, byte(0))
+	binary.Write(keyBuf, binary.BigEndian, idBytes)
+	dataBytes, err := json.Marshal(item)
+
+	if err != nil {
+		return false
+	}
+
+	w.database.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("placeitems"))
+
+		return bucket.Put(keyBuf.Bytes(), dataBytes)
+	})
+
+	return true
+}
+
+func (w *dbWorld) inventoryItem(x, y uint32, id string, pull bool) *InventoryItem {
+	itemID, err := uuid.Parse(id)
+	if err != nil {
+		return nil
+	}
+
+	idBytes, err := itemID.MarshalBinary()
+	if err != nil {
+		return nil
+	}
+
+	pt := Point{X: x, Y: y}
+	keyBuf := new(bytes.Buffer)
+	binary.Write(keyBuf, binary.BigEndian, pt.Bytes())
+	binary.Write(keyBuf, binary.BigEndian, byte(0))
+	binary.Write(keyBuf, binary.BigEndian, idBytes)
+
+	found := false
+	var inventoryItem InventoryItem
+	w.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("placeitems"))
+
+		itemBytes := bucket.Get(keyBuf.Bytes())
+
+		if itemBytes != nil {
+			if json.Unmarshal(itemBytes, &inventoryItem) == nil {
+				inventoryItem.ID = id
+				found = true
+			}
+		}
+
+		if pull && found {
+			bucket.Delete(keyBuf.Bytes())
+		}
+
+		return nil
+	})
+
+	if found {
+		return &inventoryItem
+	}
+	return nil
+}
+
+func (w *dbWorld) InventoryItem(x, y uint32, id string) *InventoryItem {
+	return w.inventoryItem(x, y, id, false)
+}
+
+func (w *dbWorld) PullInventoryItem(x, y uint32, id string) *InventoryItem {
+	return w.inventoryItem(x, y, id, true)
+}
+
+func (w *dbWorld) HasInventoryItems(x, y uint32) bool {
+	var hasItems bool
+
+	pt := Point{X: x, Y: y}
+	minBuf := new(bytes.Buffer)
+	maxBuf := new(bytes.Buffer)
+	binary.Write(minBuf, binary.BigEndian, pt.Bytes())
+	binary.Write(minBuf, binary.BigEndian, byte(0))
+	binary.Write(maxBuf, binary.BigEndian, pt.Bytes())
+	binary.Write(maxBuf, binary.BigEndian, byte(1))
+
+	min := minBuf.Bytes()
+	max := maxBuf.Bytes()
+
+	w.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("placeitems"))
+
+		cur := bucket.Cursor()
+
+		for k, _ := cur.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, _ = cur.Next() {
+			hasItems = true
+
+			return nil
+		}
+
+		return nil
+	})
+
+	return hasItems
 }
 
 func (w *dbWorld) NewPlaceID() uint64 {
@@ -823,7 +978,7 @@ func (w *dbWorld) load() {
 
 	// Make default tables
 	db.Update(func(tx *bolt.Tx) error {
-		buckets := []string{"users", "userlog", "onlineusers", "lastuseraction", "terrain", "placenames", "creaturelist", "creatures"}
+		buckets := []string{"users", "userinventory", "userlog", "onlineusers", "lastuseraction", "terrain", "placenames", "placeitems", "creaturelist", "creatures"}
 
 		for _, bucket := range buckets {
 			_, err := tx.CreateBucketIfNotExists([]byte(bucket))

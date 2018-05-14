@@ -118,6 +118,8 @@ func renderSetup(session ssh.Session, user User) {
 }
 
 func setupSSHUser(ctx context.Context, cancel context.CancelFunc, done <-chan struct{}, session ssh.Session, user User, stringInput chan inputEvent) {
+	tick := time.Tick(500 * time.Millisecond)
+
 	strengthPrimary := []byte{MELEEPRIMARY, RANGEPRIMARY, MAGICPRIMARY}
 	strengthSecondary := []byte{MELEESECONDARY, RANGESECONDARY, MAGICSECONDARY}
 	skillPrimary := []byte{PEOPLEPRIMARY, PLACESPRIMARY, THINGSPRIMARY}
@@ -203,6 +205,8 @@ func setupSSHUser(ctx context.Context, cancel context.CancelFunc, done <-chan st
 
 		case <-ctx.Done():
 			cancel()
+		case <-tick:
+			user.MarkActive()
 		case <-done:
 			log.Printf("Disconnected setup %v", session.RemoteAddr())
 			user.Log(LogItem{Message: fmt.Sprintf("Canceled player setup %v", time.Now().UTC().Format(time.RFC3339)), MessageType: MESSAGESYSTEM})
