@@ -493,6 +493,8 @@ func (screen *sshScreen) renderCharacterSheet() {
 }
 
 func (screen *sshScreen) renderInventory() {
+	fmtFunc := screen.colorFunc(fmt.Sprintf("white:%v", bgcolor))
+
 	y := screen.screenSize.Height
 	if y < 20 {
 		y = 5
@@ -504,15 +506,32 @@ func (screen *sshScreen) renderInventory() {
 	screenWidth := screen.screenSize.Width/2 - 3
 	row := y + 3
 
+	itemInventory := make(map[string][]*InventoryItem)
 	for _, item := range screen.user.InventoryItems() {
+		slice, ok := itemInventory[item.Name]
+
+		if ok {
+			itemInventory[item.Name] = append(slice, item)
+		} else {
+			itemInventory[item.Name] = []*InventoryItem{item}
+		}
+	}
+
+	for itemName, items := range itemInventory {
 		move := cursor.MoveTo(row, screenX)
-		io.WriteString(screen.session, move+item.SSHString(screenWidth-1))
+
+		lString := fmt.Sprintf("x%v", len(items))
+		fString := truncateLeft(itemName, screenWidth-1-(utf8.RuneCountInString(lString)))
+
+		io.WriteString(screen.session, move+fmtFunc(fString+lString))
 
 		row++
 		if row > screen.screenSize.Height-3 {
 			return
 		}
 	}
+
+	screen.drawFill(screenX, row, screenWidth-1, screen.screenSize.Height-3-row)
 }
 
 func (screen *sshScreen) renderLog() {
