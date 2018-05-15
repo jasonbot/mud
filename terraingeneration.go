@@ -1,6 +1,7 @@
 package mud
 
 import (
+	"math"
 	"math/rand"
 	"strconv"
 )
@@ -96,6 +97,8 @@ func visitSpread(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrai
 	blocked := false
 
 	world.SetCellInfo(x2, y2, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
+
+	//radius := getIntSetting(cellTerrain.AlgorithmParameters, 1)
 
 	xs, xe, ys, ye := -1, 1, -1, 1
 
@@ -391,6 +394,67 @@ func visitGreatWall(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTer
 }
 
 func visitCircle(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
+	settings := cellTerrain.AlgorithmParameters
+
+	radius := getIntSetting(settings, "radius", 50)
+	entryRadius := getIntSetting(settings, "entry-radius", radius)
+	seedExit := getStringSetting(settings, "seed-exit", "clearing-grass")
+	circleFill := getStringSetting(settings, "circle-fill", "clearing-grass")
+	circleThickness := getIntSetting(settings, "circle-thickness", radius-1)
+	centerFill := getStringSetting(settings, "center-fill", "clearing-grass")
+
+	lx, ly, ux, uy, _, _, free := getAvailableBox(x1, y1, x2, y2, world, radius*2, radius*2)
+
+	midx, midy := lx+(ux-lx)/2, ly+(uy-ly)/2
+
+	circleFillBlock := CellInfo{
+		TerrainID:    circleFill,
+		RegionNameID: regionID}
+
+	centerFillBlock := CellInfo{
+		TerrainID:    centerFill,
+		RegionNameID: regionID}
+
+	if free {
+		regionID = world.NewPlaceID()
+
+		for x := lx; x <= ux; x++ {
+			for y := ly; y <= uy; y++ {
+				distanceFromCenter := int(math.Sqrt(math.Pow(float64(x-midx), 2.0) + math.Pow(float64(y-midy), 2.0)))
+				if distanceFromCenter <= radius {
+					if distanceFromCenter > (radius - circleThickness) {
+						world.SetCellInfo(uint32(x), uint32(y), &circleFillBlock)
+					} else {
+						if centerFill != "" {
+							world.SetCellInfo(uint32(x), uint32(y), &centerFillBlock)
+						} else {
+							world.SetCellInfo(uint32(x), uint32(y), nil)
+						}
+					}
+				}
+			}
+		}
+
+		entryCell := CellInfo{
+			TerrainID:    seedExit,
+			RegionNameID: regionID}
+		for rad := 0; rad < entryRadius; rad++ {
+			world.SetCellInfo(uint32(midx), uint32(ly+rad), &entryCell)
+			world.SetCellInfo(uint32(midx), uint32(uy-rad), &entryCell)
+			world.SetCellInfo(uint32(lx+rad), uint32(midy), &entryCell)
+			world.SetCellInfo(uint32(ux-rad), uint32(midy), &entryCell)
+		}
+	} else {
+		var cellTerrain *CellTerrain
+
+		cellInfo := world.GetCellInfo(x1, y1)
+		if cellInfo != nil {
+			cellTerrain = &cellInfo.TerrainData
+		} else {
+			*cellTerrain = CellTypes[seedExit]
+		}
+		visitSpread(x1, y1, x2, y2, world, regionID, &cellInfo.TerrainData)
+	}
 }
 
 // PopulateCellFromAlgorithm will run the specified algorithm to generate terrain

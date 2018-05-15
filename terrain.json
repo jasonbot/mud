@@ -20,7 +20,7 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
-            "castle-clearing:1",
+            "castle-clearing:10",
             "clearing-grass:55",
             "clearing-deep-grass:20",
             "trail:12",
@@ -58,7 +58,9 @@
         "Transitions": [
             "clearing-deep-grass:4",
             "clearing-grass:6",
-            "clearing-tree"
+            "clearing-tree",
+            "clearing-fairy-circle",
+            "clearing-large-fairy-circle"
         ],
         "CreatureSpawns": [
             {
@@ -69,6 +71,46 @@
         ],
         "Algorithm": "spread",
         "AlgorithmParameters": {},
+        "FGcolor": 154,
+        "BGcolor": 118,
+        "Bold": false,
+        "Representations": [
+            8281,
+            8283,
+            8280,
+            8278
+        ]
+    },
+    "clearing-fairy-circle": {
+        "Algorithm": "circle",
+        "AlgorithmParameters": {
+            "radius": "4",
+            "entry-radius": "3",
+            "seed-exit": "clearing-fairy-circle-grass",
+            "circle-fill": "clearing-tree",
+            "circle-thickness": "2",
+            "center-fill": "clearing-fairy-circle-grass"
+        }
+    },
+    "clearing-large-fairy-circle": {
+        "Algorithm": "circle",
+        "AlgorithmParameters": {
+            "radius": "8",
+            "entry-radius": "8",
+            "seed-exit": "clearing-fairy-circle-grass",
+            "circle-fill": "clearing-tree",
+            "circle-thickness": "3",
+            "center-fill": "clearing-fairy-circle-grass"
+        }
+    },
+    "clearing-fairy-circle-grass": {
+        "Name": "Fairy Circle of %s",
+        "Permeable": false,
+        "Blocking": false,
+        "Transitions": [
+            "clearing-deep-grass"
+        ],
+        "Algorithm": "spread",
         "FGcolor": 154,
         "BGcolor": 118,
         "Bold": false,
@@ -338,6 +380,9 @@
         "Permeable": false,
         "Blocking": false,
         "Algorithm": "spread",
+        "AlgorithmParameters": {
+            "radius": "20"
+        },
         "Transitions": [
             "castle-gravel"
         ],
@@ -361,15 +406,15 @@
         "ItemDrops": [
             {
                 "Name": "Simple Sword",
-                "Probability": 0.01
+                "Probability": 0.0001
             },
             {
                 "Name": "Simple Bow",
-                "Probability": 0.01
+                "Probability": 0.001
             },
             {
                 "Name": "Simple Wand",
-                "Probability": 0.01
+                "Probability": 0.001
             }
         ],
         "FGcolor": 245,
