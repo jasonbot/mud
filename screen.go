@@ -420,7 +420,7 @@ func (screen *sshScreen) renderCharacterSheet() {
 								formatString := fmt.Sprintf("Attacking %v with %v", selc.CreatureTypeStruct.Name, sela.Name)
 								screen.user.Log(LogItem{Message: formatString,
 									MessageType: MESSAGEACTION})
-								screen.builder.Attack(screen.user.Username(), selc, selattack)
+								screen.builder.Attack(screen.user, selc, selattack)
 							}
 						}
 					}

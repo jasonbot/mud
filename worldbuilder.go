@@ -11,7 +11,7 @@ type WorldBuilder interface {
 	World() World
 	GetUser(string) User
 	Chat(LogItem)
-	Attack(string, interface{}, *Attack)
+	Attack(interface{}, interface{}, *Attack)
 
 	MoveUserNorth(user User)
 	MoveUserSouth(user User)
@@ -114,7 +114,7 @@ func (builder *worldBuilder) Chat(message LogItem) {
 	builder.world.Chat(message)
 }
 
-func (builder *worldBuilder) Attack(source string, target interface{}, attack *Attack) {
+func (builder *worldBuilder) Attack(source interface{}, target interface{}, attack *Attack) {
 	builder.world.Attack(source, target, attack)
 }
 

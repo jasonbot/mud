@@ -30,7 +30,7 @@ type World interface {
 	ClearCreatures(uint32, uint32)
 	AddStockCreature(uint32, uint32, string)
 	KillCreature(string)
-	Attack(string, interface{}, *Attack)
+	Attack(interface{}, interface{}, *Attack)
 
 	InventoryItems(uint32, uint32) []*InventoryItem
 	AddInventoryItem(uint32, uint32, *InventoryItem) bool
@@ -140,7 +140,7 @@ func (w *dbWorld) updateActivatedCells() {
 							user := usersInCell[rand.Int()%len(usersInCell)]
 							user.Reload()
 							if *(user.Location()) == location {
-								w.Attack(creature.CreatureTypeStruct.Name, user, &attack)
+								w.Attack(creature, user, &attack)
 								cell.lastCreatureAction[creature.ID] = now
 							}
 						}
@@ -649,7 +649,9 @@ func (w *dbWorld) KillCreature(id string) {
 	})
 }
 
-func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
+func (w *dbWorld) Attack(source interface{}, target interface{}, attack *Attack) {
+	var counterAttack *Attack
+
 	if attack == nil {
 		log.Println("Attack is nil")
 		return
@@ -658,6 +660,16 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 
 	message := ""
 	hitTarget := "target"
+	sourceString := "Something"
+
+	sourceUser, sourceUserok := source.(User)
+	sourceCreature, sourceCreatureok := source.(*Creature)
+
+	if sourceUserok {
+		sourceString = sourceUser.Username()
+	} else if sourceCreatureok {
+		sourceString = sourceCreature.CreatureTypeStruct.Name
+	}
 
 	user, userok := target.(User)
 	creature, creatureok := target.(*Creature)
@@ -689,15 +701,21 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 		if userok {
 			user.Reload()
 
+			if damage > 0 {
+				counterAttack = user.MusterCounterAttack()
+			}
+
 			if user.HP() == 0 {
 				message = fmt.Sprintf("%v is already dead, attack failed.", user.Username())
 			}
 
-			if user.HP() > damage {
-				user.SetHP(user.HP() - damage)
-			} else {
-				user.SetHP(0)
-				killed = true
+			if counterAttack != nil {
+				if user.HP() > damage {
+					user.SetHP(user.HP() - damage)
+				} else {
+					user.SetHP(0)
+					killed = true
+				}
 			}
 
 			user.Save()
@@ -724,14 +742,22 @@ func (w *dbWorld) Attack(source string, target interface{}, attack *Attack) {
 		if killed {
 			message = fmt.Sprintf("%v took fatal damage from %v!", hitTarget, attack.Name)
 		} else if len(message) == 0 {
-			message = fmt.Sprintf("%v hit %v for %v damage!", attack.Name, hitTarget, damage)
+			if counterAttack == nil {
+				message = fmt.Sprintf("%v hit %v for %v damage!", attack.Name, hitTarget, damage)
+			} else {
+				message = fmt.Sprintf("%v attempted to hit %v, blocked with a counterattack!", attack.Name, hitTarget)
+			}
 		}
 	} else {
 		message = fmt.Sprintf("%v missed!", attack.Name)
 	}
 
 	if len(message) > 0 {
-		w.Chat(LogItem{Author: source, Message: message, MessageType: MESSAGEACTIVITY, Location: location})
+		w.Chat(LogItem{Author: sourceString, Message: message, MessageType: MESSAGEACTIVITY, Location: location})
+	}
+
+	if counterAttack != nil {
+		w.Attack(target, source, counterAttack)
 	}
 }
 

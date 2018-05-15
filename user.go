@@ -53,6 +53,7 @@ type ChargeInfo interface {
 	Charge() (int64, int64)
 	Attacks() []*AttackInfo
 	MusterAttack(string) *Attack
+	MusterCounterAttack() *Attack
 }
 
 // UserSSHAuthentication for storing SSH auth.
@@ -677,6 +678,10 @@ func (user *dbUser) MusterAttack(attackName string) *Attack {
 		}
 	}
 
+	return nil
+}
+
+func (user *dbUser) MusterCounterAttack() *Attack {
 	return nil
 }
 
