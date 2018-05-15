@@ -229,7 +229,7 @@
                 "MP": 7,
                 "AP": 1,
                 "RP": 1,
-                "Trample": "5",
+                "Trample": 5,
                 "Charge": 8
             }
         ]
