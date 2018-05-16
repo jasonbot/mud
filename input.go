@@ -18,10 +18,10 @@ type inputEvent struct {
 type inputState int
 
 const (
-	sOUTOFSEQUENCE inputState = iota
-	sINESCAPE
-	sDIRECTIVE
-	sQUESTION
+	stateOUTOFSEQUENCE inputState = iota
+	stateINESCAPE
+	stateDIRECTIVE
+	stateQUESTION
 )
 
 // sleepThenReport is a timeout sequence so that if the escape key is pressed it will register
@@ -31,14 +31,14 @@ func sleepThenReport(stringChannel chan<- inputEvent, escapeCanceller *sync.Once
 	time.Sleep(50 * time.Millisecond)
 
 	escapeCanceller.Do(func() {
-		*state = sOUTOFSEQUENCE
+		*state = stateOUTOFSEQUENCE
 		stringChannel <- inputEvent{"ESCAPE", Point{}, nil}
 	})
 }
 
 func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel context.CancelFunc) {
 	inputGone := errors.New("Input ended")
-	inEscapeSequence := sOUTOFSEQUENCE
+	inEscapeSequence := stateOUTOFSEQUENCE
 	var escapeCanceller *sync.Once
 	emptyPoint := Point{}
 
@@ -61,23 +61,23 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel co
 			escapeCanceller.Do(func() { escapeCanceller = nil })
 		}
 
-		if inEscapeSequence == sOUTOFSEQUENCE && runeRead == 27 {
-			inEscapeSequence = sINESCAPE
+		if inEscapeSequence == stateOUTOFSEQUENCE && runeRead == 27 {
+			inEscapeSequence = stateINESCAPE
 			escapeCanceller = new(sync.Once)
 			go sleepThenReport(stringChannel, escapeCanceller, &inEscapeSequence)
-		} else if inEscapeSequence == sINESCAPE {
+		} else if inEscapeSequence == stateINESCAPE {
 			if string(runeRead) == "[" {
-				inEscapeSequence = sDIRECTIVE
+				inEscapeSequence = stateDIRECTIVE
 			} else if runeRead == 27 {
 				stringChannel <- inputEvent{"ESCAPE", emptyPoint, nil}
 			} else {
-				inEscapeSequence = sOUTOFSEQUENCE
+				inEscapeSequence = stateOUTOFSEQUENCE
 				if escapeCanceller != nil {
 					escapeCanceller.Do(func() { escapeCanceller = nil })
 				}
 				stringChannel <- inputEvent{string(runeRead), emptyPoint, nil}
 			}
-		} else if inEscapeSequence == sDIRECTIVE {
+		} else if inEscapeSequence == stateDIRECTIVE {
 			switch runeRead {
 			case 'A':
 				stringChannel <- inputEvent{"UP", emptyPoint, nil}
@@ -122,7 +122,7 @@ func handleKeys(reader *bufio.Reader, stringChannel chan<- inputEvent, cancel co
 			default:
 				stringChannel <- inputEvent{strconv.QuoteRune(runeRead), emptyPoint, nil}
 			}
-			inEscapeSequence = sOUTOFSEQUENCE
+			inEscapeSequence = stateOUTOFSEQUENCE
 		} else {
 			if newString, ok := codeMap[runeRead]; ok {
 				stringChannel <- inputEvent{newString, emptyPoint, nil}
