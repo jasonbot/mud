@@ -200,8 +200,17 @@ func (w *dbWorld) newUser(username string) UserData {
 			TerrainID:    DefaultCellType,
 			RegionNameID: newRegionID}
 
-		cell := w.Cell(userData.X, userData.Y)
-		cell.SetCellInfo(cellData)
+		for x := -1; x <= 1; x++ {
+			for y := -1; y <= 1; y++ {
+				cell := w.Cell(uint32(int(userData.X)+x), uint32(int(userData.Y)+y))
+				if x == 0 && y == 0 {
+					cellData.TerrainID = DefaultCellType
+				} else {
+					cellData.TerrainID = CellTypes[DefaultCellType].GetRandomTransition()
+				}
+				cell.SetCellInfo(cellData)
+			}
+		}
 	}
 
 	return userData
@@ -780,6 +789,12 @@ type dbCell struct {
 	w *dbWorld
 	x uint32
 	y uint32
+}
+
+func (c *dbCell) Location() Point {
+	return Point{
+		X: c.x,
+		Y: c.y}
 }
 
 func (c *dbCell) CellInfo() *CellInfo {

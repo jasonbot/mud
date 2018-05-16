@@ -3,15 +3,19 @@ package mud
 import (
 	"bytes"
 	"encoding/binary"
+	"math"
 	"math/rand"
 	"strconv"
 	"strings"
 	"time"
 )
 
+// MessageType is a log message line type
+type MessageType int
+
 // Message types for log items
 const (
-	MESSAGESYSTEM = iota
+	MESSAGESYSTEM MessageType = iota
 	MESSAGECHAT
 	MESSAGEACTION
 	MESSAGEACTIVITY
@@ -19,17 +23,49 @@ const (
 
 // LogItem is individual chat log line
 type LogItem struct {
-	Message     string    `json:""`
-	Author      string    `json:""`
-	Timestamp   time.Time `json:""`
-	MessageType int       `json:""`
-	Location    *Point    `json:",omit"`
+	Message     string      `json:""`
+	Author      string      `json:""`
+	Timestamp   time.Time   `json:""`
+	MessageType MessageType `json:""`
+	Location    *Point      `json:",omit"`
 }
 
 // Point represents an (X,Y) pair in the world
 type Point struct {
 	X uint32
 	Y uint32
+}
+
+// Add applies a vector to a point
+func (p *Point) Add(v Vector) Point {
+	return Point{
+		X: uint32(int(p.X) + v.X),
+		Y: uint32(int(p.X) + v.X)}
+}
+
+// Vector Gets the vector between two points such that v = p.Vector(q); p.Add(v) == q
+func (p *Point) Vector(v Point) Vector {
+	return Vector{
+		X: int(v.X) - int(p.X),
+		Y: int(v.Y) - int(p.Y)}
+}
+
+// Vector is for doing point-to-point comparisons
+type Vector struct {
+	X int
+	Y int
+}
+
+// Add ccombines two vectors
+func (v *Vector) Add(p Vector) Vector {
+	return Vector{
+		X: v.X + p.X,
+		Y: v.Y + p.Y}
+}
+
+// Magnitude returns the pythagorean theorem to a vector
+func (v *Vector) Magnitude() uint {
+	return uint(math.Sqrt(math.Pow(float64(v.X), 2.0) + math.Pow(float64(v.Y), 2.0)))
 }
 
 // Bytes Dumps a point into a byte array
@@ -46,6 +82,55 @@ func PointFromBytes(ptBytes []byte) Point {
 	binary.Read(buf, binary.LittleEndian, &pt)
 	return pt
 }
+
+// Direction is a cardinal direction
+type Direction int
+
+// Cardinal directions
+const (
+	DIRECTIONNORTH Direction = iota
+	DIRECTIONEAST
+	DIRECTIONSOUTH
+	DIRECTIONWEST
+)
+
+// ToTheRight gives the direction to the right of the current one
+func ToTheRight(d Direction) Direction {
+	switch d {
+	case DIRECTIONNORTH:
+		return DIRECTIONEAST
+	case DIRECTIONEAST:
+		return DIRECTIONSOUTH
+	case DIRECTIONSOUTH:
+		return DIRECTIONEAST
+	case DIRECTIONWEST:
+		return DIRECTIONNORTH
+	}
+
+	return DIRECTIONNORTH
+}
+
+// ToTheLeft gives the direction to the rigleftt of the current one
+func ToTheLeft(d Direction) Direction {
+	switch d {
+	case DIRECTIONNORTH:
+		return DIRECTIONWEST
+	case DIRECTIONWEST:
+		return DIRECTIONSOUTH
+	case DIRECTIONSOUTH:
+		return DIRECTIONEAST
+	case DIRECTIONEAST:
+		return DIRECTIONNORTH
+	}
+
+	return DIRECTIONNORTH
+}
+
+// VectorForDirection maps directions to a distance vector
+var VectorForDirection map[Direction]Vector
+
+// DirectionForVector maps vectors to directions
+var DirectionForVector map[Vector]Direction
 
 // LoadResources loads data for the game
 func LoadResources() {
@@ -100,4 +185,16 @@ func MakeTransitionFunction(name string, transitionList []string) (func() string
 		}
 		return ""
 	}, returnTransitionList
+}
+
+func init() {
+	VectorForDirection = map[Direction]Vector{
+		DIRECTIONNORTH: Vector{X: 0, Y: -1},
+		DIRECTIONEAST:  Vector{X: -1, Y: 0},
+		DIRECTIONSOUTH: Vector{X: 0, Y: 1},
+		DIRECTIONWEST:  Vector{X: 1, Y: 0}}
+	DirectionForVector = make(map[Vector]Direction)
+	for k, v := range VectorForDirection {
+		DirectionForVector[v] = k
+	}
 }

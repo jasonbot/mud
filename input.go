@@ -15,8 +15,10 @@ type inputEvent struct {
 	err         error
 }
 
+type inputState int
+
 const (
-	sOUTOFSEQUENCE = iota
+	sOUTOFSEQUENCE inputState = iota
 	sINESCAPE
 	sDIRECTIVE
 	sQUESTION
@@ -25,7 +27,7 @@ const (
 // sleepThenReport is a timeout sequence so that if the escape key is pressed it will register
 // as a keypress within a reasonable period of time with the input loop, even if the input
 // state machine is in its "inside ESCAPE press listening for extended sequence" state.
-func sleepThenReport(stringChannel chan<- inputEvent, escapeCanceller *sync.Once, state *int) {
+func sleepThenReport(stringChannel chan<- inputEvent, escapeCanceller *sync.Once, state *inputState) {
 	time.Sleep(50 * time.Millisecond)
 
 	escapeCanceller.Do(func() {
