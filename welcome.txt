@@ -12,6 +12,7 @@ Enter The Mud code jam on itch.io.
 %Cursor keys: Move
 %/: Open command mode (nonfunctional)
 %!: Open chat mode
+%Esc: Toggle sticky chat
 %Ctrl-C: Quit
 %Tab: Toggle log/inventory panel view
 
