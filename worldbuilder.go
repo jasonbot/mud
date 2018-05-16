@@ -6,6 +6,15 @@ import (
 	"time"
 )
 
+// MoveUser moves a user in the world; allowing the environment to intercept user movements
+// in case some other thing needs to happen (traps, blocking, etc)
+type MoveUser interface {
+	MoveUserNorth(user User)
+	MoveUserSouth(user User)
+	MoveUserEast(user User)
+	MoveUserWest(user User)
+}
+
 // WorldBuilder handles map generation on top of the World, which is more a data store.
 type WorldBuilder interface {
 	StepInto(x1, y1, x2, y2 uint32) bool
@@ -14,10 +23,7 @@ type WorldBuilder interface {
 	Chat(LogItem)
 	Attack(interface{}, interface{}, *Attack)
 
-	MoveUserNorth(user User)
-	MoveUserSouth(user User)
-	MoveUserEast(user User)
-	MoveUserWest(user User)
+	MoveUser
 }
 
 // CellRenderInfo holds the minimum info for rendering a plot of map in a terminal
