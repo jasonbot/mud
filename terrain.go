@@ -52,15 +52,15 @@ type CellInfo struct {
 	RegionName   string      `json:"-"`
 }
 
-// cellInfoFromBytes reads a CellInfo from raw bytes
-func cellInfoFromBytes(data []byte) CellInfo {
+// CellInfoFromBytes reads a CellInfo from raw bytes
+func CellInfoFromBytes(data []byte) CellInfo {
 	var cellInfo CellInfo
 	json.Unmarshal(data, &cellInfo)
 	return cellInfo
 }
 
-// cellInfoToBytes reads a CellInfo to JSON
-func cellInfoToBytes(cellInfo *CellInfo) []byte {
+// CellInfoToBytes reads a CellInfo to JSON
+func CellInfoToBytes(cellInfo *CellInfo) []byte {
 	data, _ := json.Marshal(cellInfo)
 	return data
 }

@@ -354,7 +354,8 @@ func (screen *sshScreen) renderCharacterSheet() {
 	foundSelectedCreature := false
 	hasCreatures := false
 	firstID := ""
-	creatures := screen.builder.World().GetCreatures(pos.X, pos.Y)
+	cell := screen.builder.World().Cell(pos.X, pos.Y)
+	creatures := cell.GetCreatures()
 	var selectedCreatureItem *Creature
 	if creatures != nil && len(creatures) > 0 {
 		hasCreatures = true
@@ -455,12 +456,11 @@ func (screen *sshScreen) renderCharacterSheet() {
 	}
 
 	//hasItems := false
-	items := screen.builder.World().InventoryItems(pos.X, pos.Y)
+	items := cell.InventoryItems()
 	if items != nil && len(items) > 0 {
 		//hasItems = true
 		extraLines := []string{centerText(" Items ", "─", width)}
 		screen.builder.World()
-		world := screen.builder.World()
 
 		for _, item := range items {
 			itemKey := "  "
@@ -471,7 +471,7 @@ func (screen *sshScreen) renderCharacterSheet() {
 				user := screen.user
 
 				screen.keyCodeMap[string(key)] = func() {
-					item := screen.builder.World().PullInventoryItem(pos.X, pos.Y, itemID)
+					item := cell.PullInventoryItem(itemID)
 
 					if item != nil {
 						if item.Type == ITEMTYPEWEAPON {
@@ -484,10 +484,10 @@ func (screen *sshScreen) renderCharacterSheet() {
 									MessageType: MESSAGEACTIVITY,
 									Message:     err.Error()})
 							}
-							world.AddInventoryItem(pos.X, pos.Y, toss)
+							cell.AddInventoryItem(toss)
 						} else {
 							if user.AddInventoryItem(item) == false {
-								world.AddInventoryItem(pos.X, pos.Y, item)
+								cell.AddInventoryItem(item)
 							} else {
 								user.AddInventoryItem(item)
 							}

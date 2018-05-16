@@ -51,7 +51,7 @@ func (builder *worldBuilder) populateAround(x, y uint32, xdelta, ydelta int) {
 			xd := uint32(int(x) + (rand.Int()%i - (i / 2)))
 			yd := uint32(int(y) + (rand.Int()%i - (i / 2)))
 
-			if builder.world.GetCellInfo(xd, yd) != nil {
+			if builder.world.Cell(xd, yd).CellInfo() != nil {
 				type diff struct {
 					x, y int
 				}
@@ -59,7 +59,7 @@ func (builder *worldBuilder) populateAround(x, y uint32, xdelta, ydelta int) {
 				directions := []diff{diff{x: -1, y: 0}, diff{x: 1, y: 0}, diff{x: 0, y: -1}, diff{x: 0, y: 1}}
 				movement := directions[rand.Int()%len(directions)]
 
-				if builder.world.GetCellInfo(uint32(int(xd)+movement.x), uint32(int(yd)+movement.y)) == nil {
+				if builder.world.Cell(uint32(int(xd)+movement.x), uint32(int(yd)+movement.y)).CellInfo() == nil {
 					builder.StepInto(xd, yd, uint32(int(xd)+xdelta), uint32(int(yd)+ydelta))
 				}
 			}
@@ -68,17 +68,18 @@ func (builder *worldBuilder) populateAround(x, y uint32, xdelta, ydelta int) {
 }
 
 func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) bool {
-	newCell := builder.world.GetCellInfo(x2, y2)
+	newCell := builder.world.Cell(x2, y2)
 	returnVal := newCell == nil
 
-	if newCell == nil {
-		currentCell := builder.world.GetCellInfo(x1, y1)
+	if newCell.CellInfo() == nil {
+		currentCell := builder.world.Cell(x1, y1)
+		currentCellInfo := currentCell.CellInfo()
 
-		if currentCell == nil {
+		if currentCell.CellInfo() == nil {
 			return returnVal
 		}
 
-		cellType := CellTypes[currentCell.TerrainID]
+		cellType := CellTypes[currentCellInfo.TerrainID]
 
 		newCellType := cellType.GetRandomTransition()
 
@@ -87,7 +88,7 @@ func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) bool {
 		}
 
 		if newCellType == "!previous" {
-			newCellType = currentCell.TerrainID
+			newCellType = currentCellInfo.TerrainID
 		}
 
 		newCellItem, ok := CellTypes[newCellType]
@@ -98,7 +99,7 @@ func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) bool {
 
 		var regionID uint64
 		if currentCell != nil {
-			regionID = currentCell.RegionNameID
+			regionID = currentCellInfo.RegionNameID
 		} else {
 			regionID = builder.World().NewPlaceID()
 		}
@@ -128,17 +129,17 @@ func (builder *worldBuilder) Attack(source interface{}, target interface{}, atta
 func (builder *worldBuilder) MoveUserNorth(user User) {
 	location := user.Location()
 
-	ci := builder.world.GetCellInfo(location.X, location.Y)
+	ci := builder.world.Cell(location.X, location.Y).CellInfo()
 	if (ci != nil) && (ci.ExitBlocks&NORTHBIT != 0) {
 		return
 	}
 
 	if location.Y > 0 {
 		if builder.StepInto(location.X, location.Y, location.X, location.Y-1) {
-			builder.world.ClearCreatures(location.X, location.Y-1)
+			builder.world.Cell(location.X, location.Y-1).ClearCreatures()
 		}
 
-		newcell := builder.world.GetCellInfo(location.X, location.Y-1)
+		newcell := builder.world.Cell(location.X, location.Y-1).CellInfo()
 
 		ct := CellTypes[ci.TerrainID]
 		if newcell != nil {
@@ -157,17 +158,17 @@ func (builder *worldBuilder) MoveUserSouth(user User) {
 	location := user.Location()
 	_, height := builder.world.GetDimensions()
 
-	ci := builder.world.GetCellInfo(location.X, location.Y)
+	ci := builder.world.Cell(location.X, location.Y).CellInfo()
 	if (ci != nil) && (ci.ExitBlocks&SOUTHBIT != 0) {
 		return
 	}
 
 	if location.Y < height-1 {
 		if builder.StepInto(location.X, location.Y, location.X, location.Y+1) {
-			builder.world.ClearCreatures(location.X, location.Y+1)
+			builder.world.Cell(location.X, location.Y+1).ClearCreatures()
 		}
 
-		newcell := builder.world.GetCellInfo(location.X, location.Y+1)
+		newcell := builder.world.Cell(location.X, location.Y+1).CellInfo()
 
 		ct := CellTypes[DefaultCellType]
 		if newcell != nil {
@@ -185,17 +186,17 @@ func (builder *worldBuilder) MoveUserSouth(user User) {
 func (builder *worldBuilder) MoveUserEast(user User) {
 	location := user.Location()
 
-	ci := builder.world.GetCellInfo(location.X, location.Y)
+	ci := builder.world.Cell(location.X, location.Y).CellInfo()
 	if (ci != nil) && (ci.ExitBlocks&EASTBIT != 0) {
 		return
 	}
 
 	if location.X > 0 {
 		if builder.StepInto(location.X, location.Y, location.X+1, location.Y) {
-			builder.world.ClearCreatures(location.X+1, location.Y)
+			builder.world.Cell(location.X+1, location.Y).ClearCreatures()
 		}
 
-		newcell := builder.world.GetCellInfo(location.X+1, location.Y)
+		newcell := builder.world.Cell(location.X+1, location.Y).CellInfo()
 
 		ct := CellTypes[DefaultCellType]
 		if newcell != nil {
@@ -214,17 +215,17 @@ func (builder *worldBuilder) MoveUserWest(user User) {
 	location := user.Location()
 	width, _ := builder.world.GetDimensions()
 
-	ci := builder.world.GetCellInfo(location.X, location.Y)
+	ci := builder.world.Cell(location.X, location.Y).CellInfo()
 	if (ci != nil) && (ci.ExitBlocks&WESTBIT != 0) {
 		return
 	}
 
 	if location.X < width-1 {
 		if builder.StepInto(location.X, location.Y, location.X-1, location.Y) {
-			builder.world.ClearCreatures(location.X-1, location.Y)
+			builder.world.Cell(location.X-1, location.Y).ClearCreatures()
 		}
 
-		newcell := builder.world.GetCellInfo(location.X-1, location.Y)
+		newcell := builder.world.Cell(location.X-1, location.Y).CellInfo()
 
 		ct := CellTypes[DefaultCellType]
 		if newcell != nil {
@@ -254,7 +255,7 @@ func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]Cel
 		for yd := int64(0); yd < int64(height); yd++ {
 			if (int64(startx)+xd) >= 0 && (int64(startx)+xd) < int64(worldWidth) && (int64(starty)+yd) >= 0 && (int64(starty)+yd) < int64(worldHeight) {
 				xcoord, ycoord := uint32(int64(startx)+xd), uint32(int64(starty)+yd)
-				cellInfo := builder.world.GetCellInfo(xcoord, ycoord)
+				cellInfo := builder.world.Cell(xcoord, ycoord).CellInfo()
 
 				if cellInfo != nil {
 					terrainInfo := cellInfo.TerrainData
@@ -273,14 +274,14 @@ func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]Cel
 
 					if cellInfo.TerrainData.Blocking == false {
 						hasItems := false
-						if builder.world.HasInventoryItems(uint32(int64(startx)+xd), uint32(int64(starty)+yd)) {
+						if builder.world.Cell(uint32(int64(startx)+xd), uint32(int64(starty)+yd)).HasInventoryItems() {
 							hasItems = true
 							terrainInfo.FGcolor = 178
 							renderGlyph = rune('≡')
 							terrainInfo.Bold = true
 						}
 
-						if builder.world.HasCreatures(uint32(int64(startx)+xd), uint32(int64(starty)+yd)) {
+						if builder.world.Cell(uint32(int64(startx)+xd), uint32(int64(starty)+yd)).HasCreatures() {
 							if hasItems {
 								terrainInfo.FGcolor = 175
 								renderGlyph = rune('≜')

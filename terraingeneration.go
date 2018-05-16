@@ -41,7 +41,8 @@ func getStringSetting(settings map[string]string, settingName string, defaultVal
 }
 
 func visitOnce(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
-	world.SetCellInfo(x2, y2, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
+	cell := world.Cell(x2, y2)
+	cell.SetCellInfo(&CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 }
 
 func tendril(x, y uint32, count uint64, world World, regionID uint64, cellTerrain *CellTerrain) {
@@ -49,15 +50,16 @@ func tendril(x, y uint32, count uint64, world World, regionID uint64, cellTerrai
 		return
 	}
 
-	cell := world.GetCellInfo(x, y)
-	if cell == nil {
-		world.SetCellInfo(x, y, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
+	cell := world.Cell(x, y)
+	cellInfo := cell.CellInfo()
+	if cellInfo == nil {
+		cell.SetCellInfo(&CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 		count--
-	} else if cell.TerrainID != cellTerrain.ID {
+	} else if cellInfo.TerrainID != cellTerrain.ID {
 		count--
 
 		// Can pass through this and keep on going
-		if !cell.TerrainData.Permeable {
+		if !cellInfo.TerrainData.Permeable {
 			return
 		}
 	}
@@ -84,19 +86,22 @@ func visitTendril(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerra
 		tendril(x2, y2, uint64(radius), world, regionID, cellTerrain)
 	}
 
-	world.SetCellInfo(x2, y2, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
+	newCell := world.Cell(x2, y2)
+	newCell.SetCellInfo(&CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 
 	nx, ny := x2+(x2-x1), y2+(y2-y1)
-	ci := world.GetCellInfo(nx, ny)
+	tCell := world.Cell(nx, ny)
+	ci := tCell.CellInfo()
 	if ci == nil {
-		world.SetCellInfo(nx, ny, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
+		tCell.SetCellInfo(&CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 	}
 }
 
 func visitSpread(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	blocked := false
 
-	world.SetCellInfo(x2, y2, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
+	newCell := world.Cell(x2, y2)
+	newCell.SetCellInfo(&CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 
 	//radius := getIntSetting(cellTerrain.AlgorithmParameters, 1)
 
@@ -117,9 +122,10 @@ func visitSpread(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrai
 	for xd := xs; xd <= xe; xd++ {
 		for yd := ys; yd <= ye; yd++ {
 			nx, ny := uint32(int(x2)+xd), uint32(int(y2)+yd)
-			ci := world.GetCellInfo(nx, ny)
+			nxCell := world.Cell(nx, ny)
+			ci := nxCell.CellInfo()
 			if ci == nil {
-				world.SetCellInfo(nx, ny, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
+				nxCell.SetCellInfo(&CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 			} else {
 				blocked = true
 			}
@@ -139,13 +145,15 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 	endcap, endok := cellTerrain.AlgorithmParameters["endcap"]
 	radius := getIntSetting(cellTerrain.AlgorithmParameters, "radius", 5)
 
-	world.SetCellInfo(x1, y1,
-		&CellInfo{
-			TerrainID:    cellTerrain.ID,
-			RegionNameID: regionID})
+	firstCell := world.Cell(x1, y1)
+
+	firstCell.SetCellInfo(&CellInfo{
+		TerrainID:    cellTerrain.ID,
+		RegionNameID: regionID})
 
 	if !ok {
-		ci := world.GetCellInfo(uint32(int(x1)+(xd*-2)), uint32(int(y1)+(yd*-2)))
+		neighborCell := world.Cell(uint32(int(x1)+(xd*-2)), uint32(int(y1)+(yd*-2)))
+		ci := neighborCell.CellInfo()
 		if ci != nil {
 			neighborTerrain = ci.TerrainID
 		}
@@ -155,28 +163,26 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 	broken := false
 
 	for i := 0; i < length; i++ {
-		newCell := world.GetCellInfo(uint32(nx), uint32(ny))
+		newCell := world.Cell(uint32(nx), uint32(ny))
+		newCellInfo := newCell.CellInfo()
 
-		if newCell == nil || newCell.TerrainID == neighborTerrain {
-			world.SetCellInfo(uint32(nx), uint32(ny),
-				&CellInfo{
-					TerrainID:    cellTerrain.ID,
+		if newCellInfo == nil || newCellInfo.TerrainID == neighborTerrain {
+			newCell.SetCellInfo(&CellInfo{
+				TerrainID:    cellTerrain.ID,
+				RegionNameID: regionID})
+
+			neighborLeft := world.Cell(uint32(nx+yd), uint32(ny+xd))
+			neightborRight := world.Cell(uint32(nx-yd), uint32(ny-xd))
+
+			if neighborLeft.CellInfo() == nil {
+				neighborLeft.SetCellInfo(&CellInfo{
+					TerrainID:    neighborTerrain,
 					RegionNameID: regionID})
-
-			neighborLeft := world.GetCellInfo(uint32(nx+yd), uint32(ny+xd))
-			neightborRight := world.GetCellInfo(uint32(nx-yd), uint32(ny-xd))
-
-			if neighborLeft == nil {
-				world.SetCellInfo(uint32(nx+yd), uint32(ny+xd),
-					&CellInfo{
-						TerrainID:    neighborTerrain,
-						RegionNameID: regionID})
 			}
-			if neightborRight == nil {
-				world.SetCellInfo(uint32(nx-yd), uint32(ny-xd),
-					&CellInfo{
-						TerrainID:    neighborTerrain,
-						RegionNameID: regionID})
+			if neightborRight.CellInfo() == nil {
+				neightborRight.SetCellInfo(&CellInfo{
+					TerrainID:    neighborTerrain,
+					RegionNameID: regionID})
 			}
 		} else {
 			broken = true
@@ -199,10 +205,10 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 	}
 
 	if !broken && endok {
-		newCell := world.GetCellInfo(uint32(nx), uint32(ny))
+		newCell := world.Cell(uint32(nx), uint32(ny))
 
-		if newCell == nil {
-			world.SetCellInfo(uint32(nx), uint32(ny), &CellInfo{TerrainID: endcap, RegionNameID: regionID})
+		if newCell.CellInfo() == nil {
+			newCell.SetCellInfo(&CellInfo{TerrainID: endcap, RegionNameID: regionID})
 
 			if rand.Int()%3 > 0 {
 				visitPath(uint32(nx), uint32(ny), uint32(nx+1), uint32(ny), world, regionID, cellTerrain)
@@ -245,7 +251,8 @@ func getAvailableBox(x1, y1, x2, y2 uint32, world World, height, width int) (int
 BlockCheck:
 	for xc := lx; xc <= ux; xc++ {
 		for yc := ly; yc <= uy; yc++ {
-			if world.GetCellInfo(uint32(xc), uint32(yc)) != nil {
+			cell := world.Cell(uint32(xc), uint32(yc))
+			if cell.CellInfo() != nil {
 				free = false
 				break BlockCheck
 			}
@@ -269,6 +276,7 @@ func visitDungeonRoom(x1, y1, x2, y2 uint32, world World, regionID uint64, cellT
 
 	lx, ly, ux, uy, xd, yd, free := getAvailableBox(x1, y1, x2, y2, world, radius*2, radius*2)
 
+	fallbackCell := world.Cell(x2, y2)
 	if !free {
 		mnx, mny, mxx, mxy := lx, ly, ux, uy
 		if xd == 0 {
@@ -281,22 +289,24 @@ func visitDungeonRoom(x1, y1, x2, y2 uint32, world World, regionID uint64, cellT
 
 		for x := mnx; x <= mxx; x++ {
 			for y := mny; y <= mxy; y++ {
-				if world.GetCellInfo(uint32(x), uint32(y)) == nil {
-					world.SetCellInfo(uint32(x), uint32(y), &CellInfo{TerrainID: fallback, RegionNameID: regionID})
+				setCell := world.Cell(uint32(x), uint32(y))
+				if setCell.CellInfo() == nil {
+					setCell.SetCellInfo(&CellInfo{TerrainID: fallback, RegionNameID: regionID})
 				}
 			}
 		}
 
-		world.SetCellInfo(x2, y2, &CellInfo{TerrainID: fallback, RegionNameID: regionID})
+		fallbackCell.SetCellInfo(&CellInfo{TerrainID: fallback, RegionNameID: regionID})
 	} else {
 		for xdd := lx; xdd <= ux; xdd++ {
 			for ydd := ly; ydd <= uy; ydd++ {
+				xdydCell := world.Cell(uint32(xdd), uint32(ydd))
 				if uint32(xdd) == x2 && uint32(ydd) == y2 {
-					world.SetCellInfo(x2, y2, &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
+					fallbackCell.SetCellInfo(&CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 				} else if xdd == ux || xdd == lx || ydd == uy || ydd == ly {
-					world.SetCellInfo(uint32(xdd), uint32(ydd), &CellInfo{TerrainID: wall, RegionNameID: regionID})
+					xdydCell.SetCellInfo(&CellInfo{TerrainID: wall, RegionNameID: regionID})
 				} else {
-					world.SetCellInfo(uint32(xdd), uint32(ydd), &CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
+					xdydCell.SetCellInfo(&CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 				}
 			}
 		}
@@ -306,7 +316,8 @@ func visitDungeonRoom(x1, y1, x2, y2 uint32, world World, regionID uint64, cellT
 			Point{X: uint32(lx + (ux-lx)/2), Y: uint32(ly)},
 			Point{X: uint32(lx), Y: uint32(ly + (uy-ly)/2)},
 			Point{X: uint32(ux), Y: uint32(ly + (uy-ly)/2)}} {
-			world.SetCellInfo(pt.X, pt.Y, &CellInfo{TerrainID: exit, RegionNameID: regionID})
+			pt := world.Cell(pt.X, pt.Y)
+			pt.SetCellInfo(&CellInfo{TerrainID: exit, RegionNameID: regionID})
 		}
 	}
 }
@@ -334,35 +345,35 @@ func visitGreatWall(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTer
 		// Outline
 		for x := 0; x < (ux - lx); x++ {
 			if rand.Int()%2 == 0 {
-				world.SetCellInfo(uint32(lx+x), uint32(uy), &wallTextureInfo)
-				world.SetCellInfo(uint32(ux-x), uint32(ly), &wallTextureInfo)
-				world.SetCellInfo(uint32(ux-x), uint32(uy-wallThickness), &wallTextureInfo)
-				world.SetCellInfo(uint32(lx+x), uint32(ly+wallThickness), &wallTextureInfo)
+				world.Cell(uint32(lx+x), uint32(uy)).SetCellInfo(&wallTextureInfo)
+				world.Cell(uint32(ux-x), uint32(ly)).SetCellInfo(&wallTextureInfo)
+				world.Cell(uint32(ux-x), uint32(uy-wallThickness)).SetCellInfo(&wallTextureInfo)
+				world.Cell(uint32(lx+x), uint32(ly+wallThickness)).SetCellInfo(&wallTextureInfo)
 			} else if x > 1 && x < (ux-lx)-1 {
-				world.SetCellInfo(uint32(ux-x), uint32(uy-wallThickness), &entryTextureInfo)
-				world.SetCellInfo(uint32(lx+x), uint32(ly+wallThickness), &entryTextureInfo)
+				world.Cell(uint32(ux-x), uint32(uy-wallThickness)).SetCellInfo(&entryTextureInfo)
+				world.Cell(uint32(lx+x), uint32(ly+wallThickness)).SetCellInfo(&entryTextureInfo)
 			}
 		}
 		for y := 0; y < (uy - ly); y++ {
 			if rand.Int()%2 == 0 {
-				world.SetCellInfo(uint32(lx), uint32(uy-y), &wallTextureInfo)
-				world.SetCellInfo(uint32(ux), uint32(ly+y), &wallTextureInfo)
-				world.SetCellInfo(uint32(lx+wallThickness), uint32(ly+y), &wallTextureInfo)
-				world.SetCellInfo(uint32(ux-wallThickness), uint32(uy-y), &wallTextureInfo)
+				world.Cell(uint32(lx), uint32(uy-y)).SetCellInfo(&wallTextureInfo)
+				world.Cell(uint32(ux), uint32(ly+y)).SetCellInfo(&wallTextureInfo)
+				world.Cell(uint32(lx+wallThickness), uint32(ly+y)).SetCellInfo(&wallTextureInfo)
+				world.Cell(uint32(ux-wallThickness), uint32(uy-y)).SetCellInfo(&wallTextureInfo)
 			} else if y > 1 && y < (uy-ly)-1 {
-				world.SetCellInfo(uint32(lx+wallThickness), uint32(ly+y), &entryTextureInfo)
-				world.SetCellInfo(uint32(ux-wallThickness), uint32(uy-y), &entryTextureInfo)
+				world.Cell(uint32(lx+wallThickness), uint32(ly+y)).SetCellInfo(&entryTextureInfo)
+				world.Cell(uint32(ux-wallThickness), uint32(uy-y)).SetCellInfo(&entryTextureInfo)
 			}
 		}
 		// Thick wall part
 		for thickness := 1; thickness < wallThickness; thickness++ {
 			for x := lx + thickness; x <= ux-thickness; x++ {
-				world.SetCellInfo(uint32(x), uint32(ly+thickness), &wallTextureInfo)
-				world.SetCellInfo(uint32(x), uint32(uy-thickness), &wallTextureInfo)
+				world.Cell(uint32(x), uint32(ly+thickness)).SetCellInfo(&wallTextureInfo)
+				world.Cell(uint32(x), uint32(uy-thickness)).SetCellInfo(&wallTextureInfo)
 			}
 			for y := ly + thickness; y <= uy-thickness; y++ {
-				world.SetCellInfo(uint32(lx+thickness), uint32(y), &wallTextureInfo)
-				world.SetCellInfo(uint32(ux-thickness), uint32(y), &wallTextureInfo)
+				world.Cell(uint32(lx+thickness), uint32(y)).SetCellInfo(&wallTextureInfo)
+				world.Cell(uint32(ux-thickness), uint32(y)).SetCellInfo(&wallTextureInfo)
 			}
 		}
 
@@ -375,15 +386,15 @@ func visitGreatWall(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTer
 				walkwayCell.TerrainID = seedEntry
 			}
 
-			world.SetCellInfo(uint32(midx), uint32(ly+i), &walkwayCell)
-			world.SetCellInfo(uint32(midx), uint32(uy-i), &walkwayCell)
-			world.SetCellInfo(uint32(lx+i), uint32(midy), &walkwayCell)
-			world.SetCellInfo(uint32(ux-i), uint32(midy), &walkwayCell)
+			world.Cell(uint32(midx), uint32(ly+i)).SetCellInfo(&walkwayCell)
+			world.Cell(uint32(midx), uint32(uy-i)).SetCellInfo(&walkwayCell)
+			world.Cell(uint32(lx+i), uint32(midy)).SetCellInfo(&walkwayCell)
+			world.Cell(uint32(ux-i), uint32(midy)).SetCellInfo(&walkwayCell)
 		}
 	} else {
 		var cellTerrain *CellTerrain
 
-		cellInfo := world.GetCellInfo(x1, y1)
+		cellInfo := world.Cell(x1, y1).CellInfo()
 		if cellInfo != nil {
 			cellTerrain = &cellInfo.TerrainData
 		} else {
@@ -423,12 +434,12 @@ func visitCircle(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrai
 				distanceFromCenter := int(math.Sqrt(math.Pow(float64(x-midx), 2.0) + math.Pow(float64(y-midy), 2.0)))
 				if distanceFromCenter <= radius {
 					if distanceFromCenter > (radius - circleThickness) {
-						world.SetCellInfo(uint32(x), uint32(y), &circleFillBlock)
+						world.Cell(uint32(x), uint32(y)).SetCellInfo(&circleFillBlock)
 					} else {
 						if centerFill != "" {
-							world.SetCellInfo(uint32(x), uint32(y), &centerFillBlock)
+							world.Cell(uint32(x), uint32(y)).SetCellInfo(&centerFillBlock)
 						} else {
-							world.SetCellInfo(uint32(x), uint32(y), nil)
+							world.Cell(uint32(x), uint32(y)).SetCellInfo(nil)
 						}
 					}
 				}
@@ -439,15 +450,15 @@ func visitCircle(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrai
 			TerrainID:    seedExit,
 			RegionNameID: regionID}
 		for rad := 0; rad < entryRadius; rad++ {
-			world.SetCellInfo(uint32(midx), uint32(ly+rad), &entryCell)
-			world.SetCellInfo(uint32(midx), uint32(uy-rad), &entryCell)
-			world.SetCellInfo(uint32(lx+rad), uint32(midy), &entryCell)
-			world.SetCellInfo(uint32(ux-rad), uint32(midy), &entryCell)
+			world.Cell(uint32(midx), uint32(ly+rad)).SetCellInfo(&entryCell)
+			world.Cell(uint32(midx), uint32(uy-rad)).SetCellInfo(&entryCell)
+			world.Cell(uint32(lx+rad), uint32(midy)).SetCellInfo(&entryCell)
+			world.Cell(uint32(ux-rad), uint32(midy)).SetCellInfo(&entryCell)
 		}
 	} else {
 		var cellTerrain *CellTerrain
 
-		cellInfo := world.GetCellInfo(x1, y1)
+		cellInfo := world.Cell(x1, y1).CellInfo()
 		if cellInfo != nil {
 			cellTerrain = &cellInfo.TerrainData
 		} else {
@@ -473,7 +484,7 @@ func visitChangeOfScenery(x1, y1, x2, y2 uint32, world World, regionID uint64, c
 
 	seedExit := ""
 	oldInfo := seedExit
-	oldCell := world.GetCellInfo(x1, y1)
+	oldCell := world.Cell(x1, y1).CellInfo()
 	if oldCell != nil {
 		oldInfo = oldCell.TerrainID
 	}
@@ -544,7 +555,7 @@ UniqueSeedFinder:
 				} else {
 					continue
 				}
-				world.SetCellInfo(uint32(xc+(yp*thick)), uint32(yc+(xp*thick)), &dividerCenterCell)
+				world.Cell(uint32(xc+(yp*thick)), uint32(yc+(xp*thick))).SetCellInfo(&dividerCenterCell)
 				jitter += (rand.Int() % 3) - 1
 				if jitter < 0 {
 					jitter = 0
@@ -563,14 +574,14 @@ UniqueSeedFinder:
 			if t > thickness/2 {
 				pathInfo.TerrainID = seedExit
 			}
-			world.SetCellInfo(uint32(pathX), uint32(pathY), &pathInfo)
+			world.Cell(uint32(pathX), uint32(pathY)).SetCellInfo(&pathInfo)
 			pathX += xd
 			pathY += yd
 		}
 	} else {
 		var cellTerrain *CellTerrain
 
-		cellInfo := world.GetCellInfo(x1, y1)
+		cellInfo := world.Cell(x1, y1).CellInfo()
 		if cellInfo != nil {
 			cellTerrain = &cellInfo.TerrainData
 		} else {
