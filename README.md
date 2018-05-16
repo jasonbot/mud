@@ -1,7 +1,7 @@
 # MUD Server
 A multiplayer MUD sever for a game jam on itch.io: [Enter the (Multi-User) Dungeon](https://itch.io/jam/enterthemud)
 
-I have a newborn and had about 10 days to make an MVP. I mostly succeeded?
+I have a newborn and had about 12 days to make an MVP. I mostly succeeded?
 
 ## Building
 
@@ -13,13 +13,13 @@ Run make.
 
 Then run `bin/mud` from this folder.
 
-## Connecting to Play
+# Connecting to Play
 
-# Overview
+## Overview
 
 This MUD is a terminal-based SSH server. You need an ssh client installed and a private key generated. This is beyond the scope of this `README`, but I'll try to set you in the right direction.
 
-# Connecting with macOS/Linux
+## Connecting with macOS/Linux
 
 You [can probably follow these instructions](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/)
 in order to get it set up on your platform of choice. From there it's a simple matter of connecting:
@@ -30,11 +30,11 @@ assuming you're running the mud server locally.
 
 Your terminal needs to support 256 colors and utf-8 encoding. iTerm2 and Terminal.app on macOS both support 256 colors as does pretty much any terminal you can think of on Linux. Putty works too if you et your terminal type to `xterm-256color`. Also [here is a very detailed amount of information on terminal types](https://stackoverflow.com/questions/15375992/vim-difference-between-t-co-256-and-term-xterm-256color-in-conjunction-with-tmu/15378816#15378816) if needed.
 
-# Connecting with Windows
+## Connecting with Windows
 
 You'll need Putty and PuttyGen. [Follow the instructions here](https://system.cs.kuleuven.be//cs/system/security/ssh/setupkeys/putty-with-key.html) for how to make a key to connect.
 
-# Usernames
+## Usernames
 
 You sign in with whatever username you used to log into the server. You now *own* this username on the server and nobody else can use it. No passwords! How nice! Hooray for encryption. You can also claim other usernames by logging in as other users; e.g. `ssh "Another User"@localhost -p 2222`.
 
@@ -42,9 +42,9 @@ You sign in with whatever username you used to log into the server. You now *own
 
 This thing appears to just sip ram (idling at approx 35 megs with three users conencted on my MacBook Pro). Go as a language was designed to handle networked servers extremely well so I don't see why a local server on modest hardware wouldn't be able to host a good hundred or so users online at at time.
 
-## Playing
+# Playing
 
-### Game mechanics
+## Game mechanics
 
 ### Strengths
 
@@ -66,13 +66,13 @@ The layout of the Melee/Range/Magic system is similar to Rock/Paper/Scissors: a 
 
 This is not fully fleshed out. Ignore for now, subject to major changes.
 
-### Battle
+## Battle
 
 You are equipped with *charge points* based on your level. Every second one charge point renews; and when your charge points are full every 5 seconds your HP will begin to restore itself. Charge points reset to zero every time you act. Moving, attacking, and changing equipment are all considering acting.
 
 You're equipped with attacks based on the strengths you chose when starting your character and may be given additional 
 
-### Keyboard commands
+# Keyboard commands
 
 `up`, `down`, `left`, `right`: move your character in that direction.
 
