@@ -84,16 +84,18 @@ func (input *StatPoints) Damage() uint64 {
 
 // Attack is a type of attack a creature can inflict
 type Attack struct {
-	ID       string   `json:",omitempty"`
-	Name     string   `json:""`
-	Accuracy byte     `json:""`
-	MP       uint64   `json:""`
-	AP       uint64   `json:""`
-	RP       uint64   `json:""`
-	Trample  uint64   `json:""`
-	Bonuses  string   `json:""`
-	Effects  []string `json:""`
-	Charge   int64    `json:""` // In Seconds
+	ID           string   `json:",omitempty"`
+	Name         string   `json:""`
+	Accuracy     byte     `json:""`
+	MP           uint64   `json:""`
+	AP           uint64   `json:""`
+	RP           uint64   `json:""`
+	Trample      uint64   `json:""`
+	Bonuses      string   `json:""`
+	UsesItems    []string `json:",omitempty"`
+	OutputsItems []string `json:",omitempty"`
+	Effects      []string `json:""`
+	Charge       int64    `json:""` // In Seconds
 }
 
 func (atk *Attack) String() string {

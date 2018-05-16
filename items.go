@@ -12,6 +12,7 @@ var ItemTypes map[string]InventoryItem
 // ItemDrop is a JSON struct used for the generation of random drops
 type ItemDrop struct {
 	Name        string  `json:""` // Name of item in items.json
+	Cluster     uint    `json:""` // 0-10000
 	Probability float32 `json:""` // 0-1.0
 }
 
@@ -44,45 +45,15 @@ const (
 	ARTIFACTTYPEINGREDIENT = "Ingredient"
 )
 
-// InventoryItemHeader is a droppable item for an inventory
-type InventoryItemHeader struct {
-	ID          string `json:""`
-	Name        string `json:""`
-	Type        string `json:""`
-	Description string `json:""`
-}
-
-// WeaponInventoryItem is a weapon
-type WeaponInventoryItem struct {
-	InventoryItemHeader
-	Subtype string    `json:",omitempty"`
-	Attacks []*Attack `json:",omitempty"`
-}
-
-// PotionInventoryItem is a drinkable/throwable buff/weakener
-type PotionInventoryItem struct {
-	InventoryItemHeader
-}
-
-// ScrollInventoryItem is a spellbook or one-off spell
-type ScrollInventoryItem struct {
-	InventoryItemHeader
-	Attacks []*Attack `json:",omitempty"` // For spells
-}
-
-// ArtifactInventoryItem is a relic with powers
-type ArtifactInventoryItem struct {
-	InventoryItemHeader
-	Subtype string `json:",omitempty"`
-}
-
 // InventoryItem is a droppable item for an inventory
 type InventoryItem struct {
-	InventoryItemHeader
-	WeaponInventoryItem
-	PotionInventoryItem
-	ScrollInventoryItem
-	ArtifactInventoryItem
+	ID             string   `json:""`
+	Name           string   `json:""`
+	Type           string   `json:""`
+	Description    string   `json:""`
+	Subtype        string   `json:",omitempty"` // For weapons and artifacts
+	Attacks        []Attack `json:",omitempty"` // For weapons and spells
+	CounterAttacks []Attack `json:",omitempty"` // For scrolls and spells with counterattack effects
 }
 
 // InventoryInfo handles a thing with inventory

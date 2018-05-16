@@ -41,6 +41,12 @@
         "MaxMP": 0,
         "MaxAP": 0,
         "MaxRP": 0,
+        "ItemDrops": [
+            {
+                "Name": "Shiny Rock",
+                "Probability": 0.9
+            }
+        ],
         "Attacks": []
     },
     "scorpion": {
@@ -230,7 +236,10 @@
                 "AP": 1,
                 "RP": 1,
                 "Trample": 5,
-                "Charge": 8
+                "Charge": 8,
+                "OutputsItems": [
+                    "Skull"
+                ]
             }
         ]
     },

@@ -457,6 +457,122 @@ func visitCircle(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrai
 	}
 }
 
+func visitChangeOfScenery(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
+	settings := cellTerrain.AlgorithmParameters
+
+	length := 100
+	thickness := 10
+	dividerThickness := 5
+	dividerEdge := "clearing-grass"
+	dividerCenter := "clearing-center"
+	length = getIntSetting(settings, "length", length)
+	thickness = getIntSetting(settings, "thickness", thickness)
+	dividerThickness = getIntSetting(settings, "divider-thickness", dividerThickness)
+	dividerEdge = getStringSetting(settings, "divider-edge", dividerEdge)
+	dividerCenter = getStringSetting(settings, "divider-center", dividerCenter)
+	seedExit := cellTerrain.GetRandomTransition()
+	//jitter := dividerThickness + thickness/2
+
+	width, height := thickness, 100
+	if y1 == y2 {
+		width, height = height, width
+	}
+
+	lx, ly, _, _, xd, yd, free := getAvailableBox(x1, y1, x2, y2, world, width, height)
+
+	if free {
+		regionID := world.NewPlaceID()
+
+		dividerCenterCell := CellInfo{RegionNameID: regionID,
+			TerrainID: dividerCenter}
+
+		// Draw mountain wall
+		xp, yp := 0, 0
+		if xd == 0 {
+			xp = 1
+		} else if yd == 0 {
+			yp = 1
+		}
+
+		oldInfo := seedExit
+		oldCell := world.GetCellInfo(x1, y1)
+		if oldCell != nil {
+			oldInfo = oldCell.TerrainID
+		}
+
+		jitter := 0
+
+		for l := 0; l < length; l++ {
+			xc, yc := lx+(xp*l), ly+(yp*l)
+			localthickness := thickness
+
+			if l < thickness {
+				localthickness = (l + 1)
+			} else if l > length-thickness {
+				localthickness = length - l
+			}
+
+			leftInfo, rightInfo := seedExit, oldInfo
+			if xd < 0 || yd < 0 {
+				leftInfo, rightInfo = rightInfo, leftInfo
+			}
+
+			for thick := 0; thick < localthickness; thick++ {
+				localthick := thick - jitter
+
+				if l == length/2 {
+					if thick < dividerThickness {
+						dividerCenterCell.TerrainID = leftInfo
+					} else {
+						dividerCenterCell.TerrainID = rightInfo
+					}
+				} else if localthick < 1 {
+					dividerCenterCell.TerrainID = rightInfo
+				} else if localthick == 1 || localthick == dividerThickness {
+					dividerCenterCell.TerrainID = dividerEdge
+				} else if localthick < dividerThickness {
+					dividerCenterCell.TerrainID = dividerCenter
+				} else if localthick < dividerThickness+2+rand.Int()%2 {
+					dividerCenterCell.TerrainID = leftInfo
+				} else {
+					continue
+				}
+				world.SetCellInfo(uint32(xc+(yp*thick)), uint32(yc+(xp*thick)), &dividerCenterCell)
+				jitter += (rand.Int() % 3) - 1
+				if jitter < 0 {
+					jitter = 0
+				} else if jitter > 2 {
+					jitter = 2
+				}
+			}
+		}
+
+		// Draw path out
+		pathInfo := CellInfo{
+			TerrainID:    oldInfo,
+			RegionNameID: regionID}
+		pathX, pathY := int(x2), int(y2)
+		for t := 0; t <= thickness; t++ {
+			if t > thickness/2 {
+				pathInfo.TerrainID = seedExit
+			}
+			world.SetCellInfo(uint32(pathX), uint32(pathY), &pathInfo)
+			pathX += xd
+			pathY += yd
+		}
+	} else {
+		var cellTerrain *CellTerrain
+
+		cellInfo := world.GetCellInfo(x1, y1)
+		if cellInfo != nil {
+			cellTerrain = &cellInfo.TerrainData
+		} else {
+			*cellTerrain = CellTypes[seedExit]
+		}
+		visitSpread(x1, y1, x2, y2, world, regionID, &cellInfo.TerrainData)
+	}
+}
+
 // PopulateCellFromAlgorithm will run the specified algorithm to generate terrain
 func PopulateCellFromAlgorithm(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	if cellTerrain == nil {
@@ -482,4 +598,5 @@ func init() {
 	generationAlgorithms["dungeon-room"] = visitDungeonRoom
 	generationAlgorithms["great-wall"] = visitGreatWall
 	generationAlgorithms["circle"] = visitCircle
+	generationAlgorithms["change-of-scenery"] = visitChangeOfScenery
 }

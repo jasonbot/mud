@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -12,6 +13,12 @@ import (
 	bolt "github.com/coreos/bbolt"
 )
 
+// EquipUserInfo is for putting outfits on a user
+type EquipUserInfo interface {
+	Equip(*InventoryItem) (*InventoryItem, error)
+	Equipped() []*InventoryItem
+}
+
 // User represents an active user in the system.
 type User interface {
 	StatInfo
@@ -19,6 +26,7 @@ type User interface {
 	LastAction
 	ChargeInfo
 	InventoryInfo
+	EquipUserInfo
 
 	Username() string
 	IsInitialized() bool
@@ -65,24 +73,25 @@ type UserSSHAuthentication interface {
 
 // UserData is a JSON-serializable set of information about a User.
 type UserData struct {
-	Username    string          `json:""`
-	X           uint32          `json:""`
-	Y           uint32          `json:""`
-	SpawnX      uint32          `json:""`
-	SpawnY      uint32          `json:""`
-	HP          uint64          `json:""`
-	MaxHP       uint64          `json:""`
-	AP          uint64          `json:""`
-	MaxAP       uint64          `json:""`
-	MP          uint64          `json:""`
-	MaxMP       uint64          `json:""`
-	RP          uint64          `json:""`
-	MaxRP       uint64          `json:""`
-	XP          uint64          `json:""`
-	ClassInfo   byte            `json:""`
-	Initialized bool            `json:""`
-	PublicKeys  map[string]bool `json:""`
-	Attacks     []*Attack       `json:""`
+	Username    string           `json:""`
+	X           uint32           `json:""`
+	Y           uint32           `json:""`
+	SpawnX      uint32           `json:""`
+	SpawnY      uint32           `json:""`
+	HP          uint64           `json:""`
+	MaxHP       uint64           `json:""`
+	AP          uint64           `json:""`
+	MaxAP       uint64           `json:""`
+	MP          uint64           `json:""`
+	MaxMP       uint64           `json:""`
+	RP          uint64           `json:""`
+	MaxRP       uint64           `json:""`
+	XP          uint64           `json:""`
+	ClassInfo   byte             `json:""`
+	Initialized bool             `json:""`
+	PublicKeys  map[string]bool  `json:""`
+	Equipped    []*InventoryItem `json:""`
+	Attacks     []*Attack        `json:""`
 }
 
 type dbUser struct {
@@ -105,6 +114,16 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 
 	var primaryattack Attack
 	var secondaryattack Attack
+	rockAttack := Attack{
+		Name:         "Rock user",
+		Accuracy:     100,
+		MP:           1,
+		AP:           1,
+		RP:           1,
+		Trample:      6,
+		Charge:       1,
+		UsesItems:    []string{"Shiny Rock"},
+		OutputsItems: []string{"Broken Rock"}}
 
 	switch primary {
 	case MELEEPRIMARY:
@@ -114,6 +133,10 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 			AP:       4,
 			RP:       0,
 			Charge:   2}
+
+		rockAttack.Name = "Smash Rock"
+		rockAttack.AP *= 2
+		rockAttack.Bonuses = "AP+25%AP"
 	case RANGEPRIMARY:
 		primaryattack = Attack{Name: "Dart",
 			Accuracy: 95,
@@ -121,6 +144,10 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 			AP:       0,
 			RP:       4,
 			Charge:   2}
+
+		rockAttack.Name = "Throw Rock"
+		rockAttack.RP *= 2
+		rockAttack.Bonuses = "RP+25%RP"
 	case MAGICPRIMARY:
 		primaryattack = Attack{Name: "Mage push",
 			Accuracy: 95,
@@ -128,6 +155,10 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 			AP:       0,
 			RP:       0,
 			Charge:   2}
+
+		rockAttack.Name = "Rock Bomb"
+		rockAttack.MP *= 2
+		rockAttack.Bonuses = "MP+25%MP"
 	}
 	switch secondary {
 	case MELEESECONDARY:
@@ -177,7 +208,7 @@ func (user *dbUser) getDefaultAttacks() []*Attack {
 		}
 	}
 
-	attacks := []*Attack{&primaryattack, &secondaryattack}
+	attacks := []*Attack{&primaryattack, &secondaryattack, &rockAttack}
 
 	return attacks
 }
@@ -207,6 +238,7 @@ func (user *dbUser) Initialize(initialize bool) {
 	user.Reload()
 
 	user.UserData.Attacks = user.getDefaultAttacks()
+	user.UserData.Equipped = make([]*InventoryItem, 0)
 	user.setupStatBonuses()
 	user.Initialized = initialize
 	user.Save()
@@ -648,6 +680,16 @@ func (user *dbUser) Attacks() []*AttackInfo {
 		attacks = append(attacks, &AttackInfo{Attack: &attack, Charged: charged})
 	}
 
+	for _, inventoryItem := range user.UserData.Equipped {
+		if inventoryItem.Type == ITEMTYPEWEAPON {
+			for _, attack := range inventoryItem.Attacks {
+				atk := attack
+				charged := charge >= attack.Charge && user.AP() >= attack.AP && user.RP() >= attack.RP && user.MP() >= attack.MP
+				attacks = append(attacks, &AttackInfo{Attack: &atk, Charged: charged})
+			}
+		}
+	}
+
 	return attacks
 }
 
@@ -660,6 +702,39 @@ func (user *dbUser) MusterAttack(attackName string) *Attack {
 			charge, _ := user.Charge()
 
 			if charge >= potentialAttack.Charge {
+				hasItems := true
+				missingItem := "true and pure soul"
+				if attack.Attack.UsesItems != nil {
+					itemsToTake := make([]*InventoryItem, len(attack.Attack.UsesItems))
+				ItemIter:
+					for _, item := range attack.Attack.UsesItems {
+						itemAttack := user.pullInventoryItemByName(item)
+						if itemAttack == nil {
+							hasItems = false
+							missingItem = item
+							break ItemIter
+						}
+					}
+
+					if !hasItems {
+						user.Log(LogItem{Message: fmt.Sprintf("You lack %v required to %v", missingItem, potentialAttack.Name), MessageType: MESSAGEACTIVITY})
+						for _, item := range itemsToTake {
+							if !user.AddInventoryItem(item) {
+								user.world.AddInventoryItem(user.X, user.Y, item)
+							}
+						}
+
+						return nil
+					}
+					if attack.Attack.OutputsItems != nil {
+						for _, itemName := range attack.Attack.OutputsItems {
+							item, ok := ItemTypes[itemName]
+							if ok {
+								user.world.AddInventoryItem(user.X, user.Y, &item)
+							}
+						}
+					}
+				}
 
 				ap, rp, mp := user.AP(), user.RP(), user.MP()
 				if ap >= potentialAttack.AP && rp >= potentialAttack.RP && mp >= potentialAttack.MP {
@@ -722,6 +797,10 @@ func (user *dbUser) InventoryItems() []*InventoryItem {
 }
 
 func (user *dbUser) AddInventoryItem(item *InventoryItem) bool {
+	if item == nil {
+		return false
+	}
+
 	inventoryItem := *item
 
 	if inventoryItem.ID == "" {
@@ -806,6 +885,58 @@ func (user *dbUser) InventoryItem(id string) *InventoryItem {
 
 func (user *dbUser) PullInventoryItem(id string) *InventoryItem {
 	return user.inventoryItem(id, true)
+}
+
+func (user *dbUser) pullInventoryItemByName(name string) *InventoryItem {
+	for _, item := range user.InventoryItems() {
+		if item.Name == name {
+			return user.PullInventoryItem(item.ID)
+		}
+	}
+
+	return nil
+}
+
+func (user *dbUser) Equip(item *InventoryItem) (*InventoryItem, error) {
+	var toss *InventoryItem
+	var err error
+
+	index := -1
+
+InvIter:
+	for idx, inventoryItem := range user.UserData.Equipped {
+		if inventoryItem.Type == item.Type {
+			index = idx
+			break InvIter
+		}
+	}
+
+	if index != -1 {
+		toss = user.UserData.Equipped[index]
+		user.UserData.Equipped = append(user.UserData.Equipped[:index], user.UserData.Equipped[index+1:]...)
+	}
+
+	if item.Type == ITEMTYPEWEAPON {
+		user.UserData.Equipped = append(user.UserData.Equipped, item)
+	} else {
+		err = fmt.Errorf("Can't equip %v", item.Name)
+		if toss != nil {
+			user.UserData.Equipped = append(user.UserData.Equipped, toss)
+		}
+		toss = item
+	}
+
+	return toss, err
+}
+
+func (user *dbUser) Equipped() []*InventoryItem {
+	inventory := make([]*InventoryItem, 0)
+	for _, i := range user.UserData.Equipped {
+		ic := *i
+		inventory = append(inventory, &ic)
+	}
+
+	return inventory
 }
 
 func (user *dbUser) SSHKeysEmpty() bool {

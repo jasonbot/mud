@@ -337,6 +337,20 @@ func (screen *sshScreen) renderCharacterSheet() {
 		screen.drawProgressMeter(screen.user.RP(), screen.user.MaxRP(), 117, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" RP: %v/%v", screen.user.RP(), screen.user.MaxRP()), width-10)),
 		screen.drawProgressMeter(screen.user.MP(), screen.user.MaxMP(), 76, bgcolor, 10) + fmtFunc(truncateRight(fmt.Sprintf(" MP: %v/%v", screen.user.MP(), screen.user.MaxMP()), width-10))}
 
+	equipment := screen.user.Equipped()
+
+	if equipment != nil && len(equipment) > 0 {
+		extraLines := []string{centerText(" Equipment ", "─", width)}
+
+		for _, item := range equipment {
+			itemCaption := fmt.Sprintf("%v (%v)", item.Name, item.Type)
+			itemString := fmtFunc(truncateRight(itemCaption, width))
+			extraLines = append(extraLines, itemString)
+		}
+
+		infoLines = append(infoLines, extraLines...)
+	}
+
 	foundSelectedCreature := false
 	hasCreatures := false
 	firstID := ""
@@ -450,7 +464,6 @@ func (screen *sshScreen) renderCharacterSheet() {
 
 		for _, item := range items {
 			itemKey := "  "
-			i := item
 			itemID := item.ID
 
 			if key < 'Z' {
@@ -461,10 +474,23 @@ func (screen *sshScreen) renderCharacterSheet() {
 					item := screen.builder.World().PullInventoryItem(pos.X, pos.Y, itemID)
 
 					if item != nil {
-						if user.AddInventoryItem(item) == false {
-							world.AddInventoryItem(pos.X, pos.Y, i)
+						if item.Type == ITEMTYPEWEAPON {
+							user.Reload()
+							toss, err := user.Equip(item)
+							user.Save()
+
+							if err != nil {
+								user.Log(LogItem{
+									MessageType: MESSAGEACTIVITY,
+									Message:     err.Error()})
+							}
+							world.AddInventoryItem(pos.X, pos.Y, toss)
 						} else {
-							user.AddInventoryItem(item)
+							if user.AddInventoryItem(item) == false {
+								world.AddInventoryItem(pos.X, pos.Y, item)
+							} else {
+								user.AddInventoryItem(item)
+							}
 						}
 					}
 				}
@@ -472,7 +498,7 @@ func (screen *sshScreen) renderCharacterSheet() {
 				key++
 			}
 
-			itemString := CRnumberColor(itemKey) + fmtFunc(truncateRight(" "+item.Name, width-3))
+			itemString := CRnumberColor(itemKey) + fmtFunc(truncateRight(" "+item.Name, width-2))
 			extraLines = append(extraLines, itemString)
 		}
 

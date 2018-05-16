@@ -319,10 +319,17 @@ func (w *dbWorld) SetCellInfo(x, y uint32, cellInfo *CellInfo) {
 
 	if drops != nil {
 		for _, drop := range drops {
-			prob := rand.Float32()
-			if drop.Probability >= prob {
-				dropItem := ItemTypes[drop.Name]
-				w.AddInventoryItem(x, y, &dropItem)
+			cluster := drop.Cluster
+			if cluster == 0 {
+				cluster = 1
+			}
+
+			for i := 0; i < int(cluster); i++ {
+				prob := rand.Float32()
+				if drop.Probability >= prob {
+					dropItem := ItemTypes[drop.Name]
+					w.AddInventoryItem(x, y, &dropItem)
+				}
 			}
 		}
 	}
@@ -745,7 +752,7 @@ func (w *dbWorld) Attack(source interface{}, target interface{}, attack *Attack)
 			if counterAttack == nil {
 				message = fmt.Sprintf("%v hit %v for %v damage!", attack.Name, hitTarget, damage)
 			} else {
-				message = fmt.Sprintf("%v attempted to hit %v, blocked with a counterattack!", attack.Name, hitTarget)
+				message = fmt.Sprintf("Attempted %v against %v; blocked with a counterattack!", attack.Name, hitTarget)
 			}
 		}
 	} else {
@@ -766,10 +773,17 @@ func (w *dbWorld) creatureDrop(creature *Creature) {
 
 	if drops != nil && len(drops) > 0 {
 		for _, drop := range drops {
-			prob := rand.Float32()
-			if drop.Probability >= prob {
-				dropItem := ItemTypes[drop.Name]
-				w.AddInventoryItem(creature.X, creature.Y, &dropItem)
+			cluster := drop.Cluster
+			if cluster == 0 {
+				cluster = 1
+			}
+
+			for i := 0; i < int(cluster); i++ {
+				prob := rand.Float32()
+				if drop.Probability >= prob {
+					dropItem := ItemTypes[drop.Name]
+					w.AddInventoryItem(creature.X, creature.Y, &dropItem)
+				}
 			}
 		}
 	}
@@ -813,6 +827,9 @@ func (w *dbWorld) InventoryItems(x, y uint32) []*InventoryItem {
 }
 
 func (w *dbWorld) AddInventoryItem(x, y uint32, item *InventoryItem) bool {
+	if item == nil {
+		return false
+	}
 	inventoryItem := *item
 
 	if inventoryItem.ID == "" {

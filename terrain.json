@@ -6,6 +6,20 @@
         "Transitions": [
             "clearing-grass"
         ],
+        "ItemDrops": [
+            {
+                "Name": "Simple Sword",
+                "Probability": 1.0
+            },
+            {
+                "Name": "Simple Bow",
+                "Probability": 1.0
+            },
+            {
+                "Name": "Simple Wand",
+                "Probability": 1.0
+            }
+        ],
         "Algorithm": "once",
         "AlgorithmParameters": {},
         "FGcolor": 184,
@@ -20,16 +34,17 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
-            "castle-clearing:10",
-            "clearing-grass:55",
-            "clearing-deep-grass:20",
+            "castle-clearing:1",
+            "clearing-grass:5",
+            "clearing-deep-grass:2",
             "trail:12",
-            "savannah:8"
+            "change-biomes:1"
         ],
         "ItemDrops": [
             {
                 "Name": "Shiny Rock",
-                "Probability": 0.05
+                "Probability": 0.02,
+                "Cluster": 4
             }
         ],
         "CreatureSpawns": [
@@ -246,9 +261,9 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
-            "clearing-grass:1",
-            "savannah:2",
-            "desert:1"
+            "savannah:20",
+            "desert:10",
+            "change-biomes:1"
         ],
         "Algorithm": "spread",
         "AlgorithmParameters": {
@@ -299,7 +314,8 @@
         "Blocking": false,
         "Transitions": [
             "desert:1",
-            "desert-cactus:10"
+            "desert-cactus:10",
+            "widedesert:10"
         ],
         "Algorithm": "tendril",
         "AlgorithmParameters": {
@@ -410,11 +426,11 @@
             },
             {
                 "Name": "Simple Bow",
-                "Probability": 0.001
+                "Probability": 0.0001
             },
             {
                 "Name": "Simple Wand",
-                "Probability": 0.001
+                "Probability": 0.0001
             }
         ],
         "FGcolor": 245,
@@ -422,6 +438,43 @@
         "Representations": [
             8281,
             8282
+        ]
+    },
+    "change-biomes": {
+        "Transitions": [
+            "desert",
+            "clearing-deep-grass"
+        ],
+        "Algorithm": "change-of-scenery",
+        "AlgorithmParameters": {
+            "thickness": "10",
+            "divider-thickness": "5",
+            "divider-edge": "mountain-short",
+            "divider-center": "mountain-tall",
+            "length": "300"
+        }
+    },
+    "mountain-short": {
+        "Permeable": false,
+        "Blocking": true,
+        "FGcolor": 56,
+        "BGcolor": 53,
+        "Representations": [
+            8896,
+            10837,
+            10840,
+            8911
+        ]
+    },
+    "mountain-tall": {
+        "Permeable": false,
+        "Blocking": true,
+        "FGcolor": 56,
+        "BGcolor": 53,
+        "Representations": [
+            923,
+            94,
+            8743
         ]
     }
 }

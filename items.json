@@ -5,12 +5,22 @@
         "Description": "The most basic melee weapon imaginable",
         "Attacks": [
             {
+                "Name": "Slice",
+                "Accuracy": 70,
+                "MP": 0,
+                "AP": 2,
+                "RP": 0,
+                "Trample": 4,
+                "Charge": 1,
+                "Bonuses": "AP+25%AP;TP+10%AP"
+            },
+            {
                 "Name": "Hack",
                 "Accuracy": 80,
                 "MP": 0,
                 "AP": 8,
                 "RP": 0,
-                "Trample": 4,
+                "Trample": 12,
                 "Charge": 3,
                 "Bonuses": "AP+50%AP;TP+10%MP"
             }
@@ -21,6 +31,16 @@
         "Subtype": "Bow",
         "Description": "The most basic ranged weapon imaginable",
         "Attacks": [
+            {
+                "Name": "Quick Fire",
+                "Accuracy": 70,
+                "MP": 0,
+                "AP": 0,
+                "RP": 2,
+                "Trample": 4,
+                "Charge": 1,
+                "Bonuses": "RP+25%RP;TP+10%RP"
+            },
             {
                 "Name": "Arrow",
                 "Accuracy": 80,
@@ -39,7 +59,17 @@
         "Subtype": "Wand",
         "Attacks": [
             {
-                "Name": "Arrow",
+                "Name": "Spontaneous Spark",
+                "Accuracy": 70,
+                "MP": 1,
+                "AP": 0,
+                "RP": 0,
+                "Trample": 4,
+                "Charge": 1,
+                "Bonuses": "MP+25%MP;TP+10%MP"
+            },
+            {
+                "Name": "Blast",
                 "Accuracy": 80,
                 "MP": 8,
                 "AP": 0,
@@ -52,6 +82,16 @@
     },
     "Shiny Rock": {
         "Description": "You've spent too long in the grasses if you think this is interesting",
+        "Type": "Artifact",
+        "Subtype": "Curiosity"
+    },
+    "Broken Rock": {
+        "Description": "Someone did something crazy with this rock",
+        "Type": "Artifact",
+        "Subtype": "Curiosity"
+    },
+    "Skull": {
+        "Description": "Someone had this inside their head once",
         "Type": "Artifact",
         "Subtype": "Curiosity"
     }
