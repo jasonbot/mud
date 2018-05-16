@@ -190,7 +190,7 @@
             "path": "trail",
             "neighbor": "clearing-grass",
             "endcap": "trailhead",
-            "radius": "50"
+            "radius": "10"
         },
         "FGcolor": 144,
         "BGcolor": 155,
@@ -204,13 +204,13 @@
         "Name": "Ruins of %s",
         "Permeable": false,
         "Transitions": [
-            "clearing-trail-ruin:10",
+            "clearing-trail-ruin:2",
             "clearing-grass:1"
         ],
         "Algorithm": "dungeon-room",
         "AlgorithmParameters": {
-            "minradius": "1",
-            "maxradius": "3",
+            "minradius": "2",
+            "maxradius": "4",
             "wall": "ruin-wall",
             "exit": "clearing-trail-ruin",
             "fallback": "clearing-deep-grass"
@@ -239,10 +239,6 @@
         "FGColor": 64,
         "BGColor": 247,
         "Blocking": true,
-        "Transitions": [
-            "clearing-trail-ruin",
-            "ruin-wall"
-        ],
         "Representations": [
             9622,
             9623,
@@ -261,9 +257,10 @@
         "Permeable": false,
         "Blocking": false,
         "Transitions": [
+            "savannah-circle:25",
             "savannah:20",
             "desert:10",
-            "change-biomes:1"
+            "change-biomes:10"
         ],
         "Algorithm": "spread",
         "AlgorithmParameters": {
@@ -277,6 +274,58 @@
             8283,
             8280,
             8278,
+            32
+        ]
+    },
+    "savannah-circle": {
+        "Name": "Savannah cactus clearing %s",
+        "Permeable": false,
+        "Blocking": false,
+        "Transitions": [
+            "savannah-circle:25",
+            "savannah:20",
+            "savannah-circle-small:40",
+            "change-biomes:20"
+        ],
+        "Algorithm": "circle",
+        "AlgorithmParameters": {
+            "radius": "6",
+            "entry-radius": "4",
+            "seed-exit": "savannah",
+            "circle-fill": "savannah",
+            "circle-thickness": "3",
+            "center-fill": "desert-cactus"
+        },
+        "FGcolor": 106,
+        "BGcolor": 149,
+        "Bold": false,
+        "Representations": [
+            32
+        ]
+    },
+    "savannah-circle-small": {
+        "Name": "Savannah cactus grove %s",
+        "Permeable": false,
+        "Blocking": false,
+        "Transitions": [
+            "savannah-circle:25",
+            "savannah-circle-small:40",
+            "savannah:20",
+            "change-biomes:5"
+        ],
+        "Algorithm": "circle",
+        "AlgorithmParameters": {
+            "radius": "4",
+            "entry-radius": "4",
+            "seed-exit": "savannah",
+            "circle-fill": "savannah",
+            "circle-thickness": "1",
+            "center-fill": "desert-cactus"
+        },
+        "FGcolor": 106,
+        "BGcolor": 149,
+        "Bold": false,
+        "Representations": [
             32
         ]
     },
@@ -315,7 +364,8 @@
         "Transitions": [
             "desert:1",
             "desert-cactus:10",
-            "widedesert:10"
+            "widedesert:10",
+            "change-biomes:10"
         ],
         "Algorithm": "tendril",
         "AlgorithmParameters": {
@@ -347,10 +397,12 @@
         "Permeable": false,
         "Blocking": true,
         "Transitions": [
-            "desert:1"
+            "widedesert:1"
         ],
-        "Algorithm": "once",
-        "AlgorithmParameters": {},
+        "Algorithm": "spread",
+        "AlgorithmParameters": {
+            "radius": "2"
+        },
         "FGcolor": 71,
         "BGcolor": 226,
         "Bold": true,
@@ -443,7 +495,7 @@
     "change-biomes": {
         "Transitions": [
             "desert",
-            "clearing-deep-grass"
+            "clearing-grass"
         ],
         "Algorithm": "change-of-scenery",
         "AlgorithmParameters": {

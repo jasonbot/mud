@@ -282,7 +282,7 @@ func visitDungeonRoom(x1, y1, x2, y2 uint32, world World, regionID uint64, cellT
 		for x := mnx; x <= mxx; x++ {
 			for y := mny; y <= mxy; y++ {
 				if world.GetCellInfo(uint32(x), uint32(y)) == nil {
-					world.SetCellInfo(uint32(x), uint32(y), &CellInfo{TerrainID: wall, RegionNameID: regionID})
+					world.SetCellInfo(uint32(x), uint32(y), &CellInfo{TerrainID: fallback, RegionNameID: regionID})
 				}
 			}
 		}
@@ -470,8 +470,21 @@ func visitChangeOfScenery(x1, y1, x2, y2 uint32, world World, regionID uint64, c
 	dividerThickness = getIntSetting(settings, "divider-thickness", dividerThickness)
 	dividerEdge = getStringSetting(settings, "divider-edge", dividerEdge)
 	dividerCenter = getStringSetting(settings, "divider-center", dividerCenter)
-	seedExit := cellTerrain.GetRandomTransition()
-	//jitter := dividerThickness + thickness/2
+
+	seedExit := ""
+	oldInfo := seedExit
+	oldCell := world.GetCellInfo(x1, y1)
+	if oldCell != nil {
+		oldInfo = oldCell.TerrainID
+	}
+
+UniqueSeedFinder:
+	for x := 0; x < 5; x++ {
+		seedExit = cellTerrain.GetRandomTransition()
+		if seedExit != oldInfo {
+			break UniqueSeedFinder
+		}
+	}
 
 	width, height := thickness, 100
 	if y1 == y2 {
@@ -492,12 +505,6 @@ func visitChangeOfScenery(x1, y1, x2, y2 uint32, world World, regionID uint64, c
 			xp = 1
 		} else if yd == 0 {
 			yp = 1
-		}
-
-		oldInfo := seedExit
-		oldCell := world.GetCellInfo(x1, y1)
-		if oldCell != nil {
-			oldInfo = oldCell.TerrainID
 		}
 
 		jitter := 0
