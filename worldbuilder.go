@@ -3,6 +3,7 @@ package mud
 import (
 	"log"
 	"math/rand"
+	"time"
 )
 
 // WorldBuilder handles map generation on top of the World, which is more a data store.
@@ -254,7 +255,11 @@ func (builder *worldBuilder) GetTerrainMap(cx, cy, width, height uint32) [][]Cel
 
 					renderGlyph := rune('·')
 					if cellInfo != nil && len(terrainInfo.Representations) > 0 {
-						renderGlyph = terrainInfo.Representations[(xcoord^ycoord)%uint32(len(terrainInfo.Representations))]
+						index := int64(xcoord ^ ycoord)
+						if terrainInfo.Animated {
+							index += time.Now().Unix()
+						}
+						renderGlyph = terrainInfo.Representations[uint32(index)%uint32(len(terrainInfo.Representations))]
 					} else {
 						terrainInfo.FGcolor = 232
 						terrainInfo.BGcolor = 233

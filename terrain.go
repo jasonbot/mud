@@ -24,6 +24,7 @@ type CellTerrain struct {
 	FGcolor             byte              `json:""`           // SSH-display specific: the 256 color xterm color for FG
 	BGcolor             byte              `json:""`           // SSH-display specific: the 256 color xterm color for BG
 	Bold                bool              `json:""`           // SSH-display specific: bold the cell FG?
+	Animated            bool              `json:""`           // SSH-display specific: Fake an animation effect?
 	Representations     []rune            `json:""`           // SSH-display specific: unicode chars to use to represent this cell on-screen
 	GetRandomTransition func() string     // What to transition to
 }
