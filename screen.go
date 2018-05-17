@@ -99,6 +99,31 @@ func centerText(message, pad string, width int) string {
 	return fmt.Sprintf("%s%s%s", string([]rune(leftString)[0:left]), message, string([]rune(leftString)[0:right]))
 }
 
+func groupInventory(items []*InventoryItem) (map[string]int, map[string]string, []string) {
+	itemCount := make(map[string]int)
+	itemID := make(map[string]string)
+	for _, item := range items {
+		_, ok := itemCount[item.Name]
+
+		if ok {
+			itemCount[item.Name] = itemCount[item.Name] + 1
+		} else {
+			itemCount[item.Name] = 1
+			itemID[item.Name] = item.ID
+		}
+	}
+
+	keyList := make([]string, len(itemCount))
+	index := 0
+	for k := range itemCount {
+		keyList[index] = k
+		index++
+	}
+	sort.Strings(keyList)
+
+	return itemCount, itemID, keyList
+}
+
 // SSHString render log item for console
 func (item *LogItem) SSHString(width int) string {
 	formatFunc := ansi.ColorFunc(fmt.Sprintf("255:%v", bgcolor))
@@ -473,26 +498,7 @@ func (screen *sshScreen) renderCharacterSheet() {
 	if items != nil && len(items) > 0 {
 		extraLines := []string{centerText(" Items ", "─", width)}
 
-		itemCount := make(map[string]int)
-		itemID := make(map[string]string)
-		for _, item := range items {
-			_, ok := itemCount[item.Name]
-
-			if ok {
-				itemCount[item.Name] = itemCount[item.Name] + 1
-			} else {
-				itemCount[item.Name] = 1
-				itemID[item.Name] = item.ID
-			}
-		}
-
-		keyList := make([]string, len(itemCount))
-		index := 0
-		for k := range itemCount {
-			keyList[index] = k
-			index++
-		}
-		sort.Strings(keyList)
+		itemCount, itemID, keyList := groupInventory(items)
 
 		for _, item := range keyList {
 			itemKey := "  "
@@ -566,26 +572,7 @@ func (screen *sshScreen) renderInventory() {
 	screenX := 2
 	screenWidth := screen.screenSize.Width/2 - 3
 
-	itemCount := make(map[string]int)
-	itemID := make(map[string]string)
-	for _, item := range screen.user.InventoryItems() {
-		_, ok := itemCount[item.Name]
-
-		if ok {
-			itemCount[item.Name] = itemCount[item.Name] + 1
-		} else {
-			itemCount[item.Name] = 1
-			itemID[item.Name] = item.ID
-		}
-	}
-
-	keyList := make([]string, len(itemCount))
-	index := 0
-	for k := range itemCount {
-		keyList[index] = k
-		index++
-	}
-	sort.Strings(keyList)
+	itemCount, itemID, keyList := groupInventory(screen.user.InventoryItems())
 
 	if screen.inventoryIndex >= len(keyList) {
 		screen.inventoryIndex = len(keyList) - 1
