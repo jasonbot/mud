@@ -71,6 +71,7 @@
                 "MP": 1,
                 "AP": 2,
                 "RP": 1,
+                "Trample": 2,
                 "Charge": 2
             },
             {
@@ -79,7 +80,7 @@
                 "MP": 9,
                 "AP": 5,
                 "RP": 3,
-                "Trample": 3,
+                "Trample": 4,
                 "Charge": 4,
                 "Effects": [
                     "poison"
@@ -109,7 +110,7 @@
                 "MP": 5,
                 "AP": 10,
                 "RP": 2,
-                "Trample": 1,
+                "Trample": 2,
                 "Charge": 10,
                 "Effects": [
                     "poison"
@@ -121,7 +122,11 @@
                 "MP": 3,
                 "AP": 1,
                 "RP": 3,
-                "Charge": 3
+                "Trample": 8,
+                "Charge": 3,
+                "Effects": [
+                    "thorn"
+                ]
             }
         ]
     },
