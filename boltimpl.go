@@ -435,13 +435,15 @@ func (w *dbWorld) Attack(source interface{}, target interface{}, attack *Attack)
 				message = fmt.Sprintf("%v is already dead, attack failed.", user.Username())
 			}
 
-			if counterAttack != nil {
+			if counterAttack == nil {
 				if user.HP() > damage {
 					user.SetHP(user.HP() - damage)
 				} else {
 					user.SetHP(0)
 					killed = true
 				}
+			} else {
+				log.Printf("Attack blocked via %v", counterAttack)
 			}
 
 			user.Save()
@@ -1891,6 +1893,34 @@ func (user *dbUser) Charge() (int64, int64) {
 	return charge, maxCharge
 }
 
+func (user *dbUser) canAffordAttack(attack *Attack) bool {
+	if attack == nil {
+		return false
+	}
+
+	if user.AP() >= attack.AP && user.RP() >= attack.RP && user.MP() >= attack.MP {
+		itemMap := make(map[string]int)
+		requireMap := make(map[string]int)
+		for _, item := range user.InventoryItems() {
+			itemMap[item.Name] = itemMap[item.Name] + 1
+		}
+
+		if attack.UsesItems != nil {
+			for _, item := range attack.UsesItems {
+				requireMap[item] = requireMap[item] + 1
+			}
+		}
+
+		for key, value := range requireMap {
+			if itemMap[key] < value {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
 func (user *dbUser) Attacks() []*AttackInfo {
 	attacks := make([]*AttackInfo, 0)
 
@@ -1898,7 +1928,7 @@ func (user *dbUser) Attacks() []*AttackInfo {
 
 	for _, item := range user.UserData.Attacks {
 		attack := *item
-		charged := charge >= attack.Charge && user.AP() >= attack.AP && user.RP() >= attack.RP && user.MP() >= attack.MP
+		charged := (charge >= attack.Charge) && user.canAffordAttack(&attack)
 
 		attacks = append(attacks, &AttackInfo{Attack: &attack, Charged: charged})
 	}
@@ -1907,8 +1937,10 @@ func (user *dbUser) Attacks() []*AttackInfo {
 		if inventoryItem.Type == ITEMTYPEWEAPON {
 			for _, attack := range inventoryItem.Attacks {
 				atk := attack
-				charged := charge >= attack.Charge && user.AP() >= attack.AP && user.RP() >= attack.RP && user.MP() >= attack.MP
-				attacks = append(attacks, &AttackInfo{Attack: &atk, Charged: charged})
+				charged := charge >= attack.Charge
+				if user.canAffordAttack(&attack) {
+					attacks = append(attacks, &AttackInfo{Attack: &atk, Charged: charged})
+				}
 			}
 		}
 	}

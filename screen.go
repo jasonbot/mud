@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"sort"
 	"strings"
 	"unicode/utf8"
 
@@ -23,6 +24,8 @@ type Screen interface {
 	GetChat() string
 	ToggleInventory()
 	InventoryActive() bool
+	PreviousInventoryItem()
+	NextInventoryItem()
 	Render()
 	Reset()
 }
@@ -40,6 +43,7 @@ type sshScreen struct {
 	inputText        string
 	commandMode      bool
 	inventoryActive  bool
+	inventoryIndex   int
 	selectedCreature string
 }
 
@@ -62,6 +66,16 @@ func truncateRight(message string, width int) string {
 func truncateLeft(message string, width int) string {
 	if utf8.RuneCountInString(message) < width {
 		fmtString := fmt.Sprintf("%%-%vs", width)
+
+		return fmt.Sprintf(fmtString, message)
+	}
+	strLen := utf8.RuneCountInString(message)
+	return ellipsis + string([]rune(message)[strLen-width:strLen-1])
+}
+
+func justifyRight(message string, width int) string {
+	if utf8.RuneCountInString(message) < width {
+		fmtString := fmt.Sprintf("%%%vs", width)
 
 		return fmt.Sprintf(fmtString, message)
 	}
@@ -455,23 +469,41 @@ func (screen *sshScreen) renderCharacterSheet() {
 		}
 	}
 
-	//hasItems := false
 	items := cell.InventoryItems()
 	if items != nil && len(items) > 0 {
-		//hasItems = true
 		extraLines := []string{centerText(" Items ", "─", width)}
-		screen.builder.World()
 
+		itemCount := make(map[string]int)
+		itemID := make(map[string]string)
 		for _, item := range items {
+			_, ok := itemCount[item.Name]
+
+			if ok {
+				itemCount[item.Name] = itemCount[item.Name] + 1
+			} else {
+				itemCount[item.Name] = 1
+				itemID[item.Name] = item.ID
+			}
+		}
+
+		keyList := make([]string, len(itemCount))
+		index := 0
+		for k := range itemCount {
+			keyList[index] = k
+			index++
+		}
+		sort.Strings(keyList)
+
+		for _, item := range keyList {
 			itemKey := "  "
-			itemID := item.ID
+			ID := itemID[item]
 
 			if key < 'Z' {
 				itemKey = fmt.Sprintf(" %v", string(key))
 				user := screen.user
 
 				screen.keyCodeMap[string(key)] = func() {
-					item := cell.PullInventoryItem(itemID)
+					item := cell.PullInventoryItem(ID)
 
 					if item != nil {
 						if item.Type == ITEMTYPEWEAPON {
@@ -498,7 +530,8 @@ func (screen *sshScreen) renderCharacterSheet() {
 				key++
 			}
 
-			itemString := CRnumberColor(itemKey) + fmtFunc(truncateRight(" "+item.Name, width-2))
+			countLine := fmt.Sprintf("x%v", itemCount[item])
+			itemString := CRnumberColor(itemKey) + fmtFunc(truncateRight(" "+item, width-(2+utf8.RuneCountInString(countLine)))+fmtFunc(countLine))
 			extraLines = append(extraLines, itemString)
 		}
 
@@ -519,7 +552,9 @@ func (screen *sshScreen) renderCharacterSheet() {
 }
 
 func (screen *sshScreen) renderInventory() {
-	fmtFunc := screen.colorFunc(fmt.Sprintf("white:%v", bgcolor))
+	fmtFunc := screen.colorFunc(fmt.Sprintf("255:%v", bgcolor))
+	selectColor := screen.colorFunc(fmt.Sprintf("%v+b:255", bgcolor))
+	keyFunc := screen.colorFunc(fmt.Sprintf("255+b:%v", bgcolor))
 
 	y := screen.screenSize.Height
 	if y < 20 {
@@ -530,34 +565,82 @@ func (screen *sshScreen) renderInventory() {
 
 	screenX := 2
 	screenWidth := screen.screenSize.Width/2 - 3
-	row := y + 3
 
-	itemInventory := make(map[string][]*InventoryItem)
+	itemCount := make(map[string]int)
+	itemID := make(map[string]string)
 	for _, item := range screen.user.InventoryItems() {
-		slice, ok := itemInventory[item.Name]
+		_, ok := itemCount[item.Name]
 
 		if ok {
-			itemInventory[item.Name] = append(slice, item)
+			itemCount[item.Name] = itemCount[item.Name] + 1
 		} else {
-			itemInventory[item.Name] = []*InventoryItem{item}
+			itemCount[item.Name] = 1
+			itemID[item.Name] = item.ID
 		}
 	}
 
-	for itemName, items := range itemInventory {
+	keyList := make([]string, len(itemCount))
+	index := 0
+	for k := range itemCount {
+		keyList[index] = k
+		index++
+	}
+	sort.Strings(keyList)
+
+	if screen.inventoryIndex >= len(keyList) {
+		screen.inventoryIndex = len(keyList) - 1
+	} else if screen.inventoryIndex < 0 {
+		screen.inventoryIndex = 0
+	}
+
+	row := y + 3
+	height := screen.screenSize.Height - 4 - row
+	offset := screen.inventoryIndex - height/2
+	if offset < 0 {
+		offset = 0
+	} else if offset >= len(keyList)-height {
+		offset = len(keyList) - height - 1
+	}
+ShowLines:
+	for index, itemName := range keyList[offset:len(keyList)] {
 		move := cursor.MoveTo(row, screenX)
 
-		lString := fmt.Sprintf("x%v", len(items))
-		fString := truncateLeft(itemName, screenWidth-1-(utf8.RuneCountInString(lString)))
+		lString := fmt.Sprintf("x%v", itemCount[itemName])
+		fString := truncateRight(itemName, screenWidth-1-(utf8.RuneCountInString(lString)))
+		var lineString string
 
-		io.WriteString(screen.session, move+fmtFunc(fString+lString))
+		if screen.inventoryIndex == index+offset {
+			lineString = selectColor(fString + lString)
+			user := screen.user
+			itemIDToGet := itemID[itemName]
+			screen.keyCodeMap["{"] = func() {
+				location := user.Location()
+				item := user.PullInventoryItem(itemIDToGet)
+				if item != nil {
+					if !screen.builder.World().Cell(location.X, location.Y).AddInventoryItem(item) {
+						user.AddInventoryItem(item)
+					}
+				}
+			}
+		} else {
+			lineString = fmtFunc(fString + lString)
+		}
+
+		io.WriteString(screen.session, move+fmtFunc(lineString))
 
 		row++
-		if row > screen.screenSize.Height-3 {
-			return
+		if row > screen.screenSize.Height-4 {
+			break ShowLines
 		}
 	}
 
-	screen.drawFill(screenX, row, screenWidth-1, screen.screenSize.Height-3-row)
+	screen.drawFill(screenX, row, screenWidth-1, screen.screenSize.Height-4-row)
+	io.WriteString(screen.session,
+		cursor.MoveTo(screen.screenSize.Height-3, screenX)+
+			keyFunc(
+				justifyRight(
+					"[: Prev ]: Next {: Drop",
+					screenWidth-1)))
 }
 
 func (screen *sshScreen) renderLog() {
@@ -667,6 +750,16 @@ func (screen *sshScreen) ToggleInventory() {
 
 func (screen *sshScreen) InventoryActive() bool {
 	return screen.inventoryActive
+}
+
+func (screen *sshScreen) PreviousInventoryItem() {
+	screen.inventoryIndex--
+	screen.Render()
+}
+
+func (screen *sshScreen) NextInventoryItem() {
+	screen.inventoryIndex++
+	screen.Render()
 }
 
 func (screen *sshScreen) Render() {

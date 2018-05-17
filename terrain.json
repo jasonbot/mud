@@ -38,7 +38,7 @@
             "clearing-grass:5",
             "clearing-deep-grass:2",
             "trail:12",
-            "change-biomes:1"
+            "change-biomes:10"
         ],
         "ItemDrops": [
             {
@@ -75,7 +75,8 @@
             "clearing-grass:6",
             "clearing-tree",
             "clearing-fairy-circle",
-            "clearing-large-fairy-circle"
+            "clearing-large-fairy-circle",
+            "change-biomes:1"
         ],
         "CreatureSpawns": [
             {

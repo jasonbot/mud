@@ -84,6 +84,18 @@ func handleConnection(builder WorldBuilder, session ssh.Session) {
 				screen.ToggleInventory()
 			case "ESCAPE":
 				screen.ToggleInput()
+			case "[":
+				if screen.InputActive() {
+					screen.HandleInputKey(inputString.inputString)
+				} else if screen.InventoryActive() {
+					screen.PreviousInventoryItem()
+				}
+			case "]":
+				if screen.InputActive() {
+					screen.HandleInputKey(inputString.inputString)
+				} else if screen.InventoryActive() {
+					screen.NextInventoryItem()
+				}
 			case "/":
 				screen.ToggleCommand()
 			case "BACKSPACE":
