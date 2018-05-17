@@ -9,6 +9,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/andlabs/ui"
+  packages = ["."]
+  revision = "6c3bda44d3039e3721c06516be3ab9ce9cbd48cc"
+
+[[projects]]
+  branch = "master"
   name = "github.com/anmitsu/go-shlex"
   packages = ["."]
   revision = "648efa622239a2f6ff949fed78ee37b48d499ba4"
@@ -70,6 +76,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b53f235cdffdb16bc63ac272ca99d18a96c10ccc78e613843c1f311d2648cc33"
+  inputs-digest = "5a5fb9c4bd1e76dc744baea6ae18183e2dba369c6e78d92ae136fe3af10b3f3b"
   solver-name = "gps-cdcl"
   solver-version = 1

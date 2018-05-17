@@ -11,16 +11,24 @@ do
 		echo app-$OS-$ARCH
 		OUTDIRNAME=mud-$OS-$ARCH
 		mkdir $OUTDIRNAME
-		for file in cmd/*.go
-		do
-			fn=${file##*/}
-			OUTITEM=$OUTDIRNAME/${fn%%.go}
-			if [ "z$OS" = "zwindows" ]
-			then
-				OUTITEM=$OUTITEM.exe
-			fi
-			GOOS=$OS GOARCH=$ARCH go build -o $OUTITEM $file
-		done
+		ENABLE_CGO=""
+
+		INFILE=cmd/mud.go
+		OUTITEM=$OUTDIRNAME/mud
+		if [ "z$OS" = "zlinux" ]
+		then
+			echo "Linux"
+		elif [ "z$OS" = "zwindows" ]
+		then
+			OUTITEM=$OUTITEM.exe
+		elif [ "z$OS" = "zdarwin" ]
+		then
+			INFILE=cmd/mud-ui.go
+		fi
+
+		# brew install mingw-w64
+		GOOS=$OS GOARCH=$ARCH go build -o $OUTITEM $INFILE
+
 		cp *.json *.txt $OUTDIRNAME
 		if [ "z$OS" = "zwindows" ]
 		then
