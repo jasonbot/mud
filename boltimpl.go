@@ -253,6 +253,20 @@ func (w *dbWorld) GetCellInfo(x, y uint32) *CellInfo {
 	return nil
 }
 
+func (w *dbWorld) reloadStoredCreatures(x, y uint32) {
+	pt := Point{X: x, Y: y}
+	record, ok := w.activeCellCache.Load(string(pt.Bytes()))
+
+	if ok {
+		ci, cast := record.(*recentCellInfo)
+
+		if cast {
+			cell := w.Cell(x, y)
+			ci.creatures = cell.GetCreatures()
+		}
+	}
+}
+
 func (w *dbWorld) getCreature(id string) *Creature {
 	var creature *Creature
 
@@ -286,20 +300,6 @@ func (w *dbWorld) getCreature(id string) *Creature {
 	creature.Charge = 0
 
 	return creature
-}
-
-func (w *dbWorld) reloadStoredCreatures(x, y uint32) {
-	pt := Point{X: x, Y: y}
-	record, ok := w.activeCellCache.Load(string(pt.Bytes()))
-
-	if ok {
-		ci, cast := record.(*recentCellInfo)
-
-		if cast {
-			cell := w.Cell(x, y)
-			ci.creatures = cell.GetCreatures()
-		}
-	}
 }
 
 func (w *dbWorld) KillCreature(id string) {
@@ -933,6 +933,56 @@ func (c *dbCell) creatureList() []string {
 	return cl.CreatureIDs
 }
 
+func (c *dbCell) getCreature(id string) *Creature {
+	pt := Point{X: c.x, Y: c.y}
+	record, ok := c.w.activeCellCache.Load(string(pt.Bytes()))
+
+	if ok {
+		ci, cast := record.(*recentCellInfo)
+
+		if cast && ci.creatures != nil {
+			for _, c := range ci.creatures {
+				if c.ID == id {
+					return c
+				}
+			}
+		}
+	}
+
+	var creature *Creature
+
+	c.w.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("creatures"))
+
+		id, err := uuid.Parse(id)
+
+		if err != nil {
+			return err
+		}
+
+		byteID, err := id.MarshalBinary()
+
+		if err != nil {
+			return err
+		}
+
+		recordBytes := bucket.Get(byteID)
+
+		if recordBytes != nil {
+			creature = &Creature{}
+			json.Unmarshal(recordBytes, creature)
+		}
+
+		return err
+	})
+
+	creature.CreatureTypeStruct = CreatureTypes[creature.CreatureType]
+	creature.maxCharge = int64(creature.CreatureTypeStruct.MaxAP+creature.CreatureTypeStruct.MaxMP+creature.CreatureTypeStruct.MaxRP) / 3
+	creature.Charge = 0
+
+	return creature
+}
+
 func (c *dbCell) getCreatures() []*Creature {
 	cl := c.creatureList()
 	creatures := make([]*Creature, 0)
@@ -941,7 +991,7 @@ func (c *dbCell) getCreatures() []*Creature {
 
 	if cl != nil && len(cl) > 0 {
 		for _, id := range cl {
-			cr := c.w.getCreature(id)
+			cr := c.getCreature(id)
 			if cr != nil {
 				_, gotName := nameFixers[cr.CreatureTypeStruct.Name]
 				if gotName {
@@ -966,6 +1016,17 @@ func (c *dbCell) getCreatures() []*Creature {
 }
 
 func (c *dbCell) GetCreatures() []*Creature {
+	pt := Point{X: c.x, Y: c.y}
+	record, ok := c.w.activeCellCache.Load(string(pt.Bytes()))
+
+	if ok {
+		ci, cast := record.(*recentCellInfo)
+
+		if cast && ci.creatures != nil {
+			return ci.creatures
+		}
+	}
+
 	cl := c.creatureList()
 	creatures := make([]*Creature, 0)
 
@@ -973,7 +1034,7 @@ func (c *dbCell) GetCreatures() []*Creature {
 
 	if cl != nil && len(cl) > 0 {
 		for _, id := range cl {
-			c := c.w.getCreature(id)
+			c := c.getCreature(id)
 			if c != nil {
 				_, gotName := nameFixers[c.CreatureTypeStruct.Name]
 				if gotName {
@@ -1020,7 +1081,7 @@ func (c *dbCell) HasCreatures() bool {
 	}
 
 	for _, id := range cl {
-		c := c.w.getCreature(id)
+		c := c.getCreature(id)
 		if c != nil {
 			return true
 		}
