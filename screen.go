@@ -91,6 +91,10 @@ func centerText(message, pad string, width int) string {
 	left := leftover / 2
 	right := leftover - left
 
+	if pad == "" {
+		pad = " "
+	}
+
 	leftString := ""
 	for utf8.RuneCountInString(leftString) <= left && utf8.RuneCountInString(leftString) <= right {
 		leftString += pad
@@ -356,7 +360,8 @@ func (screen *sshScreen) renderCharacterSheet() {
 
 	x := screen.screenSize.Width/2 - 1
 	width := (screen.screenSize.Width - x)
-	fmtFunc := screen.colorFunc(fmt.Sprintf("white:%v", bgcolor))
+	fmtFunc := screen.colorFunc(fmt.Sprintf("255:%v", bgcolor))
+	boldFunc := screen.colorFunc(fmt.Sprintf("255+bu:%v", bgcolor))
 	pos := screen.user.Location()
 
 	CRnumberColor := screen.colorFunc(fmt.Sprintf("%v:255", bgcolor))
@@ -382,9 +387,16 @@ func (screen *sshScreen) renderCharacterSheet() {
 		extraLines := []string{centerText(" Equipment ", "─", width)}
 
 		for _, item := range equipment {
-			itemCaption := fmt.Sprintf("%v (%v)", item.Name, item.Type)
-			itemString := fmtFunc(truncateRight(itemCaption, width))
-			extraLines = append(extraLines, itemString)
+			slotCaption := item.Name
+			slotString := boldFunc(truncateRight(slotCaption, width))
+			itemString := ""
+			if item.Item != nil {
+				itemCaption := fmt.Sprintf("%v (%v)", item.Item.Name, item.Item.Type)
+				itemString = fmtFunc(truncateRight(itemCaption, width))
+			} else {
+				itemString = fmtFunc(centerText("-none-", " ", width))
+			}
+			extraLines = append(extraLines, slotString, itemString)
 		}
 
 		infoLines = append(infoLines, extraLines...)
@@ -510,25 +522,11 @@ func (screen *sshScreen) renderCharacterSheet() {
 
 				screen.keyCodeMap[string(key)] = func() {
 					item := cell.PullInventoryItem(ID)
-
 					if item != nil {
-						if item.Type == ITEMTYPEWEAPON {
-							user.Reload()
-							toss, err := user.Equip(item)
-							user.Save()
-
-							if err != nil {
-								user.Log(LogItem{
-									MessageType: MESSAGEACTIVITY,
-									Message:     err.Error()})
-							}
-							cell.AddInventoryItem(toss)
+						if user.AddInventoryItem(item) == false {
+							cell.AddInventoryItem(item)
 						} else {
-							if user.AddInventoryItem(item) == false {
-								cell.AddInventoryItem(item)
-							} else {
-								user.AddInventoryItem(item)
-							}
+							user.AddInventoryItem(item)
 						}
 					}
 				}

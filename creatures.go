@@ -53,6 +53,14 @@ func (creature *Creature) StatPoints() StatPoints {
 		MP: creature.CreatureTypeStruct.MaxMP}
 }
 
+// FullStatPoints gets a fullstatinfo object for battle calculation arithmetic
+func (creature *Creature) FullStatPoints() FullStatPoints {
+	return FullStatPoints{
+		StatPoints: creature.StatPoints(),
+		HP:         creature.HP,
+		Trample:    0}
+}
+
 // CreatureList represents the creatures in a DB
 type CreatureList struct {
 	CreatureIDs []string `json:""`
