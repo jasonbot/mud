@@ -347,9 +347,10 @@ func (screen *sshScreen) redrawBorders() {
 	screen.drawHorizontalLine(1, screen.screenSize.Height-2, screen.screenSize.Width/2-3)
 }
 
-func (screen *sshScreen) renderCharacterSheet() {
+func (screen *sshScreen) renderCharacterSheet(slotKeys map[string]func()) {
 	bgcolor := uint64(bgcolor)
 	warning := ""
+	key := 'A'
 	if float32(screen.user.HP()) < float32(screen.user.MaxHP())*.25 {
 		bgcolor = 124
 		warning = " (Health low) "
@@ -388,13 +389,34 @@ func (screen *sshScreen) renderCharacterSheet() {
 
 		for _, item := range equipment {
 			slotCaption := item.Name
+
+			keyItem := rune(0)
+			if slotKeys != nil {
+				slotKey, ok := slotKeys[item.Name]
+				if ok && slotKey != nil {
+					if key <= 'Z' {
+						keyItem = key
+						screen.keyCodeMap[string(keyItem)] = slotKey
+						key++
+					}
+				}
+			}
+
 			slotString := boldFunc(truncateRight(slotCaption, width))
-			itemString := ""
+			itemString := fmtFunc("  ")
+			if keyItem > 0 {
+				itemString = CRhiliteColor(fmt.Sprintf("%v ", string(keyItem)))
+			}
+
 			if item.Item != nil {
-				itemCaption := fmt.Sprintf("%v (%v)", item.Item.Name, item.Item.Type)
-				itemString = fmtFunc(truncateRight(itemCaption, width))
+				itemString += fmtFunc(
+					truncateRight(
+						fmt.Sprintf("%v (%v)",
+							item.Item.Name,
+							item.Item.Type),
+						width-2))
 			} else {
-				itemString = fmtFunc(centerText("-none-", " ", width))
+				itemString += fmtFunc(centerText("-none-", " ", width-2))
 			}
 			extraLines = append(extraLines, slotString, itemString)
 		}
@@ -463,7 +485,6 @@ func (screen *sshScreen) renderCharacterSheet() {
 		}
 	}
 
-	key := 'A'
 	if hasCreatures {
 		attacks := screen.user.Attacks()
 		if attacks != nil && len(attacks) > 0 {
@@ -555,7 +576,8 @@ func (screen *sshScreen) renderCharacterSheet() {
 	screen.drawFill(x, lastLine+1, width, screen.screenSize.Height-(lastLine+2))
 }
 
-func (screen *sshScreen) renderInventory() {
+func (screen *sshScreen) renderInventory() map[string]func() {
+	slotCodeMap := make(map[string]func())
 	fmtFunc := screen.colorFunc(fmt.Sprintf("255:%v", bgcolor))
 	selectColor := screen.colorFunc(fmt.Sprintf("%v+b:255", bgcolor))
 	keyFunc := screen.colorFunc(fmt.Sprintf("255+b:%v", bgcolor))
@@ -573,9 +595,9 @@ func (screen *sshScreen) renderInventory() {
 	itemCount, itemID, keyList := groupInventory(screen.user.InventoryItems())
 
 	if screen.inventoryIndex >= len(keyList) {
-		screen.inventoryIndex = len(keyList) - 1
-	} else if screen.inventoryIndex < 0 {
 		screen.inventoryIndex = 0
+	} else if screen.inventoryIndex < 0 {
+		screen.inventoryIndex = len(keyList) - 1
 	}
 
 	row := y + 3
@@ -598,6 +620,34 @@ ShowLines:
 			lineString = selectColor(fString + lString)
 			user := screen.user
 			itemIDToGet := itemID[itemName]
+
+			item := user.InventoryItem(itemIDToGet)
+			if item != nil {
+				newItem := item
+
+				for _, slot := range user.EquippableSlots(item) {
+					currentUser := user
+					slotName := slot
+					slotCodeMap[slotName] = func() {
+						pulledItem := currentUser.PullInventoryItem(newItem.ID)
+						if pulledItem != nil {
+							unequppedItem, err := currentUser.Equip(slotName, pulledItem)
+							if unequppedItem != nil {
+								if !currentUser.AddInventoryItem(unequppedItem) {
+									currentUser.Cell().AddInventoryItem(unequppedItem)
+								}
+							}
+
+							if err != nil {
+								user.Log(LogItem{MessageType: MESSAGEACTIVITY, Message: err.Error()})
+							}
+						}
+
+						screen.Render()
+					}
+				}
+			}
+
 			screen.keyCodeMap["{"] = func() {
 				location := user.Location()
 				item := user.PullInventoryItem(itemIDToGet)
@@ -626,6 +676,8 @@ ShowLines:
 				justifyRight(
 					"[: Prev ]: Next {: Drop",
 					screenWidth-1)))
+
+	return slotCodeMap
 }
 
 func (screen *sshScreen) renderLog() {
@@ -774,15 +826,17 @@ func (screen *sshScreen) Render() {
 		screen.refreshed = true
 	}
 
-	screen.renderMap()
-	screen.renderChatInput()
-	screen.renderCharacterSheet()
+	var slotKeys map[string]func()
 
 	if screen.inventoryActive {
-		screen.renderInventory()
+		slotKeys = screen.renderInventory()
 	} else {
 		screen.renderLog()
 	}
+
+	screen.renderMap()
+	screen.renderChatInput()
+	screen.renderCharacterSheet(slotKeys)
 }
 
 func (screen *sshScreen) Reset() {

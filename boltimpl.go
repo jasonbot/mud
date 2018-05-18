@@ -468,7 +468,7 @@ func (w *dbWorld) Attack(source interface{}, target interface{}, attack *Attack)
 		}
 
 		if killed {
-			message = fmt.Sprintf("%v took fatal damage from %v!", hitTarget, attack.Name)
+			message = fmt.Sprintf("%v took fatal damage from %v! (%v)", hitTarget, attack.Name, damage)
 		} else if len(message) == 0 {
 			if counterAttack == nil {
 				message = fmt.Sprintf("%v hit %v for %v damage!", attack.Name, hitTarget, damage)
@@ -1694,6 +1694,10 @@ func (user *dbUser) SetSkills(primary, secondary byte) {
 	user.Save()
 }
 
+func (user *dbUser) Cell() Cell {
+	return user.world.Cell(user.X, user.Y)
+}
+
 // Location returns the name of the current cell
 func (user *dbUser) LocationName() string {
 	ci := user.world.GetCellInfo(user.UserData.X, user.UserData.Y)
@@ -2270,7 +2274,7 @@ func (user *dbUser) pullInventoryItemByName(name string) *InventoryItem {
 
 func (user *dbUser) Equip(slot string, item *InventoryItem) (*InventoryItem, error) {
 	if !user.CanEquip(slot, item) {
-		return nil, fmt.Errorf("Can't equip item in slot %v", slot)
+		return item, fmt.Errorf("Can't equip item in slot %v", slot)
 	}
 
 	oldItem := user.EquipmentSlotItem(slot)
@@ -2322,8 +2326,10 @@ func (user *dbUser) EquippableSlots(item *InventoryItem) []string {
 
 func (user *dbUser) CanEquip(slot string, item *InventoryItem) bool {
 	for _, slot := range user.Slots {
-		if item == nil || slot.Name == item.SlotName() {
-			return true
+		for _, name := range slot.SlotTypes {
+			if item == nil || name == item.SlotName() {
+				return true
+			}
 		}
 	}
 

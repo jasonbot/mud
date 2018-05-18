@@ -48,6 +48,7 @@ type User interface {
 	GetLog() []LogItem
 
 	MarkActive()
+	Cell() Cell
 	LocationName() string
 
 	Respawn()

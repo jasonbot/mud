@@ -155,7 +155,7 @@ func (atk *Attack) ApplyBonuses(sp FullStatPointable) Attack {
 	statSP := sp.FullStatPoints()
 	atkSP := atk.FullStatPoints()
 
-	newStats := ApplyBonuses(&statSP, &atkSP, atk.Bonuses)
+	newStats := ApplyBonuses(&atkSP, &statSP, atk.Bonuses)
 
 	atkCopy := *atk
 	return atkCopy.applyStatPoints(newStats)
