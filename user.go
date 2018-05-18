@@ -34,6 +34,7 @@ type User interface {
 	EquipUserInfo
 
 	Username() string
+	Title() string
 	IsInitialized() bool
 	Initialize(bool)
 	Location() *Point

@@ -36,15 +36,15 @@ var secondaryStrengthArray = []setMapThing{
 }
 
 var primarySkillArray = []setMapThing{
-	{value: PEOPLEPRIMARY, name: "A: People"},
-	{value: PLACESPRIMARY, name: "S: Places"},
-	{value: THINGSPRIMARY, name: "D: Things"},
+	{value: CUNNINGPRIMARY, name: "A: Cunning"},
+	{value: ORDERLYPRIMARY, name: "S: Orderly"},
+	{value: CREATIVEPRIMARY, name: "D: Creative"},
 }
 
 var secondarySkillArray = []setMapThing{
-	{value: PEOPLESECONDARY, name: "Z: People"},
-	{value: PLACESSECONDARY, name: "X: Places"},
-	{value: THINGSSECONDARY, name: "C: Things"},
+	{value: CUNNINGSECONDARY, name: "Z: Cunning"},
+	{value: ORDERLYSECONDARY, name: "X: Orderly"},
+	{value: CREATIVESECONDARY, name: "C: Creative"},
 }
 
 func greet(user User) {
@@ -122,8 +122,8 @@ func setupSSHUser(ctx context.Context, cancel context.CancelFunc, done <-chan st
 
 	strengthPrimary := []byte{MELEEPRIMARY, RANGEPRIMARY, MAGICPRIMARY}
 	strengthSecondary := []byte{MELEESECONDARY, RANGESECONDARY, MAGICSECONDARY}
-	skillPrimary := []byte{PEOPLEPRIMARY, PLACESPRIMARY, THINGSPRIMARY}
-	skillSecondary := []byte{PEOPLESECONDARY, PLACESSECONDARY, THINGSSECONDARY}
+	skillPrimary := []byte{CUNNINGPRIMARY, ORDERLYPRIMARY, CREATIVEPRIMARY}
+	skillSecondary := []byte{CUNNINGSECONDARY, ORDERLYSECONDARY, CREATIVESECONDARY}
 
 	user.SetClassInfo(
 		strengthPrimary[rand.Int()%len(strengthPrimary)] |
@@ -167,28 +167,28 @@ func setupSSHUser(ctx context.Context, cancel context.CancelFunc, done <-chan st
 			case "a":
 				fallthrough
 			case "A":
-				primaryskill = PEOPLEPRIMARY
+				primaryskill = CUNNINGPRIMARY
 			case "s":
 				fallthrough
 			case "S":
-				primaryskill = PLACESPRIMARY
+				primaryskill = ORDERLYPRIMARY
 			case "d":
 				fallthrough
 			case "D":
-				primaryskill = THINGSPRIMARY
+				primaryskill = CREATIVEPRIMARY
 
 			case "z":
 				fallthrough
 			case "Z":
-				secondaryskill = PEOPLESECONDARY
+				secondaryskill = CUNNINGSECONDARY
 			case "x":
 				fallthrough
 			case "X":
-				secondaryskill = PLACESSECONDARY
+				secondaryskill = ORDERLYSECONDARY
 			case "c":
 				fallthrough
 			case "C":
-				secondaryskill = THINGSSECONDARY
+				secondaryskill = CREATIVESECONDARY
 
 			case "ESCAPE":
 				session.Close()

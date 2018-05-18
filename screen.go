@@ -372,7 +372,7 @@ func (screen *sshScreen) renderCharacterSheet(slotKeys map[string]func()) {
 	charge, maxcharge := screen.user.Charge()
 
 	infoLines := []string{
-		centerText(screen.user.Username(), " ", width),
+		centerText(fmt.Sprintf("%v the %v", screen.user.Username(), screen.user.Title()), " ", width),
 		centerText(warning, "─", width),
 		truncateRight(fmt.Sprintf("%s (%v, %v)", screen.user.LocationName(), pos.X, pos.Y), width),
 		truncateRight(fmt.Sprintf("Charge: %v/%v", charge, maxcharge), width),

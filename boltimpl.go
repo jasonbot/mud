@@ -1355,6 +1355,13 @@ func (user *dbUser) Username() string {
 	return user.UserData.Username
 }
 
+func (user *dbUser) Title() string {
+	st1, st2 := user.Strengths()
+	sk1, sk2 := user.Skills()
+
+	return GetTitle(st1, st2, sk1, sk2)
+}
+
 func (user *dbUser) getDefaultAttacks() []*Attack {
 	primary, secondary := user.Strengths()
 
