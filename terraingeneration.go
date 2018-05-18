@@ -497,7 +497,7 @@ UniqueSeedFinder:
 		}
 	}
 
-	width, height := thickness, 100
+	width, height := thickness, length
 	if y1 == y2 {
 		width, height = height, width
 	}
@@ -538,13 +538,7 @@ UniqueSeedFinder:
 			for thick := 0; thick < localthickness; thick++ {
 				localthick := thick - jitter
 
-				if l == length/2 {
-					if thick < dividerThickness {
-						dividerCenterCell.TerrainID = leftInfo
-					} else {
-						dividerCenterCell.TerrainID = rightInfo
-					}
-				} else if localthick < 1 {
+				if localthick < 1 {
 					dividerCenterCell.TerrainID = rightInfo
 				} else if localthick == 1 || localthick == dividerThickness {
 					dividerCenterCell.TerrainID = dividerEdge
