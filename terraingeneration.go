@@ -540,9 +540,9 @@ UniqueSeedFinder:
 
 				if l == length/2 || l == length/4 || l == length/4*3 {
 					if thick < dividerThickness {
-						dividerCenterCell.TerrainID = leftInfo
-					} else {
 						dividerCenterCell.TerrainID = rightInfo
+					} else {
+						dividerCenterCell.TerrainID = leftInfo
 					}
 				} else if localthick < 1 {
 					dividerCenterCell.TerrainID = rightInfo

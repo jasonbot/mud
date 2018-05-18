@@ -98,6 +98,8 @@ func renderSetup(session ssh.Session, user User) {
 	primaryskill, secondaryskill := user.Skills()
 
 	header := ansi.ColorFunc("white+b:black")
+	title := ansi.ColorFunc("250+b:black")
+
 	io.WriteString(session, cursor.ClearEntireScreen()+cursor.MoveUpperLeft(1))
 	io.WriteString(session, fmt.Sprintf("Please set up your character, %v.\n\n", user.Username()))
 
@@ -113,6 +115,11 @@ func renderSetup(session ssh.Session, user User) {
 	io.WriteString(session, "      Primary: "+renderChoices(primaryskill, primarySkillArray))
 	io.WriteString(session, "\n")
 	io.WriteString(session, "    Secondary: "+renderChoices(secondaryskill, secondarySkillArray))
+
+	io.WriteString(session, "\n\n")
+	io.WriteString(session, "You're a: "+title(" "+centerText(GetTitle(primarystrength, secondarystrength, primaryskill, secondaryskill), " ", 47)))
+	io.WriteString(session, "\n")
+
 	io.WriteString(session, "\n\n")
 	io.WriteString(session, "Press enter when you are finished.")
 }
