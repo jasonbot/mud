@@ -21,13 +21,14 @@ const (
 	ITEMTYPEWEAPON   = "Weapon"
 	ITEMTYPEPOTION   = "Potion"
 	ITEMTYPESCROLL   = "Scroll"
+	ITEMTYPEARMOR    = "Armor"
 	ITEMTYPEARTIFACT = "Artifact"
 )
 
-// Weapon types for the WeaponInventoryItem
+// Weapon types
 const (
 	WEAPONSUBTYPESWORD   = "Sword"   // Melee
-	WEAPONTYPESPEAR      = "Spear"   // Melee/Range
+	WEAPONSUBTYPESPEAR   = "Spear"   // Melee/Range
 	WEAPONSUBTYPEDAGGER  = "Dagger"  // Melee/Magic
 	WEAPONSUBTYPEBOW     = "Bow"     // Range
 	WEAPONSUBTYPEDART    = "Dart"    // Range/Magic
@@ -37,7 +38,21 @@ const (
 	WEAPONSUBTYPEORB     = "Orb"     // Magic/Range
 )
 
-// Artifact types for the ArtifactInventoryItem
+// Armor Types
+const (
+	ARMORSUBTYPEHELM       = "Helmet"
+	ARMORSUBTYPEHAT        = "Hat"
+	ARMORSUBTYPECOWL       = "Cowl"
+	ARMORSUBTYPECHESTPLATE = "Chestplate"
+	ARMORSUBTYPELIGHTARMOR = "Light Armor"
+	ARMORSUBTYPECLOAK      = "Cloak"
+	ARMORSUBTYPEGAUNTLET   = "Gauntlet"
+	ARMORSUBTYPEBRACERS    = "Bracers"
+	ARMORSUBTYPEGLOVES     = "Gloves"
+	ARMORSUBTYPESHIELD     = "Shield"
+)
+
+// Artifact types
 const (
 	ARTIFACTTYPEAMULET     = "Amulet"
 	ARTIFACTTYPERELIC      = "Relic"
@@ -54,6 +69,15 @@ type InventoryItem struct {
 	Subtype        string   `json:",omitempty"` // For weapons and artifacts
 	Attacks        []Attack `json:",omitempty"` // For weapons and spells
 	CounterAttacks []Attack `json:",omitempty"` // For scrolls and spells with counterattack effects
+}
+
+// SlotName is the places a potential item can be equipped
+func (item *InventoryItem) SlotName() string {
+	if len(item.Subtype) > 0 {
+		return item.Subtype
+	}
+
+	return item.Type
 }
 
 // InventoryInfo handles a thing with inventory

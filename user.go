@@ -1,14 +1,32 @@
 package mud
 
+// SlottedInventoryItem describe the slots and items in the slots
+type SlottedInventoryItem struct {
+	Name string
+	Item *InventoryItem
+}
+
 // EquipUserInfo is for putting outfits on a user
 type EquipUserInfo interface {
-	Equip(*InventoryItem) (*InventoryItem, error)
-	Equipped() []*InventoryItem
+	Equip(string, *InventoryItem) (*InventoryItem, error)
+	EquippableSlots(*InventoryItem) []string
+	CanEquip(string, *InventoryItem) bool
+	Equipped() []SlottedInventoryItem
+	EquipmentSlotItem(string) *InventoryItem
+	EquipSlots() []string
+}
+
+// EquipmentSlotInfo Decribes a user's open equipment slots
+type EquipmentSlotInfo struct {
+	Name      string   `json:""`
+	SlotTypes []string `json:""`
 }
 
 // User represents an active user in the system.
 type User interface {
 	StatInfo
+	StatPointable
+	FullStatPointable
 	ClassInfo
 	LastAction
 	ChargeInfo

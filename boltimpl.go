@@ -103,8 +103,7 @@ func (w *dbWorld) updateActivatedCells() {
 					location := Point{X: creature.X, Y: creature.Y}
 					resetLevel = true
 					attack := creature.CreatureTypeStruct.Attacks[rand.Int()%len(creature.CreatureTypeStruct.Attacks)]
-					csp := creature.StatPoints()
-					attack = attack.ApplyBonuses(&csp)
+					attack = attack.ApplyBonuses(creature)
 					if attack.Charge <= creature.Charge {
 						usersInCell := w.usersInCell(location)
 
@@ -504,7 +503,8 @@ func (w *dbWorld) creatureDrop(creature *Creature) {
 				prob := rand.Float32()
 				if drop.Probability >= prob {
 					dropItem := ItemTypes[drop.Name]
-					w.AddInventoryItem(creature.X, creature.Y, &dropItem)
+					c := w.Cell(creature.X, creature.Y)
+					c.AddInventoryItem(&dropItem)
 				}
 			}
 		}
@@ -546,46 +546,6 @@ func (w *dbWorld) InventoryItems(x, y uint32) []*InventoryItem {
 	})
 
 	return items
-}
-
-func (w *dbWorld) AddInventoryItem(x, y uint32, item *InventoryItem) bool {
-	if item == nil {
-		return false
-	}
-	inventoryItem := *item
-
-	if inventoryItem.ID == "" {
-		inventoryItem.ID = uuid.New().String()
-	}
-
-	itemID, err := uuid.Parse(inventoryItem.ID)
-	if err != nil {
-		return false
-	}
-
-	idBytes, err := itemID.MarshalBinary()
-	if err != nil {
-		return false
-	}
-
-	pt := Point{X: x, Y: y}
-	keyBuf := new(bytes.Buffer)
-	binary.Write(keyBuf, binary.BigEndian, pt.Bytes())
-	binary.Write(keyBuf, binary.BigEndian, byte(0))
-	binary.Write(keyBuf, binary.BigEndian, idBytes)
-	dataBytes, err := json.Marshal(inventoryItem)
-
-	if err != nil {
-		return false
-	}
-
-	w.database.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte("placeitems"))
-
-		return bucket.Put(keyBuf.Bytes(), dataBytes)
-	})
-
-	return true
 }
 
 func (w *dbWorld) inventoryItem(x, y uint32, id string, pull bool) *InventoryItem {
@@ -769,7 +729,7 @@ func (w *dbWorld) load() {
 
 	// Make default tables
 	db.Update(func(tx *bolt.Tx) error {
-		buckets := []string{"users", "userinventory", "userlog", "onlineusers", "lastuseraction", "terrain", "placenames", "placeitems", "creaturelist", "creatures"}
+		buckets := []string{"users", "userinventory", "userequipment", "userlog", "onlineusers", "lastuseraction", "terrain", "placenames", "placeitems", "creaturelist", "creatures"}
 
 		for _, bucket := range buckets {
 			_, err := tx.CreateBucketIfNotExists([]byte(bucket))
@@ -1359,25 +1319,25 @@ func LoadWorldFromDB(filename string) World {
 
 // UserData is a JSON-serializable set of information about a User.
 type UserData struct {
-	Username    string           `json:""`
-	X           uint32           `json:""`
-	Y           uint32           `json:""`
-	SpawnX      uint32           `json:""`
-	SpawnY      uint32           `json:""`
-	HP          uint64           `json:""`
-	MaxHP       uint64           `json:""`
-	AP          uint64           `json:""`
-	MaxAP       uint64           `json:""`
-	MP          uint64           `json:""`
-	MaxMP       uint64           `json:""`
-	RP          uint64           `json:""`
-	MaxRP       uint64           `json:""`
-	XP          uint64           `json:""`
-	ClassInfo   byte             `json:""`
-	Initialized bool             `json:""`
-	PublicKeys  map[string]bool  `json:""`
-	Equipped    []*InventoryItem `json:""`
-	Attacks     []*Attack        `json:""`
+	Username    string               `json:""`
+	X           uint32               `json:""`
+	Y           uint32               `json:""`
+	SpawnX      uint32               `json:""`
+	SpawnY      uint32               `json:""`
+	HP          uint64               `json:""`
+	MaxHP       uint64               `json:""`
+	AP          uint64               `json:""`
+	MaxAP       uint64               `json:""`
+	MP          uint64               `json:""`
+	MaxMP       uint64               `json:""`
+	RP          uint64               `json:""`
+	MaxRP       uint64               `json:""`
+	XP          uint64               `json:""`
+	ClassInfo   byte                 `json:""`
+	Initialized bool                 `json:""`
+	PublicKeys  map[string]bool      `json:""`
+	Slots       []*EquipmentSlotInfo `json:""`
+	Attacks     []*Attack            `json:""`
 }
 
 type dbUser struct {
@@ -1520,11 +1480,79 @@ func (user *dbUser) setupStatBonuses() {
 	}
 }
 
+func (user *dbUser) getDefaultSlots() []*EquipmentSlotInfo {
+	weapon := EquipmentSlotInfo{
+		Name:      "Weapon",
+		SlotTypes: []string{}}
+	headwear := EquipmentSlotInfo{
+		Name:      "Headwear",
+		SlotTypes: []string{}}
+	armor := EquipmentSlotInfo{
+		Name:      "Armor",
+		SlotTypes: []string{}}
+
+	primary, secondary := user.Strengths()
+
+	switch primary {
+	case MELEEPRIMARY:
+		headwear.SlotTypes = append(headwear.SlotTypes, ARMORSUBTYPEHELM)
+		armor.SlotTypes = append(armor.SlotTypes, ARMORSUBTYPECHESTPLATE)
+
+		switch secondary {
+		case MELEESECONDARY:
+			weapon.SlotTypes = append(weapon.SlotTypes, WEAPONSUBTYPESWORD, WEAPONSUBTYPESPEAR, WEAPONSUBTYPEDAGGER)
+		case RANGESECONDARY:
+			headwear.SlotTypes = append(headwear.SlotTypes, ARMORSUBTYPECOWL)
+			armor.SlotTypes = append(armor.SlotTypes, ARMORSUBTYPELIGHTARMOR)
+			weapon.SlotTypes = append(weapon.SlotTypes, WEAPONSUBTYPESWORD, WEAPONSUBTYPESPEAR, WEAPONSUBTYPEJAVELIN)
+		case MAGICSECONDARY:
+			headwear.SlotTypes = append(headwear.SlotTypes, ARMORSUBTYPEHAT)
+			armor.SlotTypes = append(armor.SlotTypes, ARMORSUBTYPECLOAK)
+			weapon.SlotTypes = append(weapon.SlotTypes, WEAPONSUBTYPESWORD, WEAPONSUBTYPESPEAR, WEAPONSUBTYPESPEAR)
+		}
+	case RANGEPRIMARY:
+		headwear.SlotTypes = append(headwear.SlotTypes, ARMORSUBTYPECOWL)
+
+		switch secondary {
+		case MELEESECONDARY:
+			headwear.SlotTypes = append(headwear.SlotTypes, ARMORSUBTYPEHELM)
+			armor.SlotTypes = append(armor.SlotTypes, ARMORSUBTYPECHESTPLATE)
+			weapon.SlotTypes = append(weapon.SlotTypes, WEAPONSUBTYPEBOW, WEAPONSUBTYPEDART, WEAPONSUBTYPEJAVELIN)
+		case RANGESECONDARY:
+			weapon.SlotTypes = append(weapon.SlotTypes, WEAPONSUBTYPEBOW, WEAPONSUBTYPEJAVELIN, WEAPONSUBTYPESPEAR)
+		case MAGICSECONDARY:
+			headwear.SlotTypes = append(headwear.SlotTypes, ARMORSUBTYPEHAT)
+			armor.SlotTypes = append(armor.SlotTypes, ARMORSUBTYPECLOAK)
+			weapon.SlotTypes = append(weapon.SlotTypes, WEAPONSUBTYPEBOW, WEAPONSUBTYPEDART, WEAPONSUBTYPEORB)
+		}
+	case MAGICPRIMARY:
+		headwear.SlotTypes = append(headwear.SlotTypes, ARMORSUBTYPEHAT)
+		armor.SlotTypes = append(armor.SlotTypes, ARMORSUBTYPECLOAK)
+
+		switch secondary {
+		case MELEESECONDARY:
+			headwear.SlotTypes = append(headwear.SlotTypes, ARMORSUBTYPEHELM)
+			armor.SlotTypes = append(armor.SlotTypes, ARMORSUBTYPECHESTPLATE)
+			weapon.SlotTypes = append(weapon.SlotTypes, WEAPONSUBTYPEWAND, WEAPONSUBTYPESPEAR, WEAPONSUBTYPEDAGGER)
+		case RANGESECONDARY:
+			headwear.SlotTypes = append(headwear.SlotTypes, ARMORSUBTYPECOWL)
+			armor.SlotTypes = append(armor.SlotTypes, ARMORSUBTYPELIGHTARMOR)
+			weapon.SlotTypes = append(weapon.SlotTypes, WEAPONSUBTYPEWAND, WEAPONSUBTYPESPEAR, WEAPONSUBTYPEORB)
+		case MAGICSECONDARY:
+			weapon.SlotTypes = append(weapon.SlotTypes, WEAPONSUBTYPEWAND, WEAPONSUBTYPEORB, WEAPONSUBTYPEDART)
+		}
+	}
+
+	slots := []*EquipmentSlotInfo{&weapon, &headwear, &armor}
+
+	return slots
+}
+
 func (user *dbUser) Initialize(initialize bool) {
 	user.Reload()
 
 	user.UserData.Attacks = user.getDefaultAttacks()
-	user.UserData.Equipped = make([]*InventoryItem, 0)
+	user.UserData.Slots = user.getDefaultSlots()
 	user.setupStatBonuses()
 	user.Initialized = initialize
 	user.Save()
@@ -1614,6 +1642,20 @@ func (user *dbUser) AddXP(xp uint64) {
 
 func (user *dbUser) XPToNextLevel() uint64 {
 	return user.MaxAP() + user.MaxRP() + user.MaxMP()
+}
+
+func (user *dbUser) StatPoints() StatPoints {
+	return StatPoints{
+		AP: user.AP(),
+		RP: user.RP(),
+		MP: user.MP()}
+}
+
+func (user *dbUser) FullStatPoints() FullStatPoints {
+	return FullStatPoints{
+		StatPoints: user.StatPoints(),
+		HP:         user.HP(),
+		Trample:    0}
 }
 
 func (user *dbUser) ClassInfo() byte {
@@ -1960,26 +2002,34 @@ func (user *dbUser) canAffordAttack(attack *Attack) bool {
 	}
 
 	if user.AP() >= attack.AP && user.RP() >= attack.RP && user.MP() >= attack.MP {
-		itemMap := make(map[string]int)
-		requireMap := make(map[string]int)
-		for _, item := range user.InventoryItems() {
-			itemMap[item.Name] = itemMap[item.Name] + 1
-		}
-
-		if attack.UsesItems != nil {
-			for _, item := range attack.UsesItems {
-				requireMap[item] = requireMap[item] + 1
-			}
-		}
-
-		for key, value := range requireMap {
-			if itemMap[key] < value {
-				return false
-			}
-		}
 		return true
 	}
 	return false
+}
+
+func (user *dbUser) equippedForAttack(attack *Attack) bool {
+	if attack == nil {
+		return false
+	}
+
+	itemMap := make(map[string]int)
+	requireMap := make(map[string]int)
+	for _, item := range user.InventoryItems() {
+		itemMap[item.Name] = itemMap[item.Name] + 1
+	}
+
+	if attack.UsesItems != nil {
+		for _, item := range attack.UsesItems {
+			requireMap[item] = requireMap[item] + 1
+		}
+	}
+
+	for key, value := range requireMap {
+		if itemMap[key] < value {
+			return false
+		}
+	}
+	return true
 }
 
 func (user *dbUser) Attacks() []*AttackInfo {
@@ -1991,15 +2041,17 @@ func (user *dbUser) Attacks() []*AttackInfo {
 		attack := *item
 		charged := (charge >= attack.Charge) && user.canAffordAttack(&attack)
 
-		attacks = append(attacks, &AttackInfo{Attack: &attack, Charged: charged})
+		if user.equippedForAttack(&attack) {
+			attacks = append(attacks, &AttackInfo{Attack: &attack, Charged: charged})
+		}
 	}
 
-	for _, inventoryItem := range user.UserData.Equipped {
-		if inventoryItem.Type == ITEMTYPEWEAPON {
-			for _, attack := range inventoryItem.Attacks {
+	for _, inventoryItem := range user.Equipped() {
+		if inventoryItem.Item != nil && inventoryItem.Item.Attacks != nil {
+			for _, attack := range inventoryItem.Item.Attacks {
 				atk := attack
-				charged := charge >= attack.Charge
-				if user.canAffordAttack(&attack) {
+				charged := (charge >= attack.Charge) && user.canAffordAttack(&atk)
+				if user.equippedForAttack(&attack) {
 					attacks = append(attacks, &AttackInfo{Attack: &atk, Charged: charged})
 				}
 			}
@@ -2021,7 +2073,7 @@ func (user *dbUser) MusterAttack(attackName string) *Attack {
 				hasItems := true
 				missingItem := "true and pure soul"
 				if attack.Attack.UsesItems != nil {
-					itemsToTake := make([]*InventoryItem, len(attack.Attack.UsesItems))
+					itemsToTake := make([]*InventoryItem, 0)
 				ItemIter:
 					for _, item := range attack.Attack.UsesItems {
 						itemAttack := user.pullInventoryItemByName(item)
@@ -2029,6 +2081,8 @@ func (user *dbUser) MusterAttack(attackName string) *Attack {
 							hasItems = false
 							missingItem = item
 							break ItemIter
+						} else {
+							itemsToTake = append(itemsToTake, itemAttack)
 						}
 					}
 
@@ -2036,7 +2090,8 @@ func (user *dbUser) MusterAttack(attackName string) *Attack {
 						user.Log(LogItem{Message: fmt.Sprintf("You lack %v required to %v", missingItem, potentialAttack.Name), MessageType: MESSAGEACTIVITY})
 						for _, item := range itemsToTake {
 							if !user.AddInventoryItem(item) {
-								user.world.AddInventoryItem(user.X, user.Y, item)
+								cell := user.world.Cell(user.X, user.Y)
+								cell.AddInventoryItem(item)
 							}
 						}
 
@@ -2046,7 +2101,8 @@ func (user *dbUser) MusterAttack(attackName string) *Attack {
 						for _, itemName := range attack.Attack.OutputsItems {
 							item, ok := ItemTypes[itemName]
 							if ok {
-								user.world.AddInventoryItem(user.X, user.Y, &item)
+								c := user.world.Cell(user.X, user.Y)
+								c.AddInventoryItem(&item)
 							}
 						}
 					}
@@ -2060,8 +2116,7 @@ func (user *dbUser) MusterAttack(attackName string) *Attack {
 					user.Save()
 					user.Act()
 
-					userSP := GetStatPoints(user)
-					attack := potentialAttack.ApplyBonuses(&userSP)
+					attack := potentialAttack.ApplyBonuses(user)
 
 					return &attack
 				}
@@ -2213,46 +2268,63 @@ func (user *dbUser) pullInventoryItemByName(name string) *InventoryItem {
 	return nil
 }
 
-func (user *dbUser) Equip(item *InventoryItem) (*InventoryItem, error) {
-	var toss *InventoryItem
-	var err error
-
-	index := -1
-
-InvIter:
-	for idx, inventoryItem := range user.UserData.Equipped {
-		if inventoryItem.Type == item.Type {
-			index = idx
-			break InvIter
-		}
-	}
-
-	if index != -1 {
-		toss = user.UserData.Equipped[index]
-		user.UserData.Equipped = append(user.UserData.Equipped[:index], user.UserData.Equipped[index+1:]...)
-	}
-
-	if item.Type == ITEMTYPEWEAPON {
-		user.UserData.Equipped = append(user.UserData.Equipped, item)
-	} else {
-		err = fmt.Errorf("Can't equip %v", item.Name)
-		if toss != nil {
-			user.UserData.Equipped = append(user.UserData.Equipped, toss)
-		}
-		toss = item
-	}
-
-	return toss, err
+func (user *dbUser) Equip(slot string, item *InventoryItem) (*InventoryItem, error) {
+	// TODO: Database I/O
+	return item, nil
 }
 
-func (user *dbUser) Equipped() []*InventoryItem {
-	inventory := make([]*InventoryItem, 0)
-	for _, i := range user.UserData.Equipped {
-		ic := *i
-		inventory = append(inventory, &ic)
+func (user *dbUser) EquippableSlots(item *InventoryItem) []string {
+	slots := make([]string, 0)
+
+	if item != nil {
+		sn := item.SlotName()
+		for _, slot := range user.Slots {
+		CheckSlot:
+			for _, slotType := range slot.SlotTypes {
+				if slotType == sn {
+					slots = append(slots, slot.Name)
+					break CheckSlot
+				}
+			}
+		}
 	}
 
-	return inventory
+	return slots
+}
+
+func (user *dbUser) CanEquip(slot string, item *InventoryItem) bool {
+	for _, slot := range user.Slots {
+		if item == nil || slot.Name == item.SlotName() {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (user *dbUser) Equipped() []SlottedInventoryItem {
+	slots := make([]SlottedInventoryItem, len(user.Slots))
+
+	for index, slot := range user.Slots {
+		slots[index] = SlottedInventoryItem{Name: slot.Name, Item: user.EquipmentSlotItem(slot.Name)}
+	}
+
+	return slots
+}
+
+func (user *dbUser) EquipmentSlotItem(string) *InventoryItem {
+	// TODO: Database I/O
+	return nil
+}
+
+func (user *dbUser) EquipSlots() []string {
+	slots := make([]string, len(user.Slots))
+
+	for index, slot := range user.Slots {
+		slots[index] = slot.Name
+	}
+
+	return slots
 }
 
 func (user *dbUser) SSHKeysEmpty() bool {
