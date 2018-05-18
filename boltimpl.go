@@ -2269,8 +2269,36 @@ func (user *dbUser) pullInventoryItemByName(name string) *InventoryItem {
 }
 
 func (user *dbUser) Equip(slot string, item *InventoryItem) (*InventoryItem, error) {
-	// TODO: Database I/O
-	return item, nil
+	if !user.CanEquip(slot, item) {
+		return nil, fmt.Errorf("Can't equip item in slot %v", slot)
+	}
+
+	oldItem := user.EquipmentSlotItem(slot)
+
+	inventoryItem := *item
+
+	keyBuf := new(bytes.Buffer)
+	binary.Write(keyBuf, binary.BigEndian, []byte(user.UserData.Username))
+	binary.Write(keyBuf, binary.BigEndian, byte(0))
+	binary.Write(keyBuf, binary.BigEndian, []byte(slot))
+	var serr error
+	var dataBytes []byte
+
+	if item != nil {
+		dataBytes, serr = json.Marshal(inventoryItem)
+	}
+
+	if serr != nil {
+		return item, serr
+	}
+
+	user.world.database.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("userequipment"))
+
+		return bucket.Put(keyBuf.Bytes(), dataBytes)
+	})
+
+	return oldItem, nil
 }
 
 func (user *dbUser) EquippableSlots(item *InventoryItem) []string {
@@ -2312,8 +2340,31 @@ func (user *dbUser) Equipped() []SlottedInventoryItem {
 	return slots
 }
 
-func (user *dbUser) EquipmentSlotItem(string) *InventoryItem {
-	// TODO: Database I/O
+func (user *dbUser) EquipmentSlotItem(slotName string) *InventoryItem {
+	keyBuf := new(bytes.Buffer)
+	binary.Write(keyBuf, binary.BigEndian, []byte(user.UserData.Username))
+	binary.Write(keyBuf, binary.BigEndian, byte(0))
+	binary.Write(keyBuf, binary.BigEndian, []byte(slotName))
+
+	found := false
+	var inventoryItem InventoryItem
+	user.world.database.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("userequipment"))
+
+		itemBytes := bucket.Get(keyBuf.Bytes())
+
+		if itemBytes != nil {
+			if json.Unmarshal(itemBytes, &inventoryItem) == nil {
+				found = true
+			}
+		}
+
+		return nil
+	})
+
+	if found {
+		return &inventoryItem
+	}
 	return nil
 }
 

@@ -138,6 +138,7 @@ func (atk *Attack) FullStatPoints() FullStatPoints {
 		Trample: atk.Trample}
 }
 
+// Copies stat points back in after applying bonuses
 func (atk *Attack) applyStatPoints(sp FullStatPoints) Attack {
 	newAtk := *atk
 
