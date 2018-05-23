@@ -97,24 +97,31 @@ func renderSetup(session ssh.Session, user User) {
 	primarystrength, secondarystrength := user.Strengths()
 	primaryskill, secondaryskill := user.Skills()
 
+	strTitle, sklTitle := GetSubTitles(primarystrength, secondarystrength, primaryskill, secondaryskill)
+
 	header := ansi.ColorFunc("white+b:black")
 	title := ansi.ColorFunc("250+b:black")
 
 	io.WriteString(session, cursor.ClearEntireScreen()+cursor.MoveUpperLeft(1))
 	io.WriteString(session, fmt.Sprintf("Please set up your character, %v.\n\n", user.Username()))
 
-	io.WriteString(session, header("Strength:"))
+	io.WriteString(session, header("Strength:                                                 "))
 	io.WriteString(session, "\n")
 	io.WriteString(session, "      Primary: "+renderChoices(primarystrength, primaryStrengthArray))
 	io.WriteString(session, "\n")
 	io.WriteString(session, "    Secondary: "+renderChoices(secondarystrength, secondaryStrengthArray))
+	io.WriteString(session, "\n")
+	io.WriteString(session, "    Strengths: "+title(centerText(strTitle, " ", 43)))
+
 	io.WriteString(session, "\n\n")
 
-	io.WriteString(session, header("Skill:"))
+	io.WriteString(session, header("Skill:                                                    "))
 	io.WriteString(session, "\n")
 	io.WriteString(session, "      Primary: "+renderChoices(primaryskill, primarySkillArray))
 	io.WriteString(session, "\n")
 	io.WriteString(session, "    Secondary: "+renderChoices(secondaryskill, secondarySkillArray))
+	io.WriteString(session, "\n")
+	io.WriteString(session, "       Skills: "+title(centerText(sklTitle, " ", 43)))
 
 	io.WriteString(session, "\n\n")
 	io.WriteString(session, "You're a: "+title(" "+centerText(GetTitle(primarystrength, secondarystrength, primaryskill, secondaryskill), " ", 47)))
