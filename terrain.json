@@ -1,533 +1,536 @@
 {
-    "clearing": {
-        "Name": "Clearing of %s",
-        "Permeable": false,
-        "Blocking": false,
-        "Transitions": [
-            "clearing-grass"
-        ],
-        "ItemDrops": [
-            {
-                "Name": "Simple Sword",
-                "Probability": 1.0
+    "biomes": {},
+    "cells": {
+        "clearing": {
+            "Name": "Clearing of %s",
+            "Permeable": false,
+            "Blocking": false,
+            "Transitions": [
+                "clearing-grass"
+            ],
+            "ItemDrops": [
+                {
+                    "Name": "Simple Sword",
+                    "Probability": 1.0
+                },
+                {
+                    "Name": "Simple Bow",
+                    "Probability": 1.0
+                },
+                {
+                    "Name": "Simple Wand",
+                    "Probability": 1.0
+                }
+            ],
+            "Algorithm": "once",
+            "AlgorithmParameters": {},
+            "FGcolor": 184,
+            "BGcolor": 0,
+            "Bold": false,
+            "Representations": [
+                43
+            ]
+        },
+        "clearing-grass": {
+            "Name": "%s grasslands",
+            "Permeable": false,
+            "Blocking": false,
+            "Transitions": [
+                "castle-clearing:1",
+                "clearing-grass:5",
+                "clearing-deep-grass:2",
+                "trail:12",
+                "change-biomes:10"
+            ],
+            "ItemDrops": [
+                {
+                    "Name": "Shiny Rock",
+                    "Probability": 0.02,
+                    "Cluster": 4
+                }
+            ],
+            "CreatureSpawns": [
+                {
+                    "Name": "goat",
+                    "Probability": 0.001,
+                    "Cluster": 10
+                }
+            ],
+            "Algorithm": "spread",
+            "AlgorithmParameters": {},
+            "FGcolor": 112,
+            "BGcolor": 154,
+            "Bold": false,
+            "Representations": [
+                8281,
+                8283,
+                8280,
+                8278
+            ]
+        },
+        "clearing-deep-grass": {
+            "Name": "%s grasslands",
+            "Permeable": false,
+            "Blocking": false,
+            "Transitions": [
+                "clearing-deep-grass:4",
+                "clearing-grass:6",
+                "clearing-tree",
+                "clearing-fairy-circle",
+                "clearing-large-fairy-circle",
+                "change-biomes:1"
+            ],
+            "CreatureSpawns": [
+                {
+                    "Name": "grass-snake",
+                    "Probability": 0.01,
+                    "Cluster": 5
+                }
+            ],
+            "Algorithm": "spread",
+            "AlgorithmParameters": {},
+            "FGcolor": 154,
+            "BGcolor": 118,
+            "Bold": false,
+            "Representations": [
+                8281,
+                8283,
+                8280,
+                8278
+            ]
+        },
+        "clearing-fairy-circle": {
+            "Algorithm": "circle",
+            "AlgorithmParameters": {
+                "radius": "4",
+                "entry-radius": "3",
+                "seed-exit": "clearing-fairy-circle-grass",
+                "circle-fill": "clearing-tree",
+                "circle-thickness": "2",
+                "center-fill": "clearing-fairy-circle-grass"
+            }
+        },
+        "clearing-large-fairy-circle": {
+            "Algorithm": "circle",
+            "AlgorithmParameters": {
+                "radius": "8",
+                "entry-radius": "8",
+                "seed-exit": "clearing-fairy-circle-grass",
+                "circle-fill": "clearing-tree",
+                "circle-thickness": "3",
+                "center-fill": "clearing-fairy-circle-grass"
+            }
+        },
+        "clearing-fairy-circle-grass": {
+            "Name": "Fairy Circle of %s",
+            "Permeable": false,
+            "Blocking": false,
+            "Transitions": [
+                "clearing-deep-grass"
+            ],
+            "Algorithm": "spread",
+            "FGcolor": 154,
+            "BGcolor": 118,
+            "Bold": false,
+            "Representations": [
+                8281,
+                8283,
+                8280,
+                8278
+            ]
+        },
+        "clearing-tree": {
+            "Name": "Tree in %s",
+            "Permeable": false,
+            "Blocking": true,
+            "Transitions": [
+                "clearing-deep-grass:3",
+                "clearing-tree"
+            ],
+            "Algorithm": "tendril",
+            "AlgorithmParameters": {
+                "radius": "2",
+                "tendrilcount": "2"
             },
-            {
-                "Name": "Simple Bow",
-                "Probability": 1.0
+            "FGcolor": 34,
+            "BGcolor": 118,
+            "Bold": false,
+            "Representations": [
+                9827,
+                8607,
+                8613
+            ]
+        },
+        "trailhead": {
+            "Name": "%s grasslands",
+            "Permeable": false,
+            "Blocking": false,
+            "Transitions": [
+                "trail:14",
+                "clearing-grass:10",
+                "!previous:10"
+            ],
+            "Algorithm": "once",
+            "AlgorithmParameters": {},
+            "FGcolor": 144,
+            "BGcolor": 154,
+            "Bold": false,
+            "Representations": [
+                8284
+            ]
+        },
+        "trail": {
+            "Name": "%s trail",
+            "Permeable": false,
+            "Blocking": false,
+            "Transitions": [
+                "trail:20",
+                "!previous:15",
+                "clearing-trail-ruin:100"
+            ],
+            "Algorithm": "path",
+            "AlgorithmParameters": {
+                "path": "trail",
+                "neighbor": "clearing-grass",
+                "endcap": "trailhead",
+                "radius": "10"
             },
-            {
-                "Name": "Simple Wand",
-                "Probability": 1.0
+            "FGcolor": 144,
+            "BGcolor": 155,
+            "Bold": false,
+            "Representations": [
+                8280,
+                8281
+            ]
+        },
+        "clearing-trail-ruin": {
+            "Name": "Ruins of %s",
+            "Permeable": false,
+            "Transitions": [
+                "clearing-trail-ruin:2",
+                "clearing-grass:1"
+            ],
+            "Algorithm": "dungeon-room",
+            "AlgorithmParameters": {
+                "minradius": "2",
+                "maxradius": "4",
+                "wall": "ruin-wall",
+                "exit": "clearing-trail-ruin",
+                "fallback": "clearing-deep-grass"
+            },
+            "CreatureSpawns": [
+                {
+                    "Name": "rat",
+                    "Probability": 0.1,
+                    "Cluster": 2
+                },
+                {
+                    "Name": "mouse",
+                    "Probability": 0.1,
+                    "Cluster": 6
+                }
+            ],
+            "FGColor": 64,
+            "BGColor": 142,
+            "Representations": [
+                32
+            ]
+        },
+        "ruin-wall": {
+            "Name": "Ruin Walls of %s",
+            "Permeable": false,
+            "FGColor": 64,
+            "BGColor": 247,
+            "Blocking": true,
+            "Representations": [
+                9622,
+                9623,
+                9624,
+                9625,
+                9626,
+                9627,
+                9628,
+                9629,
+                9630,
+                9631
+            ]
+        },
+        "savannah": {
+            "Name": "Savannah %s",
+            "Permeable": false,
+            "Blocking": false,
+            "Transitions": [
+                "savannah-circle:25",
+                "savannah:20",
+                "desert:10",
+                "change-biomes:10"
+            ],
+            "Algorithm": "spread",
+            "AlgorithmParameters": {
+                "radius": "1"
+            },
+            "FGcolor": 106,
+            "BGcolor": 149,
+            "Bold": false,
+            "Representations": [
+                8281,
+                8283,
+                8280,
+                8278,
+                32
+            ]
+        },
+        "savannah-circle": {
+            "Name": "Savannah cactus clearing %s",
+            "Permeable": false,
+            "Blocking": false,
+            "Transitions": [
+                "savannah-circle:25",
+                "savannah:20",
+                "savannah-circle-small:40",
+                "change-biomes:20"
+            ],
+            "Algorithm": "circle",
+            "AlgorithmParameters": {
+                "radius": "6",
+                "entry-radius": "4",
+                "seed-exit": "savannah",
+                "circle-fill": "savannah",
+                "circle-thickness": "3",
+                "center-fill": "desert-cactus"
+            },
+            "FGcolor": 106,
+            "BGcolor": 149,
+            "Bold": false,
+            "Representations": [
+                32
+            ]
+        },
+        "savannah-circle-small": {
+            "Name": "Savannah cactus grove %s",
+            "Permeable": false,
+            "Blocking": false,
+            "Transitions": [
+                "savannah-circle:25",
+                "savannah-circle-small:40",
+                "savannah:20",
+                "change-biomes:5"
+            ],
+            "Algorithm": "circle",
+            "AlgorithmParameters": {
+                "radius": "4",
+                "entry-radius": "4",
+                "seed-exit": "savannah",
+                "circle-fill": "savannah",
+                "circle-thickness": "1",
+                "center-fill": "desert-cactus"
+            },
+            "FGcolor": 106,
+            "BGcolor": 149,
+            "Bold": false,
+            "Representations": [
+                32
+            ]
+        },
+        "desert": {
+            "Name": "%s sands",
+            "Permeable": false,
+            "Blocking": false,
+            "Transitions": [
+                "savannah:2",
+                "desert:1",
+                "widedesert:2"
+            ],
+            "Algorithm": "spread",
+            "AlgorithmParameters": {
+                "radius": "4"
+            },
+            "CreatureSpawns": [
+                {
+                    "Name": "tarantula",
+                    "Probability": 0.1,
+                    "Cluster": 2
+                }
+            ],
+            "FGcolor": 220,
+            "BGcolor": 184,
+            "Bold": false,
+            "Representations": [
+                8764,
+                8765
+            ]
+        },
+        "widedesert": {
+            "Name": "%s desert",
+            "Permeable": false,
+            "Blocking": false,
+            "Transitions": [
+                "desert:1",
+                "desert-cactus:10",
+                "widedesert:10",
+                "change-biomes:10"
+            ],
+            "Algorithm": "tendril",
+            "AlgorithmParameters": {
+                "radius": "10",
+                "tendrilcount": "5"
+            },
+            "CreatureSpawns": [
+                {
+                    "Name": "scorpion",
+                    "Probability": 0.01,
+                    "Cluster": 1
+                },
+                {
+                    "Name": "tarantula",
+                    "Probability": 0.01,
+                    "Cluster": 5
+                }
+            ],
+            "FGcolor": 220,
+            "BGcolor": 226,
+            "Bold": false,
+            "Representations": [
+                8764,
+                8765
+            ]
+        },
+        "desert-cactus": {
+            "Name": "%s desert cactus",
+            "Permeable": false,
+            "Blocking": true,
+            "Transitions": [
+                "widedesert:1"
+            ],
+            "Algorithm": "spread",
+            "AlgorithmParameters": {
+                "radius": "2"
+            },
+            "FGcolor": 71,
+            "BGcolor": 226,
+            "Bold": true,
+            "Representations": [
+                968,
+                936,
+                969
+            ]
+        },
+        "castle-clearing": {
+            "Algorithm": "great-wall",
+            "AlgorithmParameters": {
+                "radius": "20",
+                "wall-thickness": "3",
+                "wall-texture": "castle-clearing-wall",
+                "seed-entry": "castle-gravel",
+                "seed-exit": "clearing-deep-grass"
+            },
+            "FGcolor": 15,
+            "BGcolor": 15,
+            "Bold": false,
+            "Representations": [
+                32
+            ]
+        },
+        "castle-clearing-wall": {
+            "Permeable": false,
+            "Blocking": true,
+            "FGcolor": 242,
+            "BGcolor": 245,
+            "Representations": [
+                9625,
+                9626,
+                9627,
+                9628,
+                9629,
+                9630,
+                9631
+            ]
+        },
+        "castle-gravel": {
+            "Name": "Courtyard of Castle %s",
+            "Permeable": false,
+            "Blocking": false,
+            "Algorithm": "spread",
+            "AlgorithmParameters": {
+                "radius": "20"
+            },
+            "Transitions": [
+                "castle-gravel"
+            ],
+            "CreatureSpawns": [
+                {
+                    "Name": "skeltal",
+                    "Probability": 0.01,
+                    "Cluster": 1
+                },
+                {
+                    "Name": "vagabond",
+                    "Probability": 0.01,
+                    "Cluster": 1
+                },
+                {
+                    "Name": "centipede",
+                    "Probability": 0.05,
+                    "Cluster": 10
+                }
+            ],
+            "ItemDrops": [
+                {
+                    "Name": "Simple Sword",
+                    "Probability": 0.0001
+                },
+                {
+                    "Name": "Simple Bow",
+                    "Probability": 0.0001
+                },
+                {
+                    "Name": "Simple Wand",
+                    "Probability": 0.0001
+                }
+            ],
+            "FGcolor": 245,
+            "BGcolor": 15,
+            "Representations": [
+                8281,
+                8282
+            ]
+        },
+        "change-biomes": {
+            "Transitions": [
+                "desert",
+                "clearing-grass"
+            ],
+            "Algorithm": "change-of-scenery",
+            "AlgorithmParameters": {
+                "thickness": "10",
+                "divider-thickness": "5",
+                "divider-edge": "mountain-short",
+                "divider-center": "mountain-tall",
+                "length": "300"
             }
-        ],
-        "Algorithm": "once",
-        "AlgorithmParameters": {},
-        "FGcolor": 184,
-        "BGcolor": 0,
-        "Bold": false,
-        "Representations": [
-            43
-        ]
-    },
-    "clearing-grass": {
-        "Name": "%s grasslands",
-        "Permeable": false,
-        "Blocking": false,
-        "Transitions": [
-            "castle-clearing:1",
-            "clearing-grass:5",
-            "clearing-deep-grass:2",
-            "trail:12",
-            "change-biomes:10"
-        ],
-        "ItemDrops": [
-            {
-                "Name": "Shiny Rock",
-                "Probability": 0.02,
-                "Cluster": 4
-            }
-        ],
-        "CreatureSpawns": [
-            {
-                "Name": "goat",
-                "Probability": 0.001,
-                "Cluster": 10
-            }
-        ],
-        "Algorithm": "spread",
-        "AlgorithmParameters": {},
-        "FGcolor": 112,
-        "BGcolor": 154,
-        "Bold": false,
-        "Representations": [
-            8281,
-            8283,
-            8280,
-            8278
-        ]
-    },
-    "clearing-deep-grass": {
-        "Name": "%s grasslands",
-        "Permeable": false,
-        "Blocking": false,
-        "Transitions": [
-            "clearing-deep-grass:4",
-            "clearing-grass:6",
-            "clearing-tree",
-            "clearing-fairy-circle",
-            "clearing-large-fairy-circle",
-            "change-biomes:1"
-        ],
-        "CreatureSpawns": [
-            {
-                "Name": "grass-snake",
-                "Probability": 0.01,
-                "Cluster": 5
-            }
-        ],
-        "Algorithm": "spread",
-        "AlgorithmParameters": {},
-        "FGcolor": 154,
-        "BGcolor": 118,
-        "Bold": false,
-        "Representations": [
-            8281,
-            8283,
-            8280,
-            8278
-        ]
-    },
-    "clearing-fairy-circle": {
-        "Algorithm": "circle",
-        "AlgorithmParameters": {
-            "radius": "4",
-            "entry-radius": "3",
-            "seed-exit": "clearing-fairy-circle-grass",
-            "circle-fill": "clearing-tree",
-            "circle-thickness": "2",
-            "center-fill": "clearing-fairy-circle-grass"
+        },
+        "mountain-short": {
+            "Permeable": false,
+            "Blocking": true,
+            "FGcolor": 56,
+            "BGcolor": 53,
+            "Representations": [
+                8896,
+                10837,
+                10840,
+                8911
+            ]
+        },
+        "mountain-tall": {
+            "Permeable": false,
+            "Blocking": true,
+            "FGcolor": 56,
+            "BGcolor": 53,
+            "Representations": [
+                923,
+                94,
+                8743
+            ]
         }
-    },
-    "clearing-large-fairy-circle": {
-        "Algorithm": "circle",
-        "AlgorithmParameters": {
-            "radius": "8",
-            "entry-radius": "8",
-            "seed-exit": "clearing-fairy-circle-grass",
-            "circle-fill": "clearing-tree",
-            "circle-thickness": "3",
-            "center-fill": "clearing-fairy-circle-grass"
-        }
-    },
-    "clearing-fairy-circle-grass": {
-        "Name": "Fairy Circle of %s",
-        "Permeable": false,
-        "Blocking": false,
-        "Transitions": [
-            "clearing-deep-grass"
-        ],
-        "Algorithm": "spread",
-        "FGcolor": 154,
-        "BGcolor": 118,
-        "Bold": false,
-        "Representations": [
-            8281,
-            8283,
-            8280,
-            8278
-        ]
-    },
-    "clearing-tree": {
-        "Name": "Tree in %s",
-        "Permeable": false,
-        "Blocking": true,
-        "Transitions": [
-            "clearing-deep-grass:3",
-            "clearing-tree"
-        ],
-        "Algorithm": "tendril",
-        "AlgorithmParameters": {
-            "radius": "2",
-            "tendrilcount": "2"
-        },
-        "FGcolor": 34,
-        "BGcolor": 118,
-        "Bold": false,
-        "Representations": [
-            9827,
-            8607,
-            8613
-        ]
-    },
-    "trailhead": {
-        "Name": "%s grasslands",
-        "Permeable": false,
-        "Blocking": false,
-        "Transitions": [
-            "trail:14",
-            "clearing-grass:10",
-            "!previous:10"
-        ],
-        "Algorithm": "once",
-        "AlgorithmParameters": {},
-        "FGcolor": 144,
-        "BGcolor": 154,
-        "Bold": false,
-        "Representations": [
-            8284
-        ]
-    },
-    "trail": {
-        "Name": "%s trail",
-        "Permeable": false,
-        "Blocking": false,
-        "Transitions": [
-            "trail:20",
-            "!previous:15",
-            "clearing-trail-ruin:100"
-        ],
-        "Algorithm": "path",
-        "AlgorithmParameters": {
-            "path": "trail",
-            "neighbor": "clearing-grass",
-            "endcap": "trailhead",
-            "radius": "10"
-        },
-        "FGcolor": 144,
-        "BGcolor": 155,
-        "Bold": false,
-        "Representations": [
-            8280,
-            8281
-        ]
-    },
-    "clearing-trail-ruin": {
-        "Name": "Ruins of %s",
-        "Permeable": false,
-        "Transitions": [
-            "clearing-trail-ruin:2",
-            "clearing-grass:1"
-        ],
-        "Algorithm": "dungeon-room",
-        "AlgorithmParameters": {
-            "minradius": "2",
-            "maxradius": "4",
-            "wall": "ruin-wall",
-            "exit": "clearing-trail-ruin",
-            "fallback": "clearing-deep-grass"
-        },
-        "CreatureSpawns": [
-            {
-                "Name": "rat",
-                "Probability": 0.1,
-                "Cluster": 2
-            },
-            {
-                "Name": "mouse",
-                "Probability": 0.1,
-                "Cluster": 6
-            }
-        ],
-        "FGColor": 64,
-        "BGColor": 142,
-        "Representations": [
-            32
-        ]
-    },
-    "ruin-wall": {
-        "Name": "Ruin Walls of %s",
-        "Permeable": false,
-        "FGColor": 64,
-        "BGColor": 247,
-        "Blocking": true,
-        "Representations": [
-            9622,
-            9623,
-            9624,
-            9625,
-            9626,
-            9627,
-            9628,
-            9629,
-            9630,
-            9631
-        ]
-    },
-    "savannah": {
-        "Name": "Savannah %s",
-        "Permeable": false,
-        "Blocking": false,
-        "Transitions": [
-            "savannah-circle:25",
-            "savannah:20",
-            "desert:10",
-            "change-biomes:10"
-        ],
-        "Algorithm": "spread",
-        "AlgorithmParameters": {
-            "radius": "1"
-        },
-        "FGcolor": 106,
-        "BGcolor": 149,
-        "Bold": false,
-        "Representations": [
-            8281,
-            8283,
-            8280,
-            8278,
-            32
-        ]
-    },
-    "savannah-circle": {
-        "Name": "Savannah cactus clearing %s",
-        "Permeable": false,
-        "Blocking": false,
-        "Transitions": [
-            "savannah-circle:25",
-            "savannah:20",
-            "savannah-circle-small:40",
-            "change-biomes:20"
-        ],
-        "Algorithm": "circle",
-        "AlgorithmParameters": {
-            "radius": "6",
-            "entry-radius": "4",
-            "seed-exit": "savannah",
-            "circle-fill": "savannah",
-            "circle-thickness": "3",
-            "center-fill": "desert-cactus"
-        },
-        "FGcolor": 106,
-        "BGcolor": 149,
-        "Bold": false,
-        "Representations": [
-            32
-        ]
-    },
-    "savannah-circle-small": {
-        "Name": "Savannah cactus grove %s",
-        "Permeable": false,
-        "Blocking": false,
-        "Transitions": [
-            "savannah-circle:25",
-            "savannah-circle-small:40",
-            "savannah:20",
-            "change-biomes:5"
-        ],
-        "Algorithm": "circle",
-        "AlgorithmParameters": {
-            "radius": "4",
-            "entry-radius": "4",
-            "seed-exit": "savannah",
-            "circle-fill": "savannah",
-            "circle-thickness": "1",
-            "center-fill": "desert-cactus"
-        },
-        "FGcolor": 106,
-        "BGcolor": 149,
-        "Bold": false,
-        "Representations": [
-            32
-        ]
-    },
-    "desert": {
-        "Name": "%s sands",
-        "Permeable": false,
-        "Blocking": false,
-        "Transitions": [
-            "savannah:2",
-            "desert:1",
-            "widedesert:2"
-        ],
-        "Algorithm": "spread",
-        "AlgorithmParameters": {
-            "radius": "4"
-        },
-        "CreatureSpawns": [
-            {
-                "Name": "tarantula",
-                "Probability": 0.1,
-                "Cluster": 2
-            }
-        ],
-        "FGcolor": 220,
-        "BGcolor": 184,
-        "Bold": false,
-        "Representations": [
-            8764,
-            8765
-        ]
-    },
-    "widedesert": {
-        "Name": "%s desert",
-        "Permeable": false,
-        "Blocking": false,
-        "Transitions": [
-            "desert:1",
-            "desert-cactus:10",
-            "widedesert:10",
-            "change-biomes:10"
-        ],
-        "Algorithm": "tendril",
-        "AlgorithmParameters": {
-            "radius": "10",
-            "tendrilcount": "5"
-        },
-        "CreatureSpawns": [
-            {
-                "Name": "scorpion",
-                "Probability": 0.01,
-                "Cluster": 1
-            },
-            {
-                "Name": "tarantula",
-                "Probability": 0.01,
-                "Cluster": 5
-            }
-        ],
-        "FGcolor": 220,
-        "BGcolor": 226,
-        "Bold": false,
-        "Representations": [
-            8764,
-            8765
-        ]
-    },
-    "desert-cactus": {
-        "Name": "%s desert cactus",
-        "Permeable": false,
-        "Blocking": true,
-        "Transitions": [
-            "widedesert:1"
-        ],
-        "Algorithm": "spread",
-        "AlgorithmParameters": {
-            "radius": "2"
-        },
-        "FGcolor": 71,
-        "BGcolor": 226,
-        "Bold": true,
-        "Representations": [
-            968,
-            936,
-            969
-        ]
-    },
-    "castle-clearing": {
-        "Algorithm": "great-wall",
-        "AlgorithmParameters": {
-            "radius": "20",
-            "wall-thickness": "3",
-            "wall-texture": "castle-clearing-wall",
-            "seed-entry": "castle-gravel",
-            "seed-exit": "clearing-deep-grass"
-        },
-        "FGcolor": 15,
-        "BGcolor": 15,
-        "Bold": false,
-        "Representations": [
-            32
-        ]
-    },
-    "castle-clearing-wall": {
-        "Permeable": false,
-        "Blocking": true,
-        "FGcolor": 242,
-        "BGcolor": 245,
-        "Representations": [
-            9625,
-            9626,
-            9627,
-            9628,
-            9629,
-            9630,
-            9631
-        ]
-    },
-    "castle-gravel": {
-        "Name": "Courtyard of Castle %s",
-        "Permeable": false,
-        "Blocking": false,
-        "Algorithm": "spread",
-        "AlgorithmParameters": {
-            "radius": "20"
-        },
-        "Transitions": [
-            "castle-gravel"
-        ],
-        "CreatureSpawns": [
-            {
-                "Name": "skeltal",
-                "Probability": 0.01,
-                "Cluster": 1
-            },
-            {
-                "Name": "vagabond",
-                "Probability": 0.01,
-                "Cluster": 1
-            },
-            {
-                "Name": "centipede",
-                "Probability": 0.05,
-                "Cluster": 10
-            }
-        ],
-        "ItemDrops": [
-            {
-                "Name": "Simple Sword",
-                "Probability": 0.0001
-            },
-            {
-                "Name": "Simple Bow",
-                "Probability": 0.0001
-            },
-            {
-                "Name": "Simple Wand",
-                "Probability": 0.0001
-            }
-        ],
-        "FGcolor": 245,
-        "BGcolor": 15,
-        "Representations": [
-            8281,
-            8282
-        ]
-    },
-    "change-biomes": {
-        "Transitions": [
-            "desert",
-            "clearing-grass"
-        ],
-        "Algorithm": "change-of-scenery",
-        "AlgorithmParameters": {
-            "thickness": "10",
-            "divider-thickness": "5",
-            "divider-edge": "mountain-short",
-            "divider-center": "mountain-tall",
-            "length": "300"
-        }
-    },
-    "mountain-short": {
-        "Permeable": false,
-        "Blocking": true,
-        "FGcolor": 56,
-        "BGcolor": 53,
-        "Representations": [
-            8896,
-            10837,
-            10840,
-            8911
-        ]
-    },
-    "mountain-tall": {
-        "Permeable": false,
-        "Blocking": true,
-        "FGcolor": 56,
-        "BGcolor": 53,
-        "Representations": [
-            923,
-            94,
-            8743
-        ]
     }
 }

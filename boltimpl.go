@@ -191,7 +191,7 @@ func (w *dbWorld) newUser(username string) UserData {
 		RP:         2,
 		MaxRP:      2,
 		PublicKeys: make(map[string]bool)}
-	cellData := w.GetCellInfo(userData.X, userData.Y)
+	cellData := w.Cell(userData.X, userData.Y).CellInfo()
 
 	if cellData == nil {
 		newRegionID, _ := newPlaceNameInDB(w.database)
@@ -217,39 +217,6 @@ func (w *dbWorld) newUser(username string) UserData {
 
 func (w *dbWorld) Cell(x, y uint32) Cell {
 	return &dbCell{w: w, x: x, y: y}
-}
-
-func (w *dbWorld) GetCellInfo(x, y uint32) *CellInfo {
-	var cellInfo CellInfo
-	w.database.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte("terrain"))
-
-		pt := Point{x, y}
-		record := bucket.Get(pt.Bytes())
-
-		if record != nil {
-			cellInfo = CellInfoFromBytes(record)
-		}
-
-		return nil
-	})
-
-	placeName := getPlaceNameByIDFromDB(cellInfo.RegionNameID, w.database)
-	cellTerrain, ok := CellTypes[cellInfo.TerrainID]
-
-	if ok {
-		// Format place name if it exists
-		if len(cellTerrain.Name) > 0 {
-			placeName = fmt.Sprintf(cellTerrain.Name, placeName)
-		}
-
-		cellInfo.RegionName = placeName
-		cellInfo.TerrainData = cellTerrain
-
-		return &cellInfo
-	}
-
-	return nil
 }
 
 func (w *dbWorld) reloadStoredCreatures(x, y uint32) {
@@ -776,6 +743,7 @@ func (c *dbCell) CellInfo() *CellInfo {
 
 	placeName := getPlaceNameByIDFromDB(cellInfo.RegionNameID, c.w.database)
 	cellTerrain, ok := CellTypes[cellInfo.TerrainID]
+	biomeData, biomeOK := BiomeTypes[cellInfo.BiomeID]
 
 	if ok {
 		// Format place name if it exists
@@ -785,6 +753,10 @@ func (c *dbCell) CellInfo() *CellInfo {
 
 		cellInfo.RegionName = placeName
 		cellInfo.TerrainData = cellTerrain
+
+		if biomeOK {
+			cellInfo.BiomeData = biomeData
+		}
 
 		return &cellInfo
 	}
@@ -1707,7 +1679,7 @@ func (user *dbUser) Cell() Cell {
 
 // Location returns the name of the current cell
 func (user *dbUser) LocationName() string {
-	ci := user.world.GetCellInfo(user.UserData.X, user.UserData.Y)
+	ci := user.Cell().CellInfo()
 	if ci != nil {
 		return ci.RegionName
 	}

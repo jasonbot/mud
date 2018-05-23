@@ -6,6 +6,14 @@ import (
 	"log"
 )
 
+// BiomeData contains information about biome types
+type BiomeData struct {
+	ID                  string
+	Name                string        `json:",omitempty"` // Formatstring to modify place name
+	Transitions         []string      `json:""`           // Other biome types this can transition into when generating
+	GetRandomTransition func() string // What to transition to
+}
+
 // DefaultCellType is the seed land type when spawning a character.
 const DefaultCellType string = "clearing"
 
@@ -32,6 +40,9 @@ type CellTerrain struct {
 // CellTypes is the list of cell types
 var CellTypes map[string]CellTerrain
 
+// BiomeTypes is the list of cell types
+var BiomeTypes map[string]BiomeData
+
 // NORTHBIT North for bitmasks
 // EASTBIT  East for bitmasks
 // SOUTHBIT South for bitmasks
@@ -47,6 +58,8 @@ const (
 type CellInfo struct {
 	TerrainID    string      `json:""`
 	TerrainData  CellTerrain `json:"-"`
+	BiomeID      string      `json:""`
+	BiomeData    BiomeData   `json:"-"`
 	ExitBlocks   byte        `json:""`
 	RegionNameID uint64      `json:""`
 	RegionName   string      `json:"-"`
@@ -68,10 +81,23 @@ func CellInfoToBytes(cellInfo *CellInfo) []byte {
 func loadTerrainTypes(terrainInfoFile string) {
 	data, err := ioutil.ReadFile(terrainInfoFile)
 
-	if err == nil {
-		err = json.Unmarshal(data, &CellTypes)
+	var terrainFileData struct {
+		CellTypes  map[string]CellTerrain `json:"cells"`
+		BiomeTypes map[string]BiomeData   `json:"biomes"`
+	}
 
-		for k, val := range CellTypes {
+	if err == nil {
+		err = json.Unmarshal(data, &terrainFileData)
+
+		BiomeTypes = make(map[string]BiomeData)
+		for k, val := range terrainFileData.BiomeTypes {
+			val.ID = k
+			val.GetRandomTransition, val.Transitions = MakeTransitionFunction(val.ID, val.Transitions)
+			BiomeTypes[k] = val
+		}
+
+		CellTypes = make(map[string]CellTerrain)
+		for k, val := range terrainFileData.CellTypes {
 			val.ID = k
 			val.GetRandomTransition, val.Transitions = MakeTransitionFunction(val.ID, val.Transitions)
 			CellTypes[k] = val
