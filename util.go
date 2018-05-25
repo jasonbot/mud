@@ -3,6 +3,7 @@ package mud
 import (
 	"bytes"
 	"encoding/binary"
+	"io"
 	"math"
 	"math/rand"
 	"strconv"
@@ -68,17 +69,26 @@ func (v *Vector) Magnitude() uint {
 	return uint(math.Sqrt(math.Pow(float64(v.X), 2.0) + math.Pow(float64(v.Y), 2.0)))
 }
 
-// Bytes Dumps a point into a byte array
+// ToBytes flushes point to buffer
+func (p *Point) ToBytes(buf io.Writer) {
+	binary.Write(buf, binary.LittleEndian, p)
+}
+
+// Bytes dumps a point into a byte array
 func (p *Point) Bytes() []byte {
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, p)
+	p.ToBytes(buf)
 	return buf.Bytes()
 }
 
 // PointFromBytes rehydrates a point struct
 func PointFromBytes(ptBytes []byte) Point {
+	return PointFromBuffer(bytes.NewBuffer(ptBytes))
+}
+
+// PointFromBuffer pulls a point from a byte stream
+func PointFromBuffer(buf io.Reader) Point {
 	var pt Point
-	buf := bytes.NewBuffer(ptBytes)
 	binary.Read(buf, binary.LittleEndian, &pt)
 	return pt
 }
