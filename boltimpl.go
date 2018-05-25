@@ -297,47 +297,20 @@ func (w *dbWorld) KillCreature(id string) {
 			return err
 		}
 
-		creatureListBucket := tx.Bucket([]byte("creaturelist"))
-		creatureListBytes := creatureListBucket.Get(location.Bytes())
+		cID, _ := uuid.Parse(id)
 
-		if creatureListBytes != nil {
-			var creatureList CreatureList
-			err = json.Unmarshal(creatureListBytes, &creatureList)
-
-			if err != nil {
-				return err
-			}
-
-			aliveCreatureList := make([]string, 0)
-
-			if creatureList.CreatureIDs != nil {
-				for _, cid := range creatureList.CreatureIDs {
-					cuid, err := uuid.Parse(cid)
-
-					if err != nil {
-						return err
-					}
-
-					idBytes, err := cuid.MarshalBinary()
-
-					if err != nil {
-						return err
-					}
-
-					b := bucket.Get(idBytes)
-
-					if b != nil {
-						aliveCreatureList = append(aliveCreatureList, cid)
-					}
-				}
-			}
-
-			creatureList.CreatureIDs = aliveCreatureList
-			creatureListBytes, _ = json.Marshal(creatureList)
-			creatureListBucket.Put(location.Bytes(), creatureListBytes)
+		if err != nil {
+			return err
 		}
 
-		return nil
+		creatureListBucket := tx.Bucket([]byte("creaturelist"))
+		var keyBuf bytes.Buffer
+		location.ToBytes(&keyBuf)
+		binary.Write(&keyBuf, binary.BigEndian, byte(0))
+		uidBytes, _ := cID.MarshalBinary()
+		binary.Write(&keyBuf, binary.BigEndian, uidBytes)
+
+		return creatureListBucket.Delete(keyBuf.Bytes())
 	})
 }
 
@@ -846,23 +819,44 @@ func (c *dbCell) reloadStoredCreatures() {
 }
 
 func (c *dbCell) creatureList() []string {
-	var cl CreatureList
+	creatureList := make([]string, 0)
+
+	minBuf := new(bytes.Buffer)
+	maxBuf := new(bytes.Buffer)
+
+	loc := c.Location()
+	loc.ToBytes(minBuf)
+	loc.ToBytes(maxBuf)
+
+	binary.Write(minBuf, binary.BigEndian, byte(0))
+	binary.Write(maxBuf, binary.BigEndian, byte(1))
+
+	min := minBuf.Bytes()
+	max := maxBuf.Bytes()
 
 	c.w.database.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("creaturelist"))
 
-		pt := Point{X: c.x, Y: c.y}
+		cur := bucket.Cursor()
 
-		bytes := bucket.Get(pt.Bytes())
+		for k, v := cur.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = cur.Next() {
+			if v != nil {
+				buf := bytes.NewBuffer(k)
+				PointFromBuffer(buf)
+				var b byte
+				binary.Read(buf, binary.BigEndian, &b)
 
-		if bytes != nil {
-			json.Unmarshal(bytes, &cl)
+				var creatureID uuid.UUID
+				binary.Read(buf, binary.BigEndian, &creatureID)
+
+				creatureList = append(creatureList, creatureID.String())
+			}
 		}
 
 		return nil
 	})
 
-	return cl.CreatureIDs
+	return creatureList
 }
 
 func (c *dbCell) getCreature(id string) *Creature {
@@ -1076,8 +1070,6 @@ func (c *dbCell) AddStockCreature(id string) {
 		RP:           creatureType.MaxRP,
 		world:        c.w}
 
-	creatureList := CreatureList{}
-
 	c.w.database.Update(func(tx *bolt.Tx) error {
 		creatureBucket := tx.Bucket([]byte("creatures"))
 		creatureListBucket := tx.Bucket([]byte("creaturelist"))
@@ -1101,23 +1093,13 @@ func (c *dbCell) AddStockCreature(id string) {
 		}
 
 		pt := Point{X: c.x, Y: c.y}
-		creatureListBytes := creatureListBucket.Get(pt.Bytes())
+		var keyBuf bytes.Buffer
+		pt.ToBytes(&keyBuf)
+		binary.Write(&keyBuf, binary.BigEndian, byte(0))
+		uidBytes, _ := cID.MarshalBinary()
+		binary.Write(&keyBuf, binary.BigEndian, uidBytes)
 
-		if creatureListBytes != nil {
-			err = json.Unmarshal(creatureListBytes, &creatureList)
-
-			if err != nil {
-				return err
-			}
-		}
-
-		if creatureList.CreatureIDs == nil {
-			creatureList.CreatureIDs = make([]string, 0)
-		}
-
-		creatureList.CreatureIDs = append(creatureList.CreatureIDs, creature.ID)
-		creatureListBytes, _ = json.Marshal(creatureList)
-		creatureListBucket.Put(pt.Bytes(), creatureListBytes)
+		creatureListBucket.Put(keyBuf.Bytes(), make([]byte, 0))
 
 		return nil
 	})
