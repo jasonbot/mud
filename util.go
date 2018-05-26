@@ -95,6 +95,68 @@ func PointFromBuffer(buf io.Reader) Point {
 	return pt
 }
 
+// Box represents a Box, ya dingus
+type Box struct {
+	TopLeft     Point
+	BottomRight Point
+}
+
+// BoxFromCoords returns a box from coordinates
+func BoxFromCoords(x1, y1, x2, y2 uint32) Box {
+	if x2 < x1 {
+		x1, x2 = x2, x1
+	}
+
+	if y2 < y1 {
+		y1, y2 = y2, y1
+	}
+
+	return Box{Point{x1, y1}, Point{x2, y2}}
+}
+
+// BoxFromCenteraAndWidthAndHeight takes a centroid and dimensions
+func BoxFromCenteraAndWidthAndHeight(center *Point, width, height uint32) Box {
+	topLeft := Point{center.X - width/2, center.Y - height/2}
+	return Box{topLeft, Point{topLeft.X + width, topLeft.Y + height}}
+}
+
+// WidthAndHeight returns a width, height tuple
+func (b *Box) WidthAndHeight() (uint32, uint32) {
+	return b.BottomRight.X - b.TopLeft.X, b.BottomRight.Y - b.TopLeft.Y
+}
+
+// ContainsPoint checks point membership
+func (b *Box) ContainsPoint(p *Point) bool {
+	if p.X >= b.TopLeft.X && p.X <= b.BottomRight.X && p.Y >= b.TopLeft.Y && p.Y <= b.BottomRight.Y {
+		return true
+	}
+
+	return false
+}
+
+// Corners return the corners of a box
+func (b *Box) Corners() (Point, Point, Point, Point) {
+	return b.TopLeft, Point{b.BottomRight.X, b.TopLeft.Y}, b.BottomRight, Point{b.TopLeft.X, b.BottomRight.Y}
+}
+
+// Neighbor returns a box in that direction
+func (b *Box) Neighbor(d Direction) Box {
+	width, height := b.WidthAndHeight()
+
+	switch d {
+	case DIRECTIONNORTH:
+		return Box{Point{b.TopLeft.X, b.TopLeft.Y - height}, Point{b.BottomRight.X, b.BottomRight.Y - height}}
+	case DIRECTIONEAST:
+		return Box{Point{b.TopLeft.X + width, b.TopLeft.Y}, Point{b.BottomRight.X + width, b.BottomRight.Y}}
+	case DIRECTIONSOUTH:
+		return Box{Point{b.TopLeft.X, b.TopLeft.Y + height}, Point{b.BottomRight.X, b.BottomRight.Y + height}}
+	case DIRECTIONWEST:
+		return Box{Point{b.TopLeft.X - width, b.TopLeft.Y}, Point{b.BottomRight.X - width, b.BottomRight.Y}}
+	}
+
+	return *b
+}
+
 // Direction is a cardinal direction
 type Direction byte
 
