@@ -3,6 +3,7 @@ package mud
 // Cell represents the data about a living cell
 type Cell interface {
 	Location() Point
+	IsEmpty() bool
 	CellInfo() *CellInfo
 	SetCellInfo(*CellInfo)
 

@@ -4,13 +4,21 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"strings"
+
+	"github.com/ojrac/opensimplex-go"
 )
 
 type visitFunc func(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain)
 
 var generationAlgorithms map[string]visitFunc
-
 var defaultAlgorithm = "once"
+
+type tileFunc func(Cell, Cell, BiomeData, World) bool
+
+var tileGenerationAlgorithms map[string]tileFunc
+
+var seed *opensimplex.Noise
 
 func getIntSetting(settings map[string]string, settingName string, defaultValue int) int {
 	if settings != nil {
@@ -51,16 +59,18 @@ func tendril(x, y uint32, count uint64, world World, regionID uint64, cellTerrai
 	}
 
 	cell := world.Cell(x, y)
-	cellInfo := cell.CellInfo()
-	if cellInfo == nil {
+	if cell.IsEmpty() {
 		cell.SetCellInfo(&CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 		count--
-	} else if cellInfo.TerrainID != cellTerrain.ID {
-		count--
+	} else {
+		ci := cell.CellInfo()
+		if ci.TerrainID != cellTerrain.ID {
+			count--
 
-		// Can pass through this and keep on going
-		if !cellInfo.TerrainData.Permeable {
-			return
+			// Can pass through this and keep on going
+			if !ci.TerrainData.Permeable {
+				return
+			}
 		}
 	}
 
@@ -91,8 +101,7 @@ func visitTendril(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerra
 
 	nx, ny := x2+(x2-x1), y2+(y2-y1)
 	tCell := world.Cell(nx, ny)
-	ci := tCell.CellInfo()
-	if ci == nil {
+	if tCell.IsEmpty() {
 		tCell.SetCellInfo(&CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 	}
 }
@@ -123,8 +132,7 @@ func visitSpread(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrai
 		for yd := ys; yd <= ye; yd++ {
 			nx, ny := uint32(int(x2)+xd), uint32(int(y2)+yd)
 			nxCell := world.Cell(nx, ny)
-			ci := nxCell.CellInfo()
-			if ci == nil {
+			if nxCell.IsEmpty() {
 				nxCell.SetCellInfo(&CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
 			} else {
 				blocked = true
@@ -174,12 +182,12 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 			neighborLeft := world.Cell(uint32(nx+yd), uint32(ny+xd))
 			neightborRight := world.Cell(uint32(nx-yd), uint32(ny-xd))
 
-			if neighborLeft.CellInfo() == nil {
+			if neighborLeft.IsEmpty() {
 				neighborLeft.SetCellInfo(&CellInfo{
 					TerrainID:    neighborTerrain,
 					RegionNameID: regionID})
 			}
-			if neightborRight.CellInfo() == nil {
+			if neightborRight.IsEmpty() {
 				neightborRight.SetCellInfo(&CellInfo{
 					TerrainID:    neighborTerrain,
 					RegionNameID: regionID})
@@ -207,7 +215,7 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 	if !broken && endok {
 		newCell := world.Cell(uint32(nx), uint32(ny))
 
-		if newCell.CellInfo() == nil {
+		if newCell.IsEmpty() {
 			newCell.SetCellInfo(&CellInfo{TerrainID: endcap, RegionNameID: regionID})
 
 			if rand.Int()%3 > 0 {
@@ -252,7 +260,7 @@ BlockCheck:
 	for xc := lx; xc <= ux; xc++ {
 		for yc := ly; yc <= uy; yc++ {
 			cell := world.Cell(uint32(xc), uint32(yc))
-			if cell.CellInfo() != nil {
+			if !cell.IsEmpty() {
 				free = false
 				break BlockCheck
 			}
@@ -260,6 +268,34 @@ BlockCheck:
 	}
 
 	return lx, ly, ux, uy, xd, yd, free
+}
+
+func snapToTile(x1, y1 uint32, tileSize int) (uint32, uint32, uint32, uint32) {
+	x, y := x1, y1
+	x -= x % uint32(tileSize)
+	y -= y % uint32(tileSize)
+
+	return x, y, x + uint32(tileSize), y + uint32(tileSize)
+}
+
+func getTile(x1, y1 uint32, tileSize int, world World) (uint32, uint32, uint32, uint32, bool) {
+	x, y := x1, y1
+	x -= x % uint32(tileSize)
+	y -= y % uint32(tileSize)
+
+	empty := true
+
+EmptyCheck:
+	for xa := x; xa <= x+uint32(tileSize); xa++ {
+		for ya := y; ya <= y+uint32(tileSize); ya++ {
+			if !(world.Cell(xa, ya).IsEmpty()) {
+				empty = false
+				break EmptyCheck
+			}
+		}
+	}
+
+	return x, y, x + uint32(tileSize-1), y + uint32(tileSize-1), empty
 }
 
 func visitDungeonRoom(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
@@ -290,7 +326,7 @@ func visitDungeonRoom(x1, y1, x2, y2 uint32, world World, regionID uint64, cellT
 		for x := mnx; x <= mxx; x++ {
 			for y := mny; y <= mxy; y++ {
 				setCell := world.Cell(uint32(x), uint32(y))
-				if setCell.CellInfo() == nil {
+				if setCell.IsEmpty() {
 					setCell.SetCellInfo(&CellInfo{TerrainID: fallback, RegionNameID: regionID})
 				}
 			}
@@ -489,14 +525,6 @@ func visitChangeOfScenery(x1, y1, x2, y2 uint32, world World, regionID uint64, c
 		oldInfo = oldCell.TerrainID
 	}
 
-UniqueSeedFinder:
-	for x := 0; x < 5; x++ {
-		seedExit = cellTerrain.GetRandomTransition()
-		if seedExit != oldInfo {
-			break UniqueSeedFinder
-		}
-	}
-
 	width, height := thickness, length
 	if y1 == y2 {
 		width, height = height, width
@@ -591,24 +619,70 @@ UniqueSeedFinder:
 	}
 }
 
+func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
+	newLoc := toCell.Location()
+	x1, y1, x2, y2, _ := getTile(newLoc.X, newLoc.Y, 8, world)
+
+	terrains := strings.Split(biome.AlgorithmParameters["terrains"], ";")
+	terrainFunction := MakeGradientTransitionFunction(terrains)
+
+	for xc := x1; xc <= x2; xc++ {
+		for yc := y1; yc <= y2; yc++ {
+			cell := world.Cell(xc, yc)
+			if cell.IsEmpty() {
+				cell.SetCellInfo(&CellInfo{
+					TerrainID: terrainFunction(
+						math.Abs(
+							seed.Eval2(
+								float64(xc),
+								float64(yc)))),
+					BiomeID:      biome.ID,
+					RegionNameID: fromCell.CellInfo().RegionNameID})
+			}
+		}
+	}
+
+	return true
+}
+
 // PopulateCellFromAlgorithm will run the specified algorithm to generate terrain
-func PopulateCellFromAlgorithm(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
-	if cellTerrain == nil {
-		return
+func PopulateCellFromAlgorithm(oldPos, newPos Cell, world World) bool {
+	if oldPos.IsEmpty() {
+		return false
 	}
 
-	algo, ok := generationAlgorithms[cellTerrain.Algorithm]
+	if !newPos.IsEmpty() {
+		return false
+	}
 
+	fixed := false
+	newBiome := oldPos.CellInfo().BiomeData.GetRandomTransition()
+
+	biome, ok := BiomeTypes[newBiome]
 	if !ok {
-		algo = generationAlgorithms["once"]
+		biome, ok = BiomeTypes[oldPos.CellInfo().BiomeID]
+
+		if !ok {
+			return false
+		}
 	}
 
-	algo(x1, y1, x2, y2, world, regionID, cellTerrain)
+	algo, ok := tileGenerationAlgorithms[biome.Algorithm]
+	if !ok {
+		algo = tileGenerationAlgorithms[BiomeTypes[DefaultBiomeType].Algorithm]
+	}
+
+	if algo != nil {
+		fixed = algo(oldPos, newPos, biome, world)
+	}
+
+	return fixed
 }
 
 func init() {
-	generationAlgorithms = make(map[string]visitFunc)
+	seed = opensimplex.New()
 
+	generationAlgorithms = make(map[string]visitFunc)
 	generationAlgorithms["once"] = visitOnce
 	generationAlgorithms["tendril"] = visitTendril
 	generationAlgorithms["spread"] = visitSpread
@@ -617,4 +691,7 @@ func init() {
 	generationAlgorithms["great-wall"] = visitGreatWall
 	generationAlgorithms["circle"] = visitCircle
 	generationAlgorithms["change-of-scenery"] = visitChangeOfScenery
+
+	tileGenerationAlgorithms = make(map[string]tileFunc)
+	tileGenerationAlgorithms["perlin-noise"] = tilePerlin
 }

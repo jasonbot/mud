@@ -1,7 +1,6 @@
 package mud
 
 import (
-	"log"
 	"math/rand"
 	"time"
 )
@@ -71,40 +70,10 @@ func (builder *worldBuilder) StepInto(x1, y1, x2, y2 uint32) bool {
 	newCell := builder.world.Cell(x2, y2)
 	returnVal := newCell == nil
 
-	if newCell.CellInfo() == nil {
+	if newCell.IsEmpty() {
 		currentCell := builder.world.Cell(x1, y1)
-		currentCellInfo := currentCell.CellInfo()
 
-		if currentCell.CellInfo() == nil {
-			return returnVal
-		}
-
-		cellType := CellTypes[currentCellInfo.TerrainID]
-
-		newCellType := cellType.GetRandomTransition()
-
-		if len(newCellType) == 0 {
-			return false
-		}
-
-		if newCellType == "!previous" {
-			newCellType = currentCellInfo.TerrainID
-		}
-
-		newCellItem, ok := CellTypes[newCellType]
-		if !ok {
-			log.Printf("Found an invaid terrain type: %s", newCellType)
-			newCellItem = CellTypes[DefaultCellType]
-		}
-
-		var regionID uint64
-		if currentCell != nil {
-			regionID = currentCellInfo.RegionNameID
-		} else {
-			regionID = builder.World().NewPlaceID()
-		}
-
-		PopulateCellFromAlgorithm(x1, y1, x2, y2, builder.world, regionID, &newCellItem)
+		returnVal = PopulateCellFromAlgorithm(currentCell, newCell, builder.world)
 	}
 
 	return returnVal

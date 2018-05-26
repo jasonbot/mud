@@ -1,5 +1,15 @@
 {
-    "biomes": {},
+    "biomes": {
+        "open-grass": {
+            "Algorithm": "perlin-noise",
+            "AlgorithmParameters": {
+                "terrains": "clearing-grass:10;clearing-deep-grass:10;clearing-tree:15"
+            },
+            "Transitions": [
+                "open-grass"
+            ]
+        }
+    },
     "cells": {
         "clearing": {
             "Name": "Clearing of %s",

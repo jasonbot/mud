@@ -6,12 +6,16 @@ import (
 	"log"
 )
 
+// DefaultBiomeType yes
+const DefaultBiomeType = "open-grass"
+
 // BiomeData contains information about biome types
 type BiomeData struct {
 	ID                  string
-	Name                string        `json:",omitempty"` // Formatstring to modify place name
-	Transitions         []string      `json:""`           // Other biome types this can transition into when generating
-	GetRandomTransition func() string // What to transition to
+	Algorithm           string            `json:""` // Need strategies to make land
+	AlgorithmParameters map[string]string `json:""` // Helpers for terrain generator algorithm
+	Transitions         []string          `json:""` // Other biome types this can transition into when generating
+	GetRandomTransition func() string     // What to transition to
 }
 
 // DefaultCellType is the seed land type when spawning a character.
@@ -23,9 +27,8 @@ type CellTerrain struct {
 	ID                  string            `json:""`
 	Permeable           bool              `json:""`           // Things like paths, rivers, etc. should be permeable so biomes don't suddenly stop geneating through them.
 	Blocking            bool              `json:""`           // Some terrain types are impassable; e.g. walls
-	Transitions         []string          `json:""`           // Other cell types this can transition into when generating
 	Name                string            `json:",omitempty"` // Formatstring to modify place name
-	Algorithm           string            `json:""`           // Default is radiateout; should have algos for e.g. town grid building etc.
+	Algorithm           string            `json:""`           // Should have algos for e.g. town grid building etc.
 	AlgorithmParameters map[string]string `json:""`           // Helpers for terrain generator algorithm
 	CreatureSpawns      []CreatureSpawn   `json:""`           // List of monster types and probabilities of them appearing in each terrain type
 	ItemDrops           []ItemDrop        `json:""`           // List of items and probabilities of them appearing in each terrain type
@@ -34,7 +37,6 @@ type CellTerrain struct {
 	Bold                bool              `json:""`           // SSH-display specific: bold the cell FG?
 	Animated            bool              `json:""`           // SSH-display specific: Fake an animation effect?
 	Representations     []rune            `json:""`           // SSH-display specific: unicode chars to use to represent this cell on-screen
-	GetRandomTransition func() string     // What to transition to
 }
 
 // CellTypes is the list of cell types
@@ -65,19 +67,6 @@ type CellInfo struct {
 	RegionName   string      `json:"-"`
 }
 
-// CellInfoFromBytes reads a CellInfo from raw bytes
-func CellInfoFromBytes(data []byte) CellInfo {
-	var cellInfo CellInfo
-	json.Unmarshal(data, &cellInfo)
-	return cellInfo
-}
-
-// CellInfoToBytes reads a CellInfo to JSON
-func CellInfoToBytes(cellInfo *CellInfo) []byte {
-	data, _ := json.Marshal(cellInfo)
-	return data
-}
-
 func loadTerrainTypes(terrainInfoFile string) {
 	data, err := ioutil.ReadFile(terrainInfoFile)
 
@@ -99,7 +88,6 @@ func loadTerrainTypes(terrainInfoFile string) {
 		CellTypes = make(map[string]CellTerrain)
 		for k, val := range terrainFileData.CellTypes {
 			val.ID = k
-			val.GetRandomTransition, val.Transitions = MakeTransitionFunction(val.ID, val.Transitions)
 			CellTypes[k] = val
 		}
 	}
