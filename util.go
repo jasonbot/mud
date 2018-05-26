@@ -39,11 +39,16 @@ type Point struct {
 	Y uint32
 }
 
+// Neighbor returns a box in that direction
+func (p *Point) Neighbor(d Direction) Point {
+	return p.Add(VectorForDirection[d])
+}
+
 // Add applies a vector to a point
 func (p *Point) Add(v Vector) Point {
 	return Point{
 		X: uint32(int(p.X) + v.X),
-		Y: uint32(int(p.X) + v.X)}
+		Y: uint32(int(p.Y) + v.Y)}
 }
 
 // Vector Gets the vector between two points such that v = p.Vector(q); p.Add(v) == q
@@ -119,7 +124,7 @@ type Vector struct {
 	Y int
 }
 
-// Add ccombines two vectors
+// Add combines two vectors
 func (v *Vector) Add(p Vector) Vector {
 	return Vector{
 		X: v.X + p.X,
@@ -373,9 +378,9 @@ func MSGUnpack(inBytes []byte, outItem interface{}) error {
 func init() {
 	VectorForDirection = map[Direction]Vector{
 		DIRECTIONNORTH: Vector{X: 0, Y: -1},
-		DIRECTIONEAST:  Vector{X: -1, Y: 0},
+		DIRECTIONEAST:  Vector{X: 1, Y: 0},
 		DIRECTIONSOUTH: Vector{X: 0, Y: 1},
-		DIRECTIONWEST:  Vector{X: 1, Y: 0}}
+		DIRECTIONWEST:  Vector{X: -1, Y: 0}}
 	DirectionForVector = make(map[Vector]Direction)
 	for k, v := range VectorForDirection {
 		DirectionForVector[v] = k

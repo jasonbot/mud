@@ -219,6 +219,10 @@ func (w *dbWorld) Cell(x, y uint32) Cell {
 	return &dbCell{w: w, x: x, y: y}
 }
 
+func (w *dbWorld) CellAtPoint(p Point) Cell {
+	return &dbCell{w: w, x: p.X, y: p.Y}
+}
+
 func (w *dbWorld) reloadStoredCreatures(x, y uint32) {
 	pt := Point{X: x, Y: y}
 	record, ok := w.activeCellCache.Load(string(pt.Bytes()))

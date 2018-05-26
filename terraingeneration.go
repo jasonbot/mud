@@ -48,6 +48,24 @@ func getStringSetting(settings map[string]string, settingName string, defaultVal
 	return defaultValue
 }
 
+func getBoolSetting(settings map[string]string, settingName string, defaultValue bool) bool {
+	if settings != nil {
+		value, ok := settings[settingName]
+
+		if ok && len(value) > 0 {
+			val := strings.ToLower(value)
+
+			if (val == "true") || (val == "1") {
+				return true
+			} else if (val == "false") || (val == "0") {
+				return false
+			}
+		}
+	}
+
+	return defaultValue
+}
+
 func visitOnce(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
 	cell := world.Cell(x2, y2)
 	cell.SetCellInfo(&CellInfo{TerrainID: cellTerrain.ID, RegionNameID: regionID})
@@ -619,12 +637,107 @@ func visitChangeOfScenery(x1, y1, x2, y2 uint32, world World, regionID uint64, c
 	}
 }
 
-func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
-	newLoc := toCell.Location()
-	x1, y1, x2, y2, _ := getTile(newLoc.X, newLoc.Y, 8, world)
+func isBoxEmpty(box Box, world World) bool {
+	for x := box.TopLeft.X; x <= box.BottomRight.X; x++ {
+		for y := box.TopLeft.Y; y <= box.BottomRight.Y; y++ {
+			if !world.Cell(x, y).IsEmpty() {
+				return false
+			}
+		}
+	}
 
-	terrains := strings.Split(biome.AlgorithmParameters["terrains"], ";")
-	terrainFunction := MakeGradientTransitionFunction(terrains)
+	return true
+}
+
+func fillBorders(x1, y1, x2, y2 uint32, biome BiomeData, world World) {
+	top, bottom := Point{X: x1, Y: y1}, Point{X: x1, Y: y2}
+
+	width, height := int(x2-x1)/2, int(y2-y1)/2
+
+	for xc := x1; xc <= x2; xc++ {
+		topCell := world.CellAtPoint(top.Neighbor(DIRECTIONNORTH))
+		bottomCell := world.CellAtPoint(bottom.Neighbor(DIRECTIONSOUTH))
+
+		if !topCell.IsEmpty() {
+			topInfo := topCell.CellInfo()
+			if topInfo.BiomeID != biome.ID {
+				topInfo.BiomeID = biome.ID
+				pt := top
+
+				widthFill := rand.Int() % height
+
+				for i := 0; i < widthFill; i++ {
+					cell := world.CellAtPoint(pt)
+					cell.SetCellInfo(topInfo)
+					pt = pt.Neighbor(DIRECTIONSOUTH)
+				}
+			}
+		}
+
+		if !bottomCell.IsEmpty() {
+			bottomInfo := bottomCell.CellInfo()
+			if bottomInfo.BiomeID != biome.ID {
+				bottomInfo.BiomeID = biome.ID
+				pt := bottom
+
+				widthFill := rand.Int() % height
+
+				for i := 0; i < widthFill; i++ {
+					cell := world.CellAtPoint(pt)
+					cell.SetCellInfo(bottomInfo)
+					pt = pt.Neighbor(DIRECTIONNORTH)
+				}
+			}
+		}
+
+		top = top.Neighbor(DIRECTIONEAST)
+		bottom = bottom.Neighbor(DIRECTIONEAST)
+	}
+
+	left, right := Point{X: x1, Y: y1}, Point{X: x2, Y: y1}
+	for xc := x1; xc <= x2; xc++ {
+		leftCell := world.CellAtPoint(left.Neighbor(DIRECTIONWEST))
+		rightCell := world.CellAtPoint(right.Neighbor(DIRECTIONEAST))
+
+		if !leftCell.IsEmpty() {
+			leftInfo := leftCell.CellInfo()
+			if leftInfo.BiomeID != biome.ID {
+				leftInfo.BiomeID = biome.ID
+				pt := left
+
+				heightFill := rand.Int() % width
+
+				for i := 0; i < heightFill; i++ {
+					cell := world.CellAtPoint(pt)
+					cell.SetCellInfo(leftInfo)
+					pt = pt.Neighbor(DIRECTIONEAST)
+				}
+			}
+		}
+
+		if !rightCell.IsEmpty() {
+			rightInfo := rightCell.CellInfo()
+			if rightInfo.BiomeID != biome.ID {
+				rightInfo.BiomeID = biome.ID
+				pt := right
+
+				heightFill := rand.Int() % width
+
+				for i := 0; i < heightFill; i++ {
+					cell := world.CellAtPoint(pt)
+					cell.SetCellInfo(rightInfo)
+					pt = pt.Neighbor(DIRECTIONWEST)
+				}
+			}
+		}
+
+		left = left.Neighbor(DIRECTIONSOUTH)
+		right = right.Neighbor(DIRECTIONSOUTH)
+	}
+}
+
+func fillPerlin(x1, y1, x2, y2 uint32, biome BiomeData, terrainFunction func(float64) string, fromCell Cell, world World) {
+	fillBorders(x1, y1, x2, y2, biome, world)
 
 	for xc := x1; xc <= x2; xc++ {
 		for yc := y1; yc <= y2; yc++ {
@@ -638,6 +751,33 @@ func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 								float64(yc)/10.0))),
 					BiomeID:      biome.ID,
 					RegionNameID: fromCell.CellInfo().RegionNameID})
+			}
+		}
+	}
+}
+
+func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
+	cellSize := getIntSetting(biome.AlgorithmParameters, "cell-size", 8)
+
+	newLoc := toCell.Location()
+	x1, y1, x2, y2, _ := getTile(newLoc.X, newLoc.Y, cellSize, world)
+
+	terrains := strings.Split(biome.AlgorithmParameters["terrains"], ";")
+	terrainFunction := MakeGradientTransitionFunction(terrains)
+
+	fillPerlin(x1, y1, x2, y2, biome, terrainFunction, fromCell, world)
+
+	spreadIfNew := getBoolSetting(biome.AlgorithmParameters, "spread-if-new", false)
+	if spreadIfNew && !fromCell.IsEmpty() && fromCell.CellInfo().BiomeID != biome.ID {
+		newBox := BoxFromCoords(x1, y1, x2, y2)
+
+		for _, item := range []Box{
+			newBox.Neighbor(DIRECTIONNORTH),
+			newBox.Neighbor(DIRECTIONEAST),
+			newBox.Neighbor(DIRECTIONSOUTH),
+			newBox.Neighbor(DIRECTIONWEST)} {
+			if isBoxEmpty(item, world) {
+				fillPerlin(item.TopLeft.X, item.TopLeft.Y, item.BottomRight.X, item.BottomRight.Y, biome, terrainFunction, fromCell, world)
 			}
 		}
 	}

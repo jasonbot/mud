@@ -27,6 +27,7 @@ type World interface {
 	GetUser(string) User
 
 	Cell(uint32, uint32) Cell
+	CellAtPoint(Point) Cell
 	KillCreature(string)
 	Attack(interface{}, interface{}, *Attack)
 

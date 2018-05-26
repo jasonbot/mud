@@ -3,10 +3,36 @@
         "open-grass": {
             "Algorithm": "perlin-noise",
             "AlgorithmParameters": {
-                "terrains": "clearing-grass:10;clearing-deep-grass:10;clearing-tree:15"
+                "terrains": "clearing-grass:10;clearing-deep-grass:10;clearing-tree:15",
+                "fill-border": "true",
+                "spread-if-new": "true"
             },
             "Transitions": [
-                "open-grass"
+                "open-grass:5",
+                "savannah"
+            ]
+        },
+        "savannah": {
+            "Algorithm": "perlin-noise",
+            "AlgorithmParameters": {
+                "terrains": "open-savannah:5;savannah:15",
+                "fill-border": "true"
+            },
+            "Transitions": [
+                "savannah:5",
+                "open-grass",
+                "desert"
+            ]
+        },
+        "desert": {
+            "Algorithm": "perlin-noise",
+            "AlgorithmParameters": {
+                "terrains": "widedesert:20;desert:10;desert-cactus:5;savannah:15",
+                "fill-border": "true"
+            },
+            "Transitions": [
+                "savannah",
+                "desert:5"
             ]
         }
     },
@@ -281,6 +307,31 @@
             },
             "FGcolor": 106,
             "BGcolor": 149,
+            "Bold": false,
+            "Representations": [
+                8281,
+                8283,
+                8280,
+                8278,
+                32
+            ]
+        },
+        "open-savannah": {
+            "Name": "Savannah %s",
+            "Permeable": false,
+            "Blocking": false,
+            "Transitions": [
+                "savannah-circle:25",
+                "savannah:20",
+                "desert:10",
+                "change-biomes:10"
+            ],
+            "Algorithm": "spread",
+            "AlgorithmParameters": {
+                "radius": "1"
+            },
+            "FGcolor": 106,
+            "BGcolor": 148,
             "Bold": false,
             "Representations": [
                 8281,
