@@ -12,6 +12,7 @@ const DefaultBiomeType = "open-grass"
 // BiomeData contains information about biome types
 type BiomeData struct {
 	ID                  string
+	Name                string            `json:""`
 	Algorithm           string            `json:""` // Need strategies to make land
 	AlgorithmParameters map[string]string `json:""` // Helpers for terrain generator algorithm
 	Transitions         []string          `json:""` // Other biome types this can transition into when generating

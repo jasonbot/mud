@@ -722,6 +722,8 @@ func (c *dbCell) CellInfo() *CellInfo {
 		// Format place name if it exists
 		if len(cellTerrain.Name) > 0 {
 			placeName = fmt.Sprintf(cellTerrain.Name, placeName)
+		} else if len(biomeData.Name) > 0 {
+			placeName = fmt.Sprintf(biomeData.Name, placeName)
 		}
 
 		cellInfo.RegionName = placeName

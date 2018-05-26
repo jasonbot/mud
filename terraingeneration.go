@@ -634,8 +634,8 @@ func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 					TerrainID: terrainFunction(
 						math.Abs(
 							seed.Eval2(
-								float64(xc),
-								float64(yc)))),
+								float64(xc)/10.0,
+								float64(yc)/10.0))),
 					BiomeID:      biome.ID,
 					RegionNameID: fromCell.CellInfo().RegionNameID})
 			}

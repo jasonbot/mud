@@ -53,6 +53,66 @@ func (p *Point) Vector(v Point) Vector {
 		Y: int(v.Y) - int(p.Y)}
 }
 
+// Bresenham uses Bresenham's algorithm to visit every involved frame
+func (p *Point) Bresenham(v Point, visitor func(Point) error) {
+	x0, y0 := p.X, p.Y
+	x1, y1 := v.X, v.Y
+
+	if x1 < x0 {
+		x0, y0, x1, y1 = x1, y1, x0, y0
+	}
+
+	if x0 == x1 { // Vertical line
+		if y0 > y1 {
+			y0, y1 = y1, y0
+		}
+
+		for y := y0; y <= y1; y++ {
+			if visitor(Point{X: x0, Y: y}) != nil {
+				return
+			}
+		}
+
+		return
+	} else if y0 == y1 { // Horizontal line
+		if x0 > x1 {
+			x0, x1 = x1, x0
+		}
+
+		for x := x0; x <= x1; x++ {
+			if visitor(Point{X: x, Y: y0}) != nil {
+				return
+			}
+		}
+
+		return
+	}
+
+	deltax := x1 - x0
+	deltay := y1 - y0
+	deltaerr := math.Abs(float64(deltay) / float64(deltax))
+	err := float64(0.0)
+	y := y0
+
+	signDeltaY := int(1)
+	if math.Signbit(float64(deltay)) {
+		signDeltaY = -1
+	}
+
+	for x := x0; x <= x1; x++ {
+		if visitor(Point{X: uint32(x), Y: uint32(y)}) != nil {
+			return
+		}
+
+		err += deltaerr
+		for err >= 0.5 {
+			y = uint32(int(y) + signDeltaY)
+
+			err -= 1.0
+		}
+	}
+}
+
 // Vector is for doing point-to-point comparisons
 type Vector struct {
 	X int
