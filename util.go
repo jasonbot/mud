@@ -187,7 +187,7 @@ func BoxFromCenteraAndWidthAndHeight(center *Point, width, height uint32) Box {
 
 // WidthAndHeight returns a width, height tuple
 func (b *Box) WidthAndHeight() (uint32, uint32) {
-	return b.BottomRight.X - b.TopLeft.X, b.BottomRight.Y - b.TopLeft.Y
+	return (b.BottomRight.X - b.TopLeft.X) + 1, (b.BottomRight.Y - b.TopLeft.Y) + 1
 }
 
 // ContainsPoint checks point membership

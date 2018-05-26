@@ -5,10 +5,10 @@
             "AlgorithmParameters": {
                 "terrains": "clearing-grass:10;clearing-deep-grass:10;clearing-tree:15",
                 "fill-border": "true",
-                "spread-if-new": "true"
+                "spread-neighbors": "12"
             },
             "Transitions": [
-                "open-grass:5",
+                "open-grass:2",
                 "savannah"
             ]
         },
@@ -16,7 +16,8 @@
             "Algorithm": "perlin-noise",
             "AlgorithmParameters": {
                 "terrains": "open-savannah:5;savannah:15",
-                "fill-border": "true"
+                "fill-border": "true",
+                "spread-if-new": "true"
             },
             "Transitions": [
                 "savannah:5",
@@ -28,11 +29,11 @@
             "Algorithm": "perlin-noise",
             "AlgorithmParameters": {
                 "terrains": "widedesert:20;desert:10;desert-cactus:5;savannah:15",
-                "fill-border": "true"
+                "fill-border": "true",
+                "spread-neighbors": "12"
             },
             "Transitions": [
-                "savannah",
-                "desert:5"
+                "savannah"
             ]
         }
     },

@@ -768,16 +768,45 @@ func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 	fillPerlin(x1, y1, x2, y2, biome, terrainFunction, fromCell, world)
 
 	spreadIfNew := getBoolSetting(biome.AlgorithmParameters, "spread-if-new", false)
-	if spreadIfNew && !fromCell.IsEmpty() && fromCell.CellInfo().BiomeID != biome.ID {
+	spreadNeighbors := getIntSetting(biome.AlgorithmParameters, "spread-neighbors", 0)
+	if !fromCell.IsEmpty() && ((spreadIfNew && fromCell.CellInfo().BiomeID != biome.ID) || (spreadNeighbors > 0)) {
 		newBox := BoxFromCoords(x1, y1, x2, y2)
 
-		for _, item := range []Box{
+		itemArr := []Box{
 			newBox.Neighbor(DIRECTIONNORTH),
 			newBox.Neighbor(DIRECTIONEAST),
 			newBox.Neighbor(DIRECTIONSOUTH),
-			newBox.Neighbor(DIRECTIONWEST)} {
-			if isBoxEmpty(item, world) {
-				fillPerlin(item.TopLeft.X, item.TopLeft.Y, item.BottomRight.X, item.BottomRight.Y, biome, terrainFunction, fromCell, world)
+			newBox.Neighbor(DIRECTIONWEST)}
+
+		directions := []Direction{DIRECTIONNORTH, DIRECTIONSOUTH, DIRECTIONEAST, DIRECTIONWEST}
+
+		for spreadNeighbors >= 0 {
+			newItems := make([]Box, 0)
+			visitedTiles := make(map[Point]bool)
+
+			for _, item := range itemArr {
+				if isBoxEmpty(item, world) {
+					fillPerlin(item.TopLeft.X, item.TopLeft.Y, item.BottomRight.X, item.BottomRight.Y, biome, terrainFunction, fromCell, world)
+
+					for _, neighboritem := range rand.Perm(len(directions)) {
+						newBox := item.Neighbor(directions[neighboritem])
+
+						if isBoxEmpty(newBox, world) {
+							_, ok := visitedTiles[newBox.TopLeft]
+
+							if !ok {
+								newItems = append(newItems, newBox)
+								spreadNeighbors--
+								visitedTiles[newBox.TopLeft] = true
+							}
+						}
+					}
+				}
+			}
+
+			itemArr = newItems
+			if len(itemArr) == 0 {
+				spreadNeighbors--
 			}
 		}
 	}
