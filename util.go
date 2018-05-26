@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/vmihailenco/msgpack"
 )
 
 // MessageType is a log message line type
@@ -94,7 +96,7 @@ func PointFromBuffer(buf io.Reader) Point {
 }
 
 // Direction is a cardinal direction
-type Direction int
+type Direction byte
 
 // Cardinal directions
 const (
@@ -149,14 +151,13 @@ func LoadResources() {
 	loadTerrainTypes("./terrain.json")
 }
 
-// MakeTransitionFunction helps build Markov chains.
-func MakeTransitionFunction(name string, transitionList []string) (func() string, []string) {
-	total := 0
+type transitionName struct {
+	name   string
+	weight int
+}
 
-	type transitionName struct {
-		name   string
-		weight int
-	}
+func makeTransitionGradient(transitionList []string) ([]transitionName, int, []string) {
+	total := 0
 
 	transitionInternalList := make([]transitionName, 0)
 	returnTransitionList := make([]string, 0)
@@ -180,6 +181,34 @@ func MakeTransitionFunction(name string, transitionList []string) (func() string
 		total += weight
 	}
 
+	return transitionInternalList, total, returnTransitionList
+}
+
+// MakeGradientTransitionFunction helps build Markov chains.
+func MakeGradientTransitionFunction(transitionList []string) func(float64) string {
+	transitionInternalList, total, _ := makeTransitionGradient(transitionList)
+
+	return func(inNumber float64) string {
+		endWeight := float64(total) * inNumber
+		weight := float64(0)
+
+		for _, item := range transitionInternalList {
+			weight += float64(item.weight)
+
+			if weight > endWeight {
+				return item.name
+			}
+		}
+
+		return transitionInternalList[len(transitionInternalList)-1].name
+	}
+}
+
+// MakeTransitionFunction helps build Markov chains.
+func MakeTransitionFunction(name string, transitionList []string) (func() string, []string) {
+
+	transitionInternalList, total, returnTransitionList := makeTransitionGradient(transitionList)
+
 	return func() string {
 		if transitionInternalList != nil && len(transitionInternalList) != 0 {
 			weight := 0
@@ -195,6 +224,28 @@ func MakeTransitionFunction(name string, transitionList []string) (func() string
 		}
 		return ""
 	}, returnTransitionList
+}
+
+// MSGPack packs to msgpack using JSON rules
+func MSGPack(target interface{}) ([]byte, error) {
+	var outBuffer bytes.Buffer
+
+	writer := msgpack.NewEncoder(&outBuffer)
+	writer.UseJSONTag(true)
+	err := writer.Encode(target)
+
+	return outBuffer.Bytes(), err
+}
+
+// MSGUnpack unpacks from msgpack using JSON rules
+func MSGUnpack(inBytes []byte, outItem interface{}) error {
+	var inBuffer = bytes.NewBuffer(inBytes)
+
+	reader := msgpack.NewDecoder(inBuffer)
+	reader.UseJSONTag(true)
+	err := reader.Decode(outItem)
+
+	return err
 }
 
 func init() {

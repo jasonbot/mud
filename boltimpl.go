@@ -3,7 +3,6 @@ package mud
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -197,7 +196,8 @@ func (w *dbWorld) newUser(username string) UserData {
 		newRegionID, _ := newPlaceNameInDB(w.database)
 		cellData = &CellInfo{
 			TerrainID:    DefaultCellType,
-			RegionNameID: newRegionID}
+			RegionNameID: newRegionID,
+			BiomeID:      DefaultBiomeType}
 
 		for x := -1; x <= 1; x++ {
 			for y := -1; y <= 1; y++ {
@@ -205,7 +205,7 @@ func (w *dbWorld) newUser(username string) UserData {
 				if x == 0 && y == 0 {
 					cellData.TerrainID = DefaultCellType
 				} else {
-					cellData.TerrainID = CellTypes[DefaultCellType].GetRandomTransition()
+					cellData.TerrainID = "grass"
 				}
 				cell.SetCellInfo(cellData)
 			}
@@ -255,7 +255,7 @@ func (w *dbWorld) getCreature(id string) *Creature {
 
 		if recordBytes != nil {
 			creature = &Creature{}
-			json.Unmarshal(recordBytes, creature)
+			MSGUnpack(recordBytes, creature)
 		}
 
 		return err
@@ -473,7 +473,7 @@ func (w *dbWorld) InventoryItems(x, y uint32) []*InventoryItem {
 		for k, v := cur.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = cur.Next() {
 			var inventoryItem InventoryItem
 
-			err := json.Unmarshal(v, &inventoryItem)
+			err := MSGUnpack(v, &inventoryItem)
 
 			if err != nil {
 				return err
@@ -512,7 +512,7 @@ func (w *dbWorld) inventoryItem(x, y uint32, id string, pull bool) *InventoryIte
 
 		itemBytes := bucket.Get(keyBuf.Bytes())
 		if itemBytes != nil {
-			if json.Unmarshal(itemBytes, &inventoryItem) == nil {
+			if MSGUnpack(itemBytes, &inventoryItem) == nil {
 				inventoryItem.ID = id
 				found = true
 			}
@@ -708,7 +708,7 @@ func (c *dbCell) CellInfo() *CellInfo {
 		record := bucket.Get(pt.Bytes())
 
 		if record != nil {
-			cellInfo = CellInfoFromBytes(record)
+			MSGUnpack(record, &cellInfo)
 		}
 
 		return nil
@@ -744,7 +744,7 @@ func (c *dbCell) SetCellInfo(cellInfo *CellInfo) {
 	c.w.database.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("terrain"))
 
-		bytes := CellInfoToBytes(cellInfo)
+		bytes, _ := MSGPack(cellInfo)
 		err := bucket.Put(key, bytes)
 
 		return err
@@ -803,6 +803,10 @@ func (c *dbCell) SetCellInfo(cellInfo *CellInfo) {
 			}
 		}
 	}
+}
+
+func (c *dbCell) IsEmpty() bool {
+	return c.CellInfo() == nil
 }
 
 func (c *dbCell) reloadStoredCreatures() {
@@ -896,7 +900,7 @@ func (c *dbCell) getCreature(id string) *Creature {
 
 		if recordBytes != nil {
 			creature = &Creature{}
-			json.Unmarshal(recordBytes, creature)
+			MSGUnpack(recordBytes, creature)
 		}
 
 		return err
@@ -1026,7 +1030,7 @@ func (c *dbCell) UpdateCreature(creature *Creature) {
 	c.w.database.Update(func(tx *bolt.Tx) error {
 		creatureBucket := tx.Bucket([]byte("creatures"))
 
-		creatureBytes, err := json.Marshal(creature)
+		creatureBytes, err := MSGPack(creature)
 
 		if err != nil {
 			return err
@@ -1074,7 +1078,7 @@ func (c *dbCell) AddStockCreature(id string) {
 		creatureBucket := tx.Bucket([]byte("creatures"))
 		creatureListBucket := tx.Bucket([]byte("creaturelist"))
 
-		creatureBytes, err := json.Marshal(creature)
+		creatureBytes, err := MSGPack(creature)
 
 		if err != nil {
 			return err
@@ -1127,7 +1131,7 @@ func (c *dbCell) InventoryItems() []*InventoryItem {
 		for k, v := cur.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = cur.Next() {
 			var inventoryItem InventoryItem
 
-			err := json.Unmarshal(v, &inventoryItem)
+			err := MSGUnpack(v, &inventoryItem)
 
 			if err != nil {
 				return err
@@ -1167,7 +1171,7 @@ func (c *dbCell) AddInventoryItem(item *InventoryItem) bool {
 	binary.Write(keyBuf, binary.BigEndian, pt.Bytes())
 	binary.Write(keyBuf, binary.BigEndian, byte(0))
 	binary.Write(keyBuf, binary.BigEndian, idBytes)
-	dataBytes, err := json.Marshal(inventoryItem)
+	dataBytes, err := MSGPack(inventoryItem)
 
 	if err != nil {
 		return false
@@ -1206,7 +1210,7 @@ func (c *dbCell) inventoryItem(id string, pull bool) *InventoryItem {
 
 		itemBytes := bucket.Get(keyBuf.Bytes())
 		if itemBytes != nil {
-			if json.Unmarshal(itemBytes, &inventoryItem) == nil {
+			if MSGUnpack(itemBytes, &inventoryItem) == nil {
 				inventoryItem.ID = id
 				found = true
 			}
@@ -1806,7 +1810,7 @@ func (user *dbUser) Log(message LogItem) {
 	binary.Write(buf, binary.BigEndian, byte(0))
 	binary.Write(buf, binary.BigEndian, -now.UnixNano())
 
-	messageBytes, err := json.Marshal(message)
+	messageBytes, err := MSGPack(message)
 
 	if err != nil {
 		log.Printf("Log serialization failure: %v", err)
@@ -1844,7 +1848,7 @@ func (user *dbUser) GetLog() []LogItem {
 		for k, v := cur.Seek(min); k != nil && bytes.Compare(k, max) <= 0 && ct < 80; k, v = cur.Next() {
 			var messageStruct LogItem
 
-			err := json.Unmarshal(v, &messageStruct)
+			err := MSGUnpack(v, &messageStruct)
 
 			if err != nil {
 				return err
@@ -1901,12 +1905,12 @@ func (user *dbUser) Reload() {
 		log.Printf("User %s does not exist, creating anew...", user.UserData.Username)
 		user.UserData = user.world.newUser(user.UserData.Username)
 	} else {
-		json.Unmarshal(record, &(user.UserData))
+		MSGUnpack(record, &(user.UserData))
 	}
 }
 
 func (user *dbUser) Save() {
-	bytes, err := json.Marshal(user.UserData)
+	bytes, err := MSGPack(user.UserData)
 	if err != nil {
 		log.Printf("Can't marshal user: %v", err)
 		return
@@ -2117,7 +2121,7 @@ func (user *dbUser) InventoryItems() []*InventoryItem {
 		for k, v := cur.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = cur.Next() {
 			var inventoryItem InventoryItem
 
-			err := json.Unmarshal(v, &inventoryItem)
+			err := MSGUnpack(v, &inventoryItem)
 
 			if err != nil {
 				return err
@@ -2157,7 +2161,7 @@ func (user *dbUser) AddInventoryItem(item *InventoryItem) bool {
 	binary.Write(keyBuf, binary.BigEndian, []byte(user.UserData.Username))
 	binary.Write(keyBuf, binary.BigEndian, byte(0))
 	binary.Write(keyBuf, binary.BigEndian, idBytes)
-	dataBytes, err := json.Marshal(inventoryItem)
+	dataBytes, err := MSGPack(inventoryItem)
 
 	if err != nil {
 		return false
@@ -2196,7 +2200,7 @@ func (user *dbUser) inventoryItem(id string, pull bool) *InventoryItem {
 		itemBytes := bucket.Get(keyBuf.Bytes())
 
 		if itemBytes != nil {
-			if json.Unmarshal(itemBytes, &inventoryItem) == nil {
+			if MSGUnpack(itemBytes, &inventoryItem) == nil {
 				inventoryItem.ID = id
 				found = true
 			}
@@ -2250,7 +2254,7 @@ func (user *dbUser) Equip(slot string, item *InventoryItem) (*InventoryItem, err
 	var dataBytes []byte
 
 	if item != nil {
-		dataBytes, serr = json.Marshal(inventoryItem)
+		dataBytes, serr = MSGPack(inventoryItem)
 	}
 
 	if serr != nil {
@@ -2321,7 +2325,7 @@ func (user *dbUser) EquipmentSlotItem(slotName string) *InventoryItem {
 		itemBytes := bucket.Get(keyBuf.Bytes())
 
 		if itemBytes != nil {
-			if json.Unmarshal(itemBytes, &inventoryItem) == nil {
+			if MSGUnpack(itemBytes, &inventoryItem) == nil {
 				found = true
 			}
 		}

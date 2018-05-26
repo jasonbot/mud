@@ -31,6 +31,12 @@
   revision = "8c1707734eaa00a4c129cba17af6bae4e27de117"
 
 [[projects]]
+  name = "github.com/golang/protobuf"
+  packages = ["proto"]
+  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/google/uuid"
   packages = ["."]
   revision = "064e2069ce9c359c118179501254f67d7d37ba24"
@@ -56,6 +62,21 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/ojrac/opensimplex-go"
+  packages = ["."]
+  revision = "c0d2b8b324684d1e69e72eaf01f69ff700e3396a"
+
+[[projects]]
+  name = "github.com/vmihailenco/msgpack"
+  packages = [
+    ".",
+    "codes"
+  ]
+  revision = "6ab02c0ddf38d837488a746aa8709f6ecffc2fde"
+  version = "v3.3.2"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
   packages = [
     "curve25519",
@@ -69,13 +90,35 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/net"
+  packages = ["context"]
+  revision = "dfa909b99c79129e1100513e5cd36307665e5723"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
   revision = "78d5f264b493f125018180c204871ecf58a2dce1"
 
+[[projects]]
+  name = "google.golang.org/appengine"
+  packages = [
+    ".",
+    "datastore",
+    "internal",
+    "internal/app_identity",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/modules",
+    "internal/remote_api"
+  ]
+  revision = "150dc57a1b433e64154302bdc40b6bb8aefa313a"
+  version = "v1.0.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5a5fb9c4bd1e76dc744baea6ae18183e2dba369c6e78d92ae136fe3af10b3f3b"
+  inputs-digest = "7499f2d10acd26f0eb23ec0485884dc2a46d0935679c7bc4f6b99a7b160d5d93"
   solver-name = "gps-cdcl"
   solver-version = 1
