@@ -247,6 +247,11 @@ func (b *Box) Door(d Direction) Point {
 	return b.Center()
 }
 
+// Coordinates returns x1 y1 x2 y2
+func (b *Box) Coordinates() (uint32, uint32, uint32, uint32) {
+	return b.TopLeft.X, b.TopLeft.Y, b.BottomRight.X, b.BottomRight.Y
+}
+
 // Direction is a cardinal direction
 type Direction byte
 

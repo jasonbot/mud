@@ -5,19 +5,21 @@
             "AlgorithmParameters": {
                 "terrains": "clearing-grass:10;clearing-deep-grass:10;clearing-tree:15",
                 "fill-border": "true",
-                "spread-neighbors": "12"
+                "spread-neighbors": "2"
             },
             "Transitions": [
-                "open-grass:2",
-                "ruins",
-                "savannah"
+                "open-grass:20",
+                "ruins:1",
+                "savannah:8"
             ]
         },
         "ruins": {
-            "Algorithm": "noise",
+            "Algorithm": "ruin",
             "AlgorithmParameters": {
                 "cell-size": "64",
-                "terrains": "clearing-grass:10;clearing-deep-grass:10;clearing-tree:15"
+                "terrains": "clearing-grass:10;clearing-deep-grass:25",
+                "floor": "ruin-floor",
+                "wall": "ruin-wall"
             },
             "Transitions": [
                 "open-grass"
@@ -28,10 +30,10 @@
             "AlgorithmParameters": {
                 "terrains": "open-savannah:5;savannah:15",
                 "fill-border": "true",
-                "spread-if-new": "true"
+                "spread-neighbors": "1"
             },
             "Transitions": [
-                "savannah:5",
+                "savannah:2",
                 "open-grass",
                 "desert"
             ]

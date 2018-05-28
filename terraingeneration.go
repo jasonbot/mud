@@ -242,6 +242,34 @@ func visitPath(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain 
 	}
 }
 
+func getBox(x, y uint32, direction Direction, world World, width, height uint32) (uint32, uint32, uint32, uint32, bool) {
+	x1, y1, x2, y2 := x, y, x, y
+	free := true
+
+	switch direction {
+	case DIRECTIONNORTH:
+		x1, y1, x2, y2 = x-(width/2), y-(height-1), x-(width/2)+(width-1), y
+	case DIRECTIONSOUTH:
+		x1, y1, x2, y2 = x-(width/2), y, x-(width/2)+(width-1), y+(height-1)
+	case DIRECTIONEAST:
+		x1, y1, x2, y2 = x, y-(width/2), x+(height-1), y-(width/2)+(width-1)
+	case DIRECTIONWEST:
+		x1, y1, x2, y2 = x-(height-1), y-(width/2), x, y-(width/2)+(width-1)
+	}
+
+BlockCheck:
+	for xc := x1; xc <= x2; xc++ {
+		for yc := y1; yc <= y2; yc++ {
+			if !world.Cell(uint32(xc), uint32(yc)).IsEmpty() {
+				free = false
+				break BlockCheck
+			}
+		}
+	}
+
+	return x1, y1, x2, y2, free
+}
+
 func getAvailableBox(x1, y1, x2, y2 uint32, world World, height, width int) (int, int, int, int, int, int, bool) {
 	xd := int(x2) - int(x1)
 	yd := int(y2) - int(y1)
@@ -664,7 +692,9 @@ func fuzzBordersWithNeighbors(x1, y1, x2, y2 uint32, biome BiomeData, world Worl
 
 				for i := 0; i < widthFill; i++ {
 					cell := world.CellAtPoint(pt)
-					cell.SetCellInfo(topInfo)
+					if cell.IsEmpty() {
+						cell.SetCellInfo(topInfo)
+					}
 					pt = pt.Neighbor(DIRECTIONSOUTH)
 				}
 			}
@@ -680,7 +710,9 @@ func fuzzBordersWithNeighbors(x1, y1, x2, y2 uint32, biome BiomeData, world Worl
 
 				for i := 0; i < widthFill; i++ {
 					cell := world.CellAtPoint(pt)
-					cell.SetCellInfo(bottomInfo)
+					if cell.IsEmpty() {
+						cell.SetCellInfo(bottomInfo)
+					}
 					pt = pt.Neighbor(DIRECTIONNORTH)
 				}
 			}
@@ -705,7 +737,9 @@ func fuzzBordersWithNeighbors(x1, y1, x2, y2 uint32, biome BiomeData, world Worl
 
 				for i := 0; i < heightFill; i++ {
 					cell := world.CellAtPoint(pt)
-					cell.SetCellInfo(leftInfo)
+					if cell.IsEmpty() {
+						cell.SetCellInfo(leftInfo)
+					}
 					pt = pt.Neighbor(DIRECTIONEAST)
 				}
 			}
@@ -721,7 +755,9 @@ func fuzzBordersWithNeighbors(x1, y1, x2, y2 uint32, biome BiomeData, world Worl
 
 				for i := 0; i < heightFill; i++ {
 					cell := world.CellAtPoint(pt)
-					cell.SetCellInfo(rightInfo)
+					if cell.IsEmpty() {
+						cell.SetCellInfo(rightInfo)
+					}
 					pt = pt.Neighbor(DIRECTIONWEST)
 				}
 			}
@@ -753,7 +789,7 @@ func fillBox(b Box, world World, terrain *CellInfo) {
 	}
 }
 
-func fillWithNoise(x1, y1, x2, y2 uint32, biome BiomeData, terrainFunction func(float64) string, fromCell Cell, world World) {
+func fillWithNoise(x1, y1, x2, y2 uint32, biome BiomeData, terrainFunction func(float64) string, regionID uint64, world World) {
 	for xc := x1; xc <= x2; xc++ {
 		for yc := y1; yc <= y2; yc++ {
 			cell := world.Cell(xc, yc)
@@ -765,7 +801,7 @@ func fillWithNoise(x1, y1, x2, y2 uint32, biome BiomeData, terrainFunction func(
 								float64(xc)/10.0,
 								float64(yc)/10.0))),
 					BiomeID:      biome.ID,
-					RegionNameID: fromCell.CellInfo().RegionNameID})
+					RegionNameID: regionID})
 			}
 		}
 	}
@@ -777,16 +813,16 @@ func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 	newLoc := toCell.Location()
 	x1, y1, x2, y2, ok := getTile(newLoc.X, newLoc.Y, cellSize, world)
 
-	// Fall back to filling in 4 cells around here we can if we can't get a proper block
+	// Fall back to filling in 8 cells around here we can if we can't get a proper block
 	if !ok {
-		x1, y1, x2, y2, _ = getTile(newLoc.X, newLoc.Y, 4, world)
+		x1, y1, x2, y2, _ = getTile(newLoc.X, newLoc.Y, 8, world)
 	}
 
 	terrains := strings.Split(biome.AlgorithmParameters["terrains"], ";")
 	terrainFunction := MakeGradientTransitionFunction(terrains)
 
 	fuzzBordersWithNeighbors(x1, y1, x2, y2, biome, world)
-	fillWithNoise(x1, y1, x2, y2, biome, terrainFunction, fromCell, world)
+	fillWithNoise(x1, y1, x2, y2, biome, terrainFunction, fromCell.CellInfo().RegionNameID, world)
 
 	spreadIfNew := getBoolSetting(biome.AlgorithmParameters, "spread-if-new", false)
 	spreadNeighbors := getIntSetting(biome.AlgorithmParameters, "spread-neighbors", 0)
@@ -807,7 +843,7 @@ func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 
 			for _, item := range itemArr {
 				if isBoxEmpty(item, world) {
-					fillWithNoise(item.TopLeft.X, item.TopLeft.Y, item.BottomRight.X, item.BottomRight.Y, biome, terrainFunction, fromCell, world)
+					fillWithNoise(item.TopLeft.X, item.TopLeft.Y, item.BottomRight.X, item.BottomRight.Y, biome, terrainFunction, fromCell.CellInfo().RegionNameID, world)
 
 					for _, neighboritem := range rand.Perm(len(directions)) {
 						newBox := item.Neighbor(directions[neighboritem])
@@ -837,19 +873,102 @@ func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 
 func tileRuin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 	cellSize := getIntSetting(biome.AlgorithmParameters, "cell-size", 64)
+	roomCount := getIntSetting(biome.AlgorithmParameters, "room-count", 20)
 	terrains := strings.Split(biome.AlgorithmParameters["terrains"], ";")
+	floorType := getStringSetting(biome.AlgorithmParameters, "floor", DefaultCellType)
+	wallType := getStringSetting(biome.AlgorithmParameters, "wall", DefaultCellType)
+
 	terrainFunction := MakeGradientTransitionFunction(terrains)
 
+	oldLoc := fromCell.Location()
 	newLoc := toCell.Location()
-	x1, y1, x2, y2, ok := getTile(newLoc.X, newLoc.Y, cellSize, world)
+	direction := DirectionForVector[oldLoc.Vector(newLoc)]
 
-	// Fall back to filling in 4 cells around here we can if we can't get a proper block
+	x1, y1, x2, y2, ok := getBox(newLoc.X, newLoc.Y, direction, world, uint32(cellSize), uint32(cellSize))
+	containerBox := BoxFromCoords(x1, y1, x2, y2)
+
+	// Can't fill block? Fizzle out some grass.
 	if !ok {
-		return false
+		x1, y1, x2, y2, _ = getTile(newLoc.X, newLoc.Y, 8, world)
+		fuzzBordersWithNeighbors(x1, y1, x2, y2, biome, world)
+		fillWithNoise(x1, y1, x2, y2, biome, terrainFunction, fromCell.CellInfo().RegionNameID, world)
+
+		containerBox = BoxFromCoords(x1, y1, x2, y2)
+		door := containerBox.Door(direction)
+		nextDoor := door.Neighbor(direction)
+		x1, y1, x2, y2, ok = getBox(nextDoor.X, nextDoor.Y, direction, world, uint32(cellSize), uint32(cellSize))
+		if ok {
+			containerBox = BoxFromCoords(x1, y1, x2, y2)
+		} else {
+			return true
+		}
+	}
+
+	directions := []Direction{DIRECTIONNORTH, DIRECTIONSOUTH, DIRECTIONEAST, DIRECTIONWEST}
+
+	c := containerBox.Center()
+	itemArr := []Box{BoxFromCenteraAndWidthAndHeight(&c, 4, 4)}
+	regionName := world.NewPlaceID()
+
+	floor := CellInfo{
+		TerrainID:    floorType,
+		BiomeID:      biome.ID,
+		RegionNameID: regionName}
+
+	wall := CellInfo{
+		TerrainID:    wallType,
+		BiomeID:      biome.ID,
+		RegionNameID: regionName}
+
+	for roomCount >= 0 {
+		newItems := make([]Box, 0)
+		visitedTiles := make(map[Point]bool)
+
+		for _, item := range itemArr {
+			if isBoxEmpty(item, world) {
+				roomCount--
+				fillBox(item, world, &floor)
+				drawBoxBorder(item, 1, world, &wall)
+				visitedTiles[item.TopLeft] = true
+
+				for _, direction := range directions {
+					door := item.Door(direction)
+					cell := world.CellAtPoint(door.Neighbor(direction))
+					ci := cell.CellInfo()
+					if roomCount < 3 || ci != nil {
+						world.CellAtPoint(door).SetCellInfo(&floor)
+
+						if ci != nil && ci.TerrainID == wallType {
+							cell.SetCellInfo(&floor)
+						}
+					}
+				}
+
+				for _, neighboritem := range rand.Perm(len(directions))[0 : 1+rand.Int()%len(directions)] {
+					newBox := item.Neighbor(directions[neighboritem])
+					door := item.Door(directions[neighboritem])
+
+					if isBoxEmpty(newBox, world) {
+						_, ok := visitedTiles[newBox.TopLeft]
+
+						if !ok {
+							world.CellAtPoint(door).SetCellInfo(&floor)
+							newItems = append(newItems, newBox)
+							visitedTiles[newBox.TopLeft] = true
+						}
+					}
+				}
+			}
+		}
+
+		itemArr = newItems
+		if len(itemArr) == 0 {
+			roomCount--
+		}
 	}
 
 	fuzzBordersWithNeighbors(x1, y1, x2, y2, biome, world)
-	fillWithNoise(x1, y1, x2, y2, biome, terrainFunction, fromCell, world)
+	fillWithNoise(x1, y1, x2, y2, biome, terrainFunction, regionName, world)
 
 	return true
 }
@@ -869,7 +988,6 @@ func PopulateCellFromAlgorithm(oldPos, newPos Cell, world World) bool {
 AlgoLoop:
 	for i := 0; i < 25 && fixed == false; i++ {
 		newBiome := oldPos.CellInfo().BiomeData.GetRandomTransition()
-
 		biome, ok := BiomeTypes[newBiome]
 		if !ok {
 			biome, ok = BiomeTypes[oldPos.CellInfo().BiomeID]
@@ -886,7 +1004,6 @@ AlgoLoop:
 
 		if algo != nil {
 			fixed = algo(oldPos, newPos, biome, world)
-
 			if fixed {
 				break AlgoLoop
 			}
