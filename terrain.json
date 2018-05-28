@@ -10,6 +10,7 @@
             "Transitions": [
                 "open-grass:20",
                 "ruins:1",
+                "castle:1",
                 "savannah:8"
             ]
         },
@@ -20,6 +21,22 @@
                 "terrains": "clearing-grass:10;clearing-deep-grass:25",
                 "floor": "ruin-floor",
                 "wall": "ruin-wall"
+            },
+            "Transitions": [
+                "open-grass"
+            ]
+        },
+        "castle": {
+            "Algorithm": "castle",
+            "AlgorithmParameters": {
+                "cell-size": "32",
+                "radius": "24",
+                "terrains": "clearing-grass:10;clearing-deep-grass:25",
+                "seed-exit": "clearing-grass",
+                "wall-thickness": "3",
+                "seed-entry": "castle-gravel",
+                "wall-texture": "castle-clearing-wall",
+                "floor": "castle-gravel"
             },
             "Transitions": [
                 "open-grass"

@@ -400,85 +400,83 @@ func visitDungeonRoom(x1, y1, x2, y2 uint32, world World, regionID uint64, cellT
 	}
 }
 
-func visitGreatWall(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain) {
-	settings := cellTerrain.AlgorithmParameters
+func visitGreatWall(castleWall Box, world World, regionID uint64, biome BiomeData) {
+	settings := biome.AlgorithmParameters
 
-	radius := getIntSetting(settings, "radius", 50)
 	seedExit := getStringSetting(settings, "seed-exit", "clearing-grass")
 
-	lx, ly, ux, uy, _, _, free := getAvailableBox(x1, y1, x2, y2, world, radius*2, radius*2)
+	lx, ly, ux, uy := castleWall.Coordinates()
 
-	if free {
-		newRegionID := world.NewPlaceID()
-		wallThickness := getIntSetting(settings, "wall-thickness", 3)
-		seedEntry := getStringSetting(settings, "seed-entry", "gravel")
-		wallTexture := getStringSetting(settings, "wall-texture", "castle-clearing-wall")
-		wallTextureInfo := CellInfo{
-			TerrainID:    wallTexture,
-			RegionNameID: newRegionID}
-		entryTextureInfo := CellInfo{
-			TerrainID:    seedEntry,
-			RegionNameID: newRegionID}
+	wallThickness := uint32(getIntSetting(settings, "wall-thickness", 3))
+	seedEntry := getStringSetting(settings, "seed-entry", "gravel")
+	wallTexture := getStringSetting(settings, "wall-texture", "castle-clearing-wall")
+	wallTextureInfo := CellInfo{
+		TerrainID:    wallTexture,
+		RegionNameID: regionID}
+	entryTextureInfo := CellInfo{
+		TerrainID:    seedEntry,
+		RegionNameID: regionID}
 
-		// Outline
-		for x := 0; x < (ux - lx); x++ {
-			if rand.Int()%2 == 0 {
-				world.Cell(uint32(lx+x), uint32(uy)).SetCellInfo(&wallTextureInfo)
-				world.Cell(uint32(ux-x), uint32(ly)).SetCellInfo(&wallTextureInfo)
-				world.Cell(uint32(ux-x), uint32(uy-wallThickness)).SetCellInfo(&wallTextureInfo)
-				world.Cell(uint32(lx+x), uint32(ly+wallThickness)).SetCellInfo(&wallTextureInfo)
-			} else if x > 1 && x < (ux-lx)-1 {
-				world.Cell(uint32(ux-x), uint32(uy-wallThickness)).SetCellInfo(&entryTextureInfo)
-				world.Cell(uint32(lx+x), uint32(ly+wallThickness)).SetCellInfo(&entryTextureInfo)
-			}
+	floorType := getStringSetting(biome.AlgorithmParameters, "floor", "gravel")
+	floor := CellInfo{
+		TerrainID:    floorType,
+		BiomeID:      biome.ID,
+		RegionNameID: regionID}
+
+	width, height := castleWall.WidthAndHeight()
+	center := castleWall.Center()
+	innerBox := BoxFromCenteraAndWidthAndHeight(&center, width-3, height-3)
+
+	fillBox(innerBox, world, &floor)
+
+	// Outline
+	for x := uint32(0); x < (ux - lx); x++ {
+		if rand.Int()%2 == 0 {
+			world.Cell(uint32(lx+x), uint32(uy)).SetCellInfo(&wallTextureInfo)
+			world.Cell(uint32(ux-x), uint32(ly)).SetCellInfo(&wallTextureInfo)
+			world.Cell(uint32(ux-x), uint32(uy-wallThickness)).SetCellInfo(&wallTextureInfo)
+			world.Cell(uint32(lx+x), uint32(ly+wallThickness)).SetCellInfo(&wallTextureInfo)
+		} else if x > 1 && x < (ux-lx)-1 {
+			world.Cell(uint32(ux-x), uint32(uy-wallThickness)).SetCellInfo(&entryTextureInfo)
+			world.Cell(uint32(lx+x), uint32(ly+wallThickness)).SetCellInfo(&entryTextureInfo)
 		}
-		for y := 0; y < (uy - ly); y++ {
-			if rand.Int()%2 == 0 {
-				world.Cell(uint32(lx), uint32(uy-y)).SetCellInfo(&wallTextureInfo)
-				world.Cell(uint32(ux), uint32(ly+y)).SetCellInfo(&wallTextureInfo)
-				world.Cell(uint32(lx+wallThickness), uint32(ly+y)).SetCellInfo(&wallTextureInfo)
-				world.Cell(uint32(ux-wallThickness), uint32(uy-y)).SetCellInfo(&wallTextureInfo)
-			} else if y > 1 && y < (uy-ly)-1 {
-				world.Cell(uint32(lx+wallThickness), uint32(ly+y)).SetCellInfo(&entryTextureInfo)
-				world.Cell(uint32(ux-wallThickness), uint32(uy-y)).SetCellInfo(&entryTextureInfo)
-			}
+	}
+	for y := uint32(0); y < (uy - ly); y++ {
+		if rand.Int()%2 == 0 {
+			world.Cell(uint32(lx), uint32(uy-y)).SetCellInfo(&wallTextureInfo)
+			world.Cell(uint32(ux), uint32(ly+y)).SetCellInfo(&wallTextureInfo)
+			world.Cell(uint32(lx+wallThickness), uint32(ly+y)).SetCellInfo(&wallTextureInfo)
+			world.Cell(uint32(ux-wallThickness), uint32(uy-y)).SetCellInfo(&wallTextureInfo)
+		} else if y > 1 && y < (uy-ly)-1 {
+			world.Cell(uint32(lx+wallThickness), uint32(ly+y)).SetCellInfo(&entryTextureInfo)
+			world.Cell(uint32(ux-wallThickness), uint32(uy-y)).SetCellInfo(&entryTextureInfo)
 		}
-		// Thick wall part
-		for thickness := 1; thickness < wallThickness; thickness++ {
-			for x := lx + thickness; x <= ux-thickness; x++ {
-				world.Cell(uint32(x), uint32(ly+thickness)).SetCellInfo(&wallTextureInfo)
-				world.Cell(uint32(x), uint32(uy-thickness)).SetCellInfo(&wallTextureInfo)
-			}
-			for y := ly + thickness; y <= uy-thickness; y++ {
-				world.Cell(uint32(lx+thickness), uint32(y)).SetCellInfo(&wallTextureInfo)
-				world.Cell(uint32(ux-thickness), uint32(y)).SetCellInfo(&wallTextureInfo)
-			}
+	}
+	// Thick wall part
+	for thickness := uint32(1); thickness < wallThickness; thickness++ {
+		for x := lx + thickness; x <= ux-thickness; x++ {
+			world.Cell(uint32(x), uint32(ly+thickness)).SetCellInfo(&wallTextureInfo)
+			world.Cell(uint32(x), uint32(uy-thickness)).SetCellInfo(&wallTextureInfo)
+		}
+		for y := ly + thickness; y <= uy-thickness; y++ {
+			world.Cell(uint32(lx+thickness), uint32(y)).SetCellInfo(&wallTextureInfo)
+			world.Cell(uint32(ux-thickness), uint32(y)).SetCellInfo(&wallTextureInfo)
+		}
+	}
+
+	walkwayCell := CellInfo{
+		TerrainID:    seedExit,
+		RegionNameID: regionID}
+	for i := uint32(0); i <= wallThickness; i++ {
+		midx, midy := lx+(ux-lx)/2, ly+(uy-ly)/2
+		if i >= wallThickness-1 {
+			walkwayCell.TerrainID = seedEntry
 		}
 
-		walkwayCell := CellInfo{
-			TerrainID:    seedExit,
-			RegionNameID: newRegionID}
-		for i := 0; i <= wallThickness; i++ {
-			midx, midy := lx+(ux-lx)/2, ly+(uy-ly)/2
-			if i >= wallThickness-1 {
-				walkwayCell.TerrainID = seedEntry
-			}
-
-			world.Cell(uint32(midx), uint32(ly+i)).SetCellInfo(&walkwayCell)
-			world.Cell(uint32(midx), uint32(uy-i)).SetCellInfo(&walkwayCell)
-			world.Cell(uint32(lx+i), uint32(midy)).SetCellInfo(&walkwayCell)
-			world.Cell(uint32(ux-i), uint32(midy)).SetCellInfo(&walkwayCell)
-		}
-	} else {
-		var cellTerrain *CellTerrain
-
-		cellInfo := world.Cell(x1, y1).CellInfo()
-		if cellInfo != nil {
-			cellTerrain = &cellInfo.TerrainData
-		} else {
-			*cellTerrain = CellTypes[seedExit]
-		}
-		visitSpread(x1, y1, x2, y2, world, regionID, &cellInfo.TerrainData)
+		world.Cell(uint32(midx), uint32(ly+i)).SetCellInfo(&walkwayCell)
+		world.Cell(uint32(midx), uint32(uy-i)).SetCellInfo(&walkwayCell)
+		world.Cell(uint32(lx+i), uint32(midy)).SetCellInfo(&walkwayCell)
+		world.Cell(uint32(ux-i), uint32(midy)).SetCellInfo(&walkwayCell)
 	}
 }
 
@@ -871,12 +869,9 @@ func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 	return true
 }
 
-func tileRuin(fromCell, toCell Cell, biome BiomeData, world World) bool {
+func fillyReachy(fromCell, toCell Cell, biome BiomeData, world World) (Box, bool) {
 	cellSize := getIntSetting(biome.AlgorithmParameters, "cell-size", 64)
-	roomCount := getIntSetting(biome.AlgorithmParameters, "room-count", 20)
 	terrains := strings.Split(biome.AlgorithmParameters["terrains"], ";")
-	floorType := getStringSetting(biome.AlgorithmParameters, "floor", DefaultCellType)
-	wallType := getStringSetting(biome.AlgorithmParameters, "wall", DefaultCellType)
 
 	terrainFunction := MakeGradientTransitionFunction(terrains)
 
@@ -900,15 +895,34 @@ func tileRuin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 		if ok {
 			containerBox = BoxFromCoords(x1, y1, x2, y2)
 		} else {
-			return true
+			return containerBox, true
 		}
+	}
+
+	return containerBox, false
+}
+
+func tileRuin(fromCell, toCell Cell, biome BiomeData, world World) bool {
+	containerBox, handled := fillyReachy(fromCell, toCell, biome, world)
+
+	if handled {
+		return true
 	}
 
 	directions := []Direction{DIRECTIONNORTH, DIRECTIONSOUTH, DIRECTIONEAST, DIRECTIONWEST}
 
 	c := containerBox.Center()
+	x1, y1, x2, y2 := containerBox.Coordinates()
+
 	itemArr := []Box{BoxFromCenteraAndWidthAndHeight(&c, 4, 4)}
 	regionName := world.NewPlaceID()
+
+	floorType := getStringSetting(biome.AlgorithmParameters, "floor", DefaultCellType)
+	wallType := getStringSetting(biome.AlgorithmParameters, "wall", DefaultCellType)
+	roomCount := getIntSetting(biome.AlgorithmParameters, "room-count", 20)
+	terrains := strings.Split(biome.AlgorithmParameters["terrains"], ";")
+
+	terrainFunction := MakeGradientTransitionFunction(terrains)
 
 	floor := CellInfo{
 		TerrainID:    floorType,
@@ -973,6 +987,34 @@ func tileRuin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 	return true
 }
 
+func tileCastle(fromCell, toCell Cell, biome BiomeData, world World) bool {
+	containerBox, handled := fillyReachy(fromCell, toCell, biome, world)
+
+	if handled {
+		return true
+	}
+
+	c := containerBox.Center()
+	x1, y1, x2, y2 := containerBox.Coordinates()
+
+	regionName := world.NewPlaceID()
+
+	terrains := strings.Split(biome.AlgorithmParameters["terrains"], ";")
+	cellSize := getIntSetting(biome.AlgorithmParameters, "cell-size", 64)
+	castleSize := getIntSetting(biome.AlgorithmParameters, "radius", cellSize-10)
+
+	terrainFunction := MakeGradientTransitionFunction(terrains)
+
+	castleWall := BoxFromCenteraAndWidthAndHeight(&c, uint32(castleSize), uint32(castleSize))
+
+	visitGreatWall(castleWall, world, regionName, biome)
+
+	fuzzBordersWithNeighbors(x1, y1, x2, y2, biome, world)
+	fillWithNoise(x1, y1, x2, y2, biome, terrainFunction, regionName, world)
+
+	return true
+}
+
 // PopulateCellFromAlgorithm will generate terrain
 func PopulateCellFromAlgorithm(oldPos, newPos Cell, world World) bool {
 	if oldPos.IsEmpty() {
@@ -1021,4 +1063,5 @@ func init() {
 	tileGenerationAlgorithms = make(map[string]tileFunc)
 	tileGenerationAlgorithms["noise"] = tilePerlin
 	tileGenerationAlgorithms["ruin"] = tileRuin
+	tileGenerationAlgorithms["castle"] = tileCastle
 }
