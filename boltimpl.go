@@ -750,11 +750,18 @@ func (c *dbCell) SetCellInfo(cellInfo *CellInfo) {
 	c.w.database.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("terrain"))
 
-		bytes, _ := MSGPack(cellInfo)
-		err := bucket.Put(key, bytes)
+		if cellInfo == nil {
+			return bucket.Delete(key)
+		}
 
-		return err
+		bytes, _ := MSGPack(cellInfo)
+		return bucket.Put(key, bytes)
 	})
+
+	if cellInfo == nil {
+		c.w.activeCellCache.Delete(string(pt.Bytes()))
+		return
+	}
 
 	_, ok := c.w.activeCellCache.Load(string(pt.Bytes()))
 

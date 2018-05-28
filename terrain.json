@@ -1,7 +1,7 @@
 {
     "biomes": {
         "open-grass": {
-            "Algorithm": "perlin-noise",
+            "Algorithm": "noise",
             "AlgorithmParameters": {
                 "terrains": "clearing-grass:10;clearing-deep-grass:10;clearing-tree:15",
                 "fill-border": "true",
@@ -9,11 +9,22 @@
             },
             "Transitions": [
                 "open-grass:2",
+                "ruins",
                 "savannah"
             ]
         },
+        "ruins": {
+            "Algorithm": "noise",
+            "AlgorithmParameters": {
+                "cell-size": "64",
+                "terrains": "clearing-grass:10;clearing-deep-grass:10;clearing-tree:15"
+            },
+            "Transitions": [
+                "open-grass"
+            ]
+        },
         "savannah": {
-            "Algorithm": "perlin-noise",
+            "Algorithm": "noise",
             "AlgorithmParameters": {
                 "terrains": "open-savannah:5;savannah:15",
                 "fill-border": "true",
@@ -26,7 +37,7 @@
             ]
         },
         "desert": {
-            "Algorithm": "perlin-noise",
+            "Algorithm": "noise",
             "AlgorithmParameters": {
                 "terrains": "widedesert:20;desert:10;desert-cactus:5;savannah:15",
                 "fill-border": "true",
@@ -42,9 +53,6 @@
             "Name": "Clearing of %s",
             "Permeable": false,
             "Blocking": false,
-            "Transitions": [
-                "clearing-grass"
-            ],
             "ItemDrops": [
                 {
                     "Name": "Simple Sword",
@@ -59,8 +67,6 @@
                     "Probability": 1.0
                 }
             ],
-            "Algorithm": "once",
-            "AlgorithmParameters": {},
             "FGcolor": 184,
             "BGcolor": 0,
             "Bold": false,
@@ -72,13 +78,6 @@
             "Name": "%s grasslands",
             "Permeable": false,
             "Blocking": false,
-            "Transitions": [
-                "castle-clearing:1",
-                "clearing-grass:5",
-                "clearing-deep-grass:2",
-                "trail:12",
-                "change-biomes:10"
-            ],
             "ItemDrops": [
                 {
                     "Name": "Shiny Rock",
@@ -93,8 +92,6 @@
                     "Cluster": 10
                 }
             ],
-            "Algorithm": "spread",
-            "AlgorithmParameters": {},
             "FGcolor": 112,
             "BGcolor": 154,
             "Bold": false,
@@ -109,14 +106,6 @@
             "Name": "%s grasslands",
             "Permeable": false,
             "Blocking": false,
-            "Transitions": [
-                "clearing-deep-grass:4",
-                "clearing-grass:6",
-                "clearing-tree",
-                "clearing-fairy-circle",
-                "clearing-large-fairy-circle",
-                "change-biomes:1"
-            ],
             "CreatureSpawns": [
                 {
                     "Name": "grass-snake",
@@ -124,8 +113,6 @@
                     "Cluster": 5
                 }
             ],
-            "Algorithm": "spread",
-            "AlgorithmParameters": {},
             "FGcolor": 154,
             "BGcolor": 118,
             "Bold": false,
@@ -240,7 +227,7 @@
                 8281
             ]
         },
-        "clearing-trail-ruin": {
+        "ruin-floor": {
             "Name": "Ruins of %s",
             "Permeable": false,
             "Transitions": [

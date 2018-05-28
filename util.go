@@ -222,6 +222,31 @@ func (b *Box) Neighbor(d Direction) Box {
 	return *b
 }
 
+// Center returns a point on the middle of the edge, useful for doors
+func (b *Box) Center() Point {
+	width, height := b.WidthAndHeight()
+
+	return Point{b.TopLeft.X + width/2, b.TopLeft.Y + height/2}
+}
+
+// Door returns a point on the middle of the edge, useful for doors
+func (b *Box) Door(d Direction) Point {
+	width, height := b.WidthAndHeight()
+
+	switch d {
+	case DIRECTIONNORTH:
+		return Point{b.TopLeft.X + width/2, b.TopLeft.Y}
+	case DIRECTIONEAST:
+		return Point{b.BottomRight.X, b.TopLeft.Y + height/2}
+	case DIRECTIONSOUTH:
+		return Point{b.TopLeft.X + width/2, b.BottomRight.Y}
+	case DIRECTIONWEST:
+		return Point{b.TopLeft.X, b.TopLeft.Y + height/2}
+	}
+
+	return b.Center()
+}
+
 // Direction is a cardinal direction
 type Direction byte
 

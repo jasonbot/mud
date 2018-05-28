@@ -1,6 +1,7 @@
 package mud
 
 import (
+	"log"
 	"math"
 	"math/rand"
 	"strconv"
@@ -8,11 +9,6 @@ import (
 
 	"github.com/ojrac/opensimplex-go"
 )
-
-type visitFunc func(x1, y1, x2, y2 uint32, world World, regionID uint64, cellTerrain *CellTerrain)
-
-var generationAlgorithms map[string]visitFunc
-var defaultAlgorithm = "once"
 
 type tileFunc func(Cell, Cell, BiomeData, World) bool
 
@@ -649,7 +645,7 @@ func isBoxEmpty(box Box, world World) bool {
 	return true
 }
 
-func fillBorders(x1, y1, x2, y2 uint32, biome BiomeData, world World) {
+func fuzzBordersWithNeighbors(x1, y1, x2, y2 uint32, biome BiomeData, world World) {
 	top, bottom := Point{X: x1, Y: y1}, Point{X: x1, Y: y2}
 
 	width, height := int(x2-x1)/2, int(y2-y1)/2
@@ -736,9 +732,28 @@ func fillBorders(x1, y1, x2, y2 uint32, biome BiomeData, world World) {
 	}
 }
 
-func fillPerlin(x1, y1, x2, y2 uint32, biome BiomeData, terrainFunction func(float64) string, fromCell Cell, world World) {
-	fillBorders(x1, y1, x2, y2, biome, world)
+func drawBoxBorder(b Box, thickness uint32, world World, terrain *CellInfo) {
+	for i := uint32(0); i < thickness; i++ {
+		for x := b.TopLeft.X + i; x <= b.BottomRight.X-i; x++ {
+			world.Cell(x, b.TopLeft.Y+i).SetCellInfo(terrain)
+			world.Cell(x, b.BottomRight.Y-i).SetCellInfo(terrain)
+		}
+		for y := b.TopLeft.Y + (i + 1); y <= b.BottomRight.Y-(i+1); y++ {
+			world.Cell(b.TopLeft.X+i, y).SetCellInfo(terrain)
+			world.Cell(b.BottomRight.X-i, y).SetCellInfo(terrain)
+		}
+	}
+}
 
+func fillBox(b Box, world World, terrain *CellInfo) {
+	for x := b.TopLeft.X; x <= b.BottomRight.X; x++ {
+		for y := b.TopLeft.Y; y <= b.BottomRight.Y; y++ {
+			world.Cell(x, y).SetCellInfo(terrain)
+		}
+	}
+}
+
+func fillWithNoise(x1, y1, x2, y2 uint32, biome BiomeData, terrainFunction func(float64) string, fromCell Cell, world World) {
 	for xc := x1; xc <= x2; xc++ {
 		for yc := y1; yc <= y2; yc++ {
 			cell := world.Cell(xc, yc)
@@ -760,12 +775,18 @@ func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 	cellSize := getIntSetting(biome.AlgorithmParameters, "cell-size", 8)
 
 	newLoc := toCell.Location()
-	x1, y1, x2, y2, _ := getTile(newLoc.X, newLoc.Y, cellSize, world)
+	x1, y1, x2, y2, ok := getTile(newLoc.X, newLoc.Y, cellSize, world)
+
+	// Fall back to filling in 4 cells around here we can if we can't get a proper block
+	if !ok {
+		x1, y1, x2, y2, _ = getTile(newLoc.X, newLoc.Y, 4, world)
+	}
 
 	terrains := strings.Split(biome.AlgorithmParameters["terrains"], ";")
 	terrainFunction := MakeGradientTransitionFunction(terrains)
 
-	fillPerlin(x1, y1, x2, y2, biome, terrainFunction, fromCell, world)
+	fuzzBordersWithNeighbors(x1, y1, x2, y2, biome, world)
+	fillWithNoise(x1, y1, x2, y2, biome, terrainFunction, fromCell, world)
 
 	spreadIfNew := getBoolSetting(biome.AlgorithmParameters, "spread-if-new", false)
 	spreadNeighbors := getIntSetting(biome.AlgorithmParameters, "spread-neighbors", 0)
@@ -786,7 +807,7 @@ func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 
 			for _, item := range itemArr {
 				if isBoxEmpty(item, world) {
-					fillPerlin(item.TopLeft.X, item.TopLeft.Y, item.BottomRight.X, item.BottomRight.Y, biome, terrainFunction, fromCell, world)
+					fillWithNoise(item.TopLeft.X, item.TopLeft.Y, item.BottomRight.X, item.BottomRight.Y, biome, terrainFunction, fromCell, world)
 
 					for _, neighboritem := range rand.Perm(len(directions)) {
 						newBox := item.Neighbor(directions[neighboritem])
@@ -814,7 +835,26 @@ func tilePerlin(fromCell, toCell Cell, biome BiomeData, world World) bool {
 	return true
 }
 
-// PopulateCellFromAlgorithm will run the specified algorithm to generate terrain
+func tileRuin(fromCell, toCell Cell, biome BiomeData, world World) bool {
+	cellSize := getIntSetting(biome.AlgorithmParameters, "cell-size", 64)
+	terrains := strings.Split(biome.AlgorithmParameters["terrains"], ";")
+	terrainFunction := MakeGradientTransitionFunction(terrains)
+
+	newLoc := toCell.Location()
+	x1, y1, x2, y2, ok := getTile(newLoc.X, newLoc.Y, cellSize, world)
+
+	// Fall back to filling in 4 cells around here we can if we can't get a proper block
+	if !ok {
+		return false
+	}
+
+	fuzzBordersWithNeighbors(x1, y1, x2, y2, biome, world)
+	fillWithNoise(x1, y1, x2, y2, biome, terrainFunction, fromCell, world)
+
+	return true
+}
+
+// PopulateCellFromAlgorithm will generate terrain
 func PopulateCellFromAlgorithm(oldPos, newPos Cell, world World) bool {
 	if oldPos.IsEmpty() {
 		return false
@@ -825,24 +865,34 @@ func PopulateCellFromAlgorithm(oldPos, newPos Cell, world World) bool {
 	}
 
 	fixed := false
-	newBiome := oldPos.CellInfo().BiomeData.GetRandomTransition()
 
-	biome, ok := BiomeTypes[newBiome]
-	if !ok {
-		biome, ok = BiomeTypes[oldPos.CellInfo().BiomeID]
+AlgoLoop:
+	for i := 0; i < 25 && fixed == false; i++ {
+		newBiome := oldPos.CellInfo().BiomeData.GetRandomTransition()
 
+		biome, ok := BiomeTypes[newBiome]
 		if !ok {
-			return false
+			biome, ok = BiomeTypes[oldPos.CellInfo().BiomeID]
+
+			if !ok {
+				return false
+			}
 		}
-	}
 
-	algo, ok := tileGenerationAlgorithms[biome.Algorithm]
-	if !ok {
-		algo = tileGenerationAlgorithms[BiomeTypes[DefaultBiomeType].Algorithm]
-	}
+		algo, ok := tileGenerationAlgorithms[biome.Algorithm]
+		if !ok {
+			algo = tileGenerationAlgorithms[BiomeTypes[DefaultBiomeType].Algorithm]
+		}
 
-	if algo != nil {
-		fixed = algo(oldPos, newPos, biome, world)
+		if algo != nil {
+			fixed = algo(oldPos, newPos, biome, world)
+
+			if fixed {
+				break AlgoLoop
+			}
+		} else {
+			log.Printf("Nil algorithm: %v", biome.Algorithm)
+		}
 	}
 
 	return fixed
@@ -851,16 +901,7 @@ func PopulateCellFromAlgorithm(oldPos, newPos Cell, world World) bool {
 func init() {
 	seed = opensimplex.New()
 
-	generationAlgorithms = make(map[string]visitFunc)
-	generationAlgorithms["once"] = visitOnce
-	generationAlgorithms["tendril"] = visitTendril
-	generationAlgorithms["spread"] = visitSpread
-	generationAlgorithms["path"] = visitPath
-	generationAlgorithms["dungeon-room"] = visitDungeonRoom
-	generationAlgorithms["great-wall"] = visitGreatWall
-	generationAlgorithms["circle"] = visitCircle
-	generationAlgorithms["change-of-scenery"] = visitChangeOfScenery
-
 	tileGenerationAlgorithms = make(map[string]tileFunc)
-	tileGenerationAlgorithms["perlin-noise"] = tilePerlin
+	tileGenerationAlgorithms["noise"] = tilePerlin
+	tileGenerationAlgorithms["ruin"] = tileRuin
 }
