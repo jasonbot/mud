@@ -3,10 +3,10 @@ OUTFILES := $(patsubst cmd/%.go,bin/%,$(wildcard cmd/*.go))
 bin/%: cmd/%.go
 	go build -o $@ $<
 
-all: clean dep $(OUTFILES)
+all: clean mod $(OUTFILES)
 
-dep:
-	dep ensure
+mod:
+	go mod download
 
 clean:
 	rm bin/* || true

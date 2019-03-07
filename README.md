@@ -5,7 +5,7 @@ I have a newborn and had about 12 days to make an MVP. I mostly succeeded?
 
 ## Building
 
-You need a correctly set up Golang environment with [dep](https://github.com/golang/dep) installed.
+You need a correctly set up Golang environment over 1.11; this proejct uses `go mod`.
 
 Run make.
 
@@ -70,13 +70,13 @@ This is not fully fleshed out. Ignore for now, subject to major changes.
 
 You are equipped with *charge points* based on your level. Every second one charge point renews; and when your charge points are full every 5 seconds your HP will begin to restore itself. Charge points reset to zero every time you act. Moving, attacking, and changing equipment are all considering acting.
 
-You're equipped with attacks based on the strengths you chose when starting your character and may be given additional 
+You're equipped with attacks based on the strengths you chose when starting your character and may be given additional items/buffs based on class.
 
 # Keyboard commands
 
 `up`, `down`, `left`, `right`: move your character in that direction.
 
-`ctrl-C`: log off.
+`ctrl-c`: log off.
 
 `tab`: toggle log/inventory view.
 
@@ -84,6 +84,6 @@ You're equipped with attacks based on the strengths you chose when starting your
 
 `/`: activate command input mode (any input message that starts with `/` is treated as a command).
 
-`T`: activate chat input mode (and input string that starts with `!` is treated a a chat)
+`t`: activate chat input mode (any input string that starts with `!` is treated as a chat)
 
 > **Note:** No commands have been implemented yet.
