@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	bolt "github.com/coreos/bbolt"
 	"github.com/google/uuid"
+	bolt "go.etcd.io/bbolt"
 )
 
 type dbWorld struct {

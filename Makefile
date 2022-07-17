@@ -1,6 +1,6 @@
-OUTFILES := $(patsubst cmd/%.go,bin/%,$(wildcard cmd/*.go))
+OUTFILES := $(patsubst cmd/%/main.go,bin/%,$(wildcard cmd/*/main.go))
 
-bin/%: cmd/%.go
+bin/%: cmd/%/main.go
 	go build -o $@ $<
 
 all: clean mod $(OUTFILES)

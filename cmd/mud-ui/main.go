@@ -9,7 +9,8 @@ import (
 	"path/filepath"
 
 	"github.com/andlabs/ui"
-	"github.com/jasonbot/mud"
+
+	mud "mud/internal"
 )
 
 var configFile = "./config.json"

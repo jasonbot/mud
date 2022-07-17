@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jasonbot/mud"
+	mud "mud/internal"
 )
 
 var configFile = "./config.json"
