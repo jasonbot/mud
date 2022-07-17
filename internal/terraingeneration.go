@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ojrac/opensimplex-go"
 )
@@ -14,7 +15,7 @@ type tileFunc func(Cell, Cell, BiomeData, World) bool
 
 var tileGenerationAlgorithms map[string]tileFunc
 
-var seed *opensimplex.Noise
+var seed opensimplex.Noise
 
 func getIntSetting(settings map[string]string, settingName string, defaultValue int) int {
 	if settings != nil {
@@ -1058,7 +1059,7 @@ AlgoLoop:
 }
 
 func init() {
-	seed = opensimplex.New()
+	seed = opensimplex.New(time.Now().UnixMicro())
 
 	tileGenerationAlgorithms = make(map[string]tileFunc)
 	tileGenerationAlgorithms["noise"] = tilePerlin
